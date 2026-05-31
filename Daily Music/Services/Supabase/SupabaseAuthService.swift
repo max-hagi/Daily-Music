@@ -24,9 +24,12 @@ final class SupabaseAuthService: AuthService {
     }
 
     func signInWithApple() async throws -> AuthSession {
-        // Real Sign in with Apple needs the Apple Developer entitlement. Until
-        // that's configured, use the "Continue as guest" (anonymous) path.
-        throw AuthError.appleSignInNotConfigured
+        // TODO: swap in the real ASAuthorization Sign in with Apple flow once the
+        // Apple Developer entitlement is available; the anonymous user can then be
+        // linked to the Apple identity so nothing is lost. Until then, this uses an
+        // anonymous Supabase session so the primary button has a working path.
+        let session = try await client.auth.signInAnonymously()
+        return Self.map(session.user)
     }
 
     func continueAsGuest() async throws -> AuthSession {
@@ -44,13 +47,5 @@ final class SupabaseAuthService: AuthService {
             displayName: user.email,
             isGuest: user.isAnonymous
         )
-    }
-}
-
-enum AuthError: LocalizedError {
-    case appleSignInNotConfigured
-
-    var errorDescription: String? {
-        "Sign in with Apple isn't set up yet (needs the Apple Developer entitlement). Use Continue as guest for now."
     }
 }
