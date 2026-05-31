@@ -23,7 +23,15 @@ struct VaultView: View {
                         onRetry: { await model.load() }
                     ) { entries in
                         ScrollView {
-                            CalendarMonthView(entries: entries)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                                Text("Past songs")
+                                    .font(.dmDisplay())
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                CalendarMonthView(entries: entries)
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, Theme.Spacing.md)
                         }
                     }
                 } else {

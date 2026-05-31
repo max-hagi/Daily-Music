@@ -36,7 +36,8 @@ final class WrappedViewModel {
         state = .loading
         do {
             let history = try await entries.publishedHistory()
-            let dates = try await checkIns.checkInDates()
+            // check_ins is optional context; don't let a missing table fail the recap.
+            let dates = (try? await checkIns.checkInDates()) ?? []
 
             let calendar = Calendar.current
             let now = Date()

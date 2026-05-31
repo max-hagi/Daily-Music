@@ -20,18 +20,32 @@ final class ArtworkPalette {
     /// it (ImageRenderer can't wait on an async AsyncImage).
     private(set) var image: UIImage?
     private(set) var isLoaded = false
+    private(set) var didFinishLoading = false
 
     func load(from url: URL?) async {
-        guard let url else { return }
+        didFinishLoading = false
+        isLoaded = false
+        image = nil
+
+        guard let url else {
+            didFinishLoading = true
+            return
+        }
+
         guard
             let (data, _) = try? await URLSession.shared.data(from: url),
             let image = UIImage(data: data)
-        else { return }
+        else {
+            didFinishLoading = true
+            return
+        }
+
         self.image = image
         if let color = image.dominantVibrantColor() {
             accent = Color(color)
         }
         isLoaded = true
+        didFinishLoading = true
     }
 }
 

@@ -26,7 +26,7 @@ enum Theme {
 
     enum Brand {
         /// Fallback gradient when no artwork color is available.
-        static let gradient = [Color.purple, Color.indigo]
+        static let gradient = [Color.purple, Color.indigo, Color.cyan, Color.orange]
     }
 }
 

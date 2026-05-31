@@ -14,40 +14,53 @@ struct EntryDetailView: View {
     let entry: DailyEntry
     /// Optional caption shown above the art (Today passes the date here).
     var dateLabel: String? = nil
+    var showsNavigationTitle = true
+    var albumArtHorizontalPadding: CGFloat = 40
+    var usesImmersiveBackdrop = false
 
     @Environment(AppEnvironment.self) private var env
     @State private var palette = ArtworkPalette()
     @State private var showingShare = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Theme.Spacing.lg) {
-                if let dateLabel {
-                    Text(dateLabel.uppercased())
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 8)
+        ZStack {
+            ScrollView {
+                VStack(spacing: Theme.Spacing.lg) {
+                    if let dateLabel {
+                        Text(dateLabel.uppercased())
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                    }
+
+                    AlbumArtView(url: entry.albumArtURL)
+                        .padding(.horizontal, albumArtHorizontalPadding)
+                        .padding(.top, dateLabel == nil ? 8 : 0)
+
+                    header
+                    PreviewPlayButton(entry: entry, accent: palette.accent)
+                    ReactionsBar(entry: entry, accent: palette.accent)
+                    streamingActions
+
+                    Divider().padding(.vertical, 4)
+
+                    JournalText(markdown: entry.journalMarkdown)
+                        .padding(.horizontal)
                 }
-
-                AlbumArtView(url: entry.albumArtURL)
-                    .padding(.horizontal, 40)
-                    .padding(.top, dateLabel == nil ? 8 : 0)
-
-                header
-                PreviewPlayButton(entry: entry, accent: palette.accent)
-                ReactionsBar(entry: entry, accent: palette.accent)
-                streamingActions
-
-                Divider().padding(.vertical, 4)
-
-                JournalText(markdown: entry.journalMarkdown)
-                    .padding(.horizontal)
+                .padding(.bottom, 40)
             }
-            .padding(.bottom, 40)
+            .opacity(isWaitingForArtwork ? 0 : 1)
+
+            if isWaitingForArtwork {
+                ArtworkLoadingScreen(entry: entry)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
         }
         .background(backdrop)
-        .navigationTitle(entry.title)
+        .scrollContentBackground(.hidden)
+        .navigationTitle(showsNavigationTitle ? entry.title : "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(usesImmersiveBackdrop ? .hidden : .automatic, for: .navigationBar, .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 FavoriteButton(entry: entry)
@@ -67,16 +80,47 @@ struct EntryDetailView: View {
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
     }
 
-    /// Soft wash of the artwork's accent color from the top, fading out behind
-    /// the album art — the heart of the "bold & expressive" look.
+    /// Artwork-driven wash that can either stay subtle for pushed details or
+    /// bleed behind the bars for Today's hero presentation.
     private var backdrop: some View {
-        LinearGradient(
-            colors: [palette.accent.opacity(0.45), palette.accent.opacity(0)],
-            startPoint: .top,
-            endPoint: .center
-        )
-        .ignoresSafeArea()
+        ZStack {
+            if usesImmersiveBackdrop, let image = palette.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .blur(radius: 48)
+                    .saturation(1.25)
+                    .opacity(0.46)
+                    .ignoresSafeArea()
+            }
+
+            LinearGradient(
+                colors: usesImmersiveBackdrop ? immersiveBackdropColors : standardBackdropColors,
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
         .animation(.easeInOut(duration: 0.6), value: palette.accent)
+        .animation(.easeInOut(duration: 0.6), value: palette.isLoaded)
+        .animation(.easeInOut(duration: 0.35), value: palette.didFinishLoading)
+    }
+
+    private var isWaitingForArtwork: Bool {
+        usesImmersiveBackdrop && !palette.didFinishLoading
+    }
+
+    private var standardBackdropColors: [Color] {
+        [palette.accent.opacity(0.45), palette.accent.opacity(0)]
+    }
+
+    private var immersiveBackdropColors: [Color] {
+        [
+            palette.accent.opacity(0.62),
+            palette.accent.opacity(0.28),
+            Color(.systemBackground).opacity(0.9),
+            palette.accent.opacity(0.18)
+        ]
     }
 
     private var header: some View {
@@ -113,6 +157,65 @@ struct EntryDetailView: View {
             }
         }
         .padding(.horizontal)
+    }
+}
+
+private struct ArtworkLoadingScreen: View {
+    let entry: DailyEntry
+    @State private var isAnimating = false
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.white.opacity(0.14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(.white.opacity(0.28), lineWidth: 1)
+                    }
+                    .shadow(color: .black.opacity(0.18), radius: 26, y: 14)
+
+                VStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "opticaldisc.fill")
+                        .font(.system(size: 64))
+                        .foregroundStyle(.white.opacity(0.94))
+                        .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                        .animation(.linear(duration: 2.8).repeatForever(autoreverses: false), value: isAnimating)
+
+                    MusicLoadingView(title: nil, tint: .white)
+                        .scaleEffect(0.72)
+                        .frame(height: 36)
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+            .padding(.horizontal, 42)
+
+            VStack(spacing: Theme.Spacing.xs) {
+                Text(entry.title)
+                    .font(.dmTitle())
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                Text(entry.artist)
+                    .font(.dmHeadline())
+                    .foregroundStyle(.white.opacity(0.78))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
+        .background {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.1, green: 0.08, blue: 0.18),
+                    Color(red: 0.22, green: 0.16, blue: 0.46),
+                    Color(red: 0.02, green: 0.42, blue: 0.5)
+                ],
+                startPoint: isAnimating ? .bottomLeading : .topLeading,
+                endPoint: isAnimating ? .topTrailing : .bottomTrailing
+            )
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true), value: isAnimating)
+        }
+        .onAppear { isAnimating = true }
     }
 }
 

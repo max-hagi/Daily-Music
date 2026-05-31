@@ -23,7 +23,13 @@ struct TodayView: View {
                         emptyMessage: "Today's pick hasn't been published. Check back soon.",
                         onRetry: { await model.load() }
                     ) { entry in
-                        EntryDetailView(entry: entry, dateLabel: todayString)
+                        EntryDetailView(
+                            entry: entry,
+                            dateLabel: todayString,
+                            showsNavigationTitle: false,
+                            albumArtHorizontalPadding: 18,
+                            usesImmersiveBackdrop: true
+                        )
                     }
                 } else {
                     ProgressView()

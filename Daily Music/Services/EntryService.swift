@@ -33,7 +33,7 @@ final class MockEntryService: EntryService {
                 date: day(0),
                 title: "Nightswimming",
                 artist: "R.E.M.",
-                albumArtURL: URL(string: "https://placehold.co/600x600/1a1a2e/eee?text=Automatic"),
+                albumArtURL: URL(string: "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/97/1a/9b/971a9bf7-b6dc-8712-ac3a-1d4351512c8b/17CRGIM03466.rgb.jpg/1200x1200bb.jpg"),
                 journalMarkdown: """
                 There's a particular kind of quiet that only exists at 2am, and \
                 this song lives inside it. Mike Mills wrote the piano part first \
@@ -42,7 +42,7 @@ final class MockEntryService: EntryService {
                 *Listen for* the oboe that drifts in near the end — it shouldn't \
                 work, and that's exactly why it does.
                 """,
-                appleMusicID: "1440899503",
+                appleMusicID: "1440947554",
                 spotifyURI: "spotify:track:4gphxUgq0JSFv2BCLhNDiE"
             ),
             DailyEntry(
@@ -50,14 +50,14 @@ final class MockEntryService: EntryService {
                 date: day(-1),
                 title: "A Real Hero",
                 artist: "College & Electric Youth",
-                albumArtURL: URL(string: "https://placehold.co/600x600/16213e/eee?text=Drive"),
+                albumArtURL: URL(string: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/2e/cb/c7/2ecbc706-6356-baf8-dc15-102d255b8f3c/859707985680_cover.jpg/1200x1200bb.jpg"),
                 journalMarkdown: """
                 Synthwave usually points backward, all neon nostalgia. This one \
                 points *forward* — it sounds like deciding to become someone braver.
 
                 Built for late-night drives with nowhere in particular to be.
                 """,
-                appleMusicID: "1445016276",
+                appleMusicID: "515382567",
                 spotifyURI: "spotify:track:1WrPa4lrIddctcb0bI8HFV"
             ),
             DailyEntry(
@@ -65,14 +65,14 @@ final class MockEntryService: EntryService {
                 date: day(-2),
                 title: "Pyramid Song",
                 artist: "Radiohead",
-                albumArtURL: URL(string: "https://placehold.co/600x600/0f3460/eee?text=Amnesiac"),
+                albumArtURL: URL(string: "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/43/d8/ec/43d8ec17-0e96-dba9-21d9-4cdf9d98f2bf/634904078362.png/1200x1200bb.jpg"),
                 journalMarkdown: """
                 The rhythm famously refuses to sit still — people have written \
                 papers arguing about its time signature. Don't count it. Float in it.
 
                 **Why today:** some days don't resolve neatly, and that's allowed.
                 """,
-                appleMusicID: "1109714933",
+                appleMusicID: "1097864572",
                 spotifyURI: "spotify:track:2Qwzr1AjJjPft9XYG56dn1"
             ),
         ]

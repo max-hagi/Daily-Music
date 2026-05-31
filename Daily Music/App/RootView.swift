@@ -13,16 +13,29 @@ struct RootView: View {
     @State private var didRestore = false
 
     var body: some View {
-        Group {
+        ZStack {
             if !didRestore {
-                ProgressView()
+                MusicLoadingView(title: "Daily Music", tint: Theme.Brand.gradient[2])
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(WelcomeGradientBackground())
+                    .transition(.opacity)
             } else if env.session.isSignedIn {
                 MainTabView()
                     .task { await env.favoritesStore.load() }
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.96).combined(with: .opacity),
+                        removal: .opacity
+                    ))
             } else {
                 SignInView()
+                    .transition(.asymmetric(
+                        insertion: .opacity,
+                        removal: .scale(scale: 1.08).combined(with: .opacity)
+                    ))
             }
         }
+        .animation(.spring(response: 0.65, dampingFraction: 0.86), value: didRestore)
+        .animation(.spring(response: 0.75, dampingFraction: 0.84), value: env.session.isSignedIn)
         .task {
             if !didRestore {
                 await env.session.restore()

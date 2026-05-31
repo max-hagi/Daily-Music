@@ -32,24 +32,20 @@ final class InsightsViewModel {
 
     func load() async {
         state = .loading
-        do {
-            let dates = try await checkIns.checkInDates()
-            let history = try await entries.publishedHistory()
 
-            let calendar = Calendar.current
-            let seen = history.filter { dates.contains(calendar.startOfDay(for: $0.date)) }
-            let artists = Set(seen.map(\.artist)).count
+        // Each piece degrades independently: a missing/failing optional backend
+        // (e.g. the check_ins table before it's created) shouldn't blank the page.
+        let dates = (try? await checkIns.checkInDates()) ?? []
+        let history = (try? await entries.publishedHistory()) ?? []
+        let listeners = (try? await sharedStats.todaysListenerCount()) ?? 0
 
-            // Don't fail the whole page if the shared count is unavailable.
-            let listeners = (try? await sharedStats.todaysListenerCount()) ?? 0
+        let calendar = Calendar.current
+        let seen = history.filter { dates.contains(calendar.startOfDay(for: $0.date)) }
 
-            state = .loaded(Stats(
-                tasteProfile: .from(seen: seen),
-                artistsDiscovered: artists,
-                listenersToday: listeners
-            ))
-        } catch {
-            state = .failed(error)
-        }
+        state = .loaded(Stats(
+            tasteProfile: .from(seen: seen),
+            artistsDiscovered: Set(seen.map(\.artist)).count,
+            listenersToday: listeners
+        ))
     }
 }

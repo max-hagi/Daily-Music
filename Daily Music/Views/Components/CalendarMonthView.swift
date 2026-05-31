@@ -35,7 +35,7 @@ struct CalendarMonthView: View {
             grid
             Spacer(minLength: 0)
         }
-        .padding()
+        .padding(.vertical)
     }
 
     private var monthHeader: some View {
@@ -84,11 +84,22 @@ struct CalendarMonthView: View {
         let number = calendar.component(.day, from: day)
         if let entry = entriesByDay[calendar.startOfDay(for: day)] {
             NavigationLink(value: entry) {
-                Text("\(number)")
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Circle().fill(Color.accentColor))
+                VStack(spacing: 3) {
+                    Text("\(number)")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(Color.primary)
+                        .frame(width: 32, height: 28)
+                        .overlay {
+                            if isToday(day) {
+                                Circle().stroke(.secondary, lineWidth: 1)
+                            }
+                        }
+
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 5, height: 5)
+                }
+                .frame(width: 40, height: 40)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
