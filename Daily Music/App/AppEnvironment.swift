@@ -58,6 +58,9 @@ final class AppEnvironment {
             entries: SupabaseEntryService(),
             favorites: MockFavoritesService(),
             notifications: LocalNotificationService(),
+            // Apple Music infrastructure is ready in MusicKitMusicEngine.
+            // Once the MusicKit capability is enabled (paid dev account),
+            // swap the line below to: MusicKitMusicEngine()
             musicEngine: MockMusicEngine()
         )
     }
