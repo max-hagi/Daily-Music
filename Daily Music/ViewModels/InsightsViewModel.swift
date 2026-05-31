@@ -13,11 +13,9 @@ import Foundation
 @Observable
 final class InsightsViewModel {
     struct Stats {
-        var tasteProfile: TasteProfile
         var artistsDiscovered: Int
+        var songsHeard: Int
         var listenersToday: Int
-        /// Today's album art — used to theme the screen with its color.
-        var artURL: URL?
     }
 
     private(set) var state: LoadState<Stats> = .loading
@@ -40,16 +38,14 @@ final class InsightsViewModel {
         let dates = (try? await checkIns.checkInDates()) ?? []
         let history = (try? await entries.publishedHistory()) ?? []
         let listeners = (try? await sharedStats.todaysListenerCount()) ?? 0
-        let today = (try? await entries.todayEntry()) ?? nil
 
         let calendar = Calendar.current
         let seen = history.filter { dates.contains(calendar.startOfDay(for: $0.date)) }
 
         state = .loaded(Stats(
-            tasteProfile: .from(seen: seen),
             artistsDiscovered: Set(seen.map(\.artist)).count,
-            listenersToday: listeners,
-            artURL: today?.albumArtURL
+            songsHeard: seen.count,
+            listenersToday: listeners
         ))
     }
 }

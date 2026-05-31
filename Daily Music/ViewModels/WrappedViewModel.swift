@@ -60,7 +60,7 @@ final class WrappedViewModel {
                 favourites: entriesThisMonth.filter { favoriteIDs.contains($0.id) }.count,
                 topArtist: top?.artist,
                 topArtistPlays: top?.count ?? 0,
-                profile: .from(seen: seen)
+                profile: .from(seen: seen, favorites: favoriteIDs.count)
             ))
         } catch {
             state = .failed(error)

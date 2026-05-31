@@ -23,5 +23,5 @@ struct Daily_MusicApp: App {
 
 #Preview {
     RootView()
-        .environment(AppEnvironment.mock())
+        .environment(AppEnvironment.live())
 }

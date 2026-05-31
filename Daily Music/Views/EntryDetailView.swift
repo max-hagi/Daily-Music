@@ -25,19 +25,23 @@ struct EntryDetailView: View {
     var body: some View {
         ZStack {
             ScrollView {
-                VStack(spacing: Theme.Spacing.lg) {
-                    if let dateLabel {
+                VStack(spacing: usesImmersiveBackdrop ? Theme.Spacing.md : Theme.Spacing.lg) {
+                    if let dateLabel, !usesImmersiveBackdrop {
                         Text(dateLabel.uppercased())
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .padding(.top, 8)
                     }
 
-                    AlbumArtView(url: entry.albumArtURL)
+                    AlbumArtView(url: entry.albumArtURL, cornerRadius: usesImmersiveBackdrop ? 24 : 16)
                         .padding(.horizontal, albumArtHorizontalPadding)
-                        .padding(.top, dateLabel == nil ? 8 : 0)
+                        .padding(.top, usesImmersiveBackdrop ? 0 : (dateLabel == nil ? 8 : 0))
 
-                    header
+                    if usesImmersiveBackdrop {
+                        todayHeader(dateLabel: dateLabel)
+                    } else {
+                        header
+                    }
                     PreviewPlayButton(entry: entry, accent: palette.accent)
                     ReactionsBar(entry: entry, accent: palette.accent)
                     streamingActions
@@ -135,6 +139,19 @@ struct EntryDetailView: View {
         .padding(.horizontal)
     }
 
+    private func todayHeader(dateLabel: String?) -> some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            if let dateLabel {
+                Text(dateLabel.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            header
+        }
+        .padding(.horizontal)
+    }
+
     private var streamingActions: some View {
         VStack(spacing: 12) {
             AddToPlaylistButton(entry: entry, accent: palette.accent)
@@ -149,14 +166,41 @@ struct EntryDetailView: View {
                 }
                 if let url = entry.spotifyURL {
                     Link(destination: url) {
-                        Label("Spotify", systemImage: "music.note")
-                            .frame(maxWidth: .infinity)
+                        HStack(spacing: 6) {
+                            SpotifyLogoIcon()
+                                .frame(width: 16, height: 16)
+                            Text("Spotify")
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                 }
             }
         }
         .padding(.horizontal)
+    }
+}
+
+private struct SpotifyLogoIcon: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color(red: 0.12, green: 0.84, blue: 0.38))
+
+            VStack(spacing: 2.2) {
+                spotifyWave(width: 9.5, rotation: 7)
+                spotifyWave(width: 8, rotation: 6)
+                spotifyWave(width: 6.4, rotation: 5)
+            }
+            .foregroundStyle(.black.opacity(0.82))
+        }
+    }
+
+    private func spotifyWave(width: CGFloat, rotation: Double) -> some View {
+        Capsule()
+            .frame(width: width, height: 1.35)
+            .rotationEffect(.degrees(rotation))
+            .offset(x: 0.8)
     }
 }
 
@@ -273,9 +317,9 @@ private struct AddToPlaylistButton: View {
 
     private var title: String {
         switch status {
-        case .idle: "Add to my Daily Playlist"
+        case .idle: "Add to Library"
         case .working: "Adding…"
-        case .added: "Added to Daily Playlist"
+        case .added: "Added to Library"
         case .failed: "Couldn't add — tap to retry"
         }
     }
