@@ -17,6 +17,7 @@ struct EntryDetailView: View {
 
     @Environment(AppEnvironment.self) private var env
     @State private var palette = ArtworkPalette()
+    @State private var showingShare = false
 
     var body: some View {
         ScrollView {
@@ -50,6 +51,17 @@ struct EntryDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 FavoriteButton(entry: entry)
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingShare = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("Share")
+            }
+        }
+        .sheet(isPresented: $showingShare) {
+            ShareCardSheet(entry: entry, artwork: palette.image, accent: palette.accent)
         }
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
     }

@@ -16,16 +16,21 @@ import CoreImage
 @Observable
 final class ArtworkPalette {
     private(set) var accent: Color = Theme.Brand.gradient[0]
+    /// The loaded artwork itself, kept so features like the share card can embed
+    /// it (ImageRenderer can't wait on an async AsyncImage).
+    private(set) var image: UIImage?
     private(set) var isLoaded = false
 
     func load(from url: URL?) async {
         guard let url else { return }
         guard
             let (data, _) = try? await URLSession.shared.data(from: url),
-            let image = UIImage(data: data),
-            let color = image.dominantVibrantColor()
+            let image = UIImage(data: data)
         else { return }
-        accent = Color(color)
+        self.image = image
+        if let color = image.dominantVibrantColor() {
+            accent = Color(color)
+        }
         isLoaded = true
     }
 }
