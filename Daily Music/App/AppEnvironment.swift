@@ -20,6 +20,7 @@ final class AppEnvironment {
     let favorites: FavoritesService
     let checkIns: CheckInService
     let sharedStats: SharedStatsService
+    let reactions: ReactionsService
     let notifications: NotificationService
     let musicPlayer: MusicPlayer
     let session: SessionStore
@@ -31,6 +32,7 @@ final class AppEnvironment {
         favorites: FavoritesService,
         checkIns: CheckInService,
         sharedStats: SharedStatsService,
+        reactions: ReactionsService,
         notifications: NotificationService,
         musicEngine: MusicEngine
     ) {
@@ -39,6 +41,7 @@ final class AppEnvironment {
         self.favorites = favorites
         self.checkIns = checkIns
         self.sharedStats = sharedStats
+        self.reactions = reactions
         self.notifications = notifications
         self.musicPlayer = MusicPlayer(engine: musicEngine)
         self.session = SessionStore(auth: auth)
@@ -53,6 +56,7 @@ final class AppEnvironment {
             favorites: MockFavoritesService(),
             checkIns: MockCheckInService(),
             sharedStats: MockSharedStatsService(),
+            reactions: MockReactionsService(),
             notifications: LocalNotificationService(),
             musicEngine: MockMusicEngine()
         )
@@ -67,6 +71,7 @@ final class AppEnvironment {
             favorites: SupabaseFavouritesService(),
             checkIns: SupabaseCheckInService(),
             sharedStats: SupabaseSharedStatsService(),
+            reactions: SupabaseReactionsService(),
             notifications: LocalNotificationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
             // Once the MusicKit capability is enabled (paid dev account),

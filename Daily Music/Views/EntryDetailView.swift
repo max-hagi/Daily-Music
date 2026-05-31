@@ -35,6 +35,7 @@ struct EntryDetailView: View {
 
                 header
                 PreviewPlayButton(entry: entry, accent: palette.accent)
+                ReactionsBar(entry: entry, accent: palette.accent)
                 streamingActions
 
                 Divider().padding(.vertical, 4)
