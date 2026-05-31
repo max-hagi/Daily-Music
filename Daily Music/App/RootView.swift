@@ -37,10 +37,17 @@ struct RootView: View {
         .animation(.spring(response: 0.65, dampingFraction: 0.86), value: didRestore)
         .animation(.spring(response: 0.75, dampingFraction: 0.84), value: env.session.isSignedIn)
         .task {
-            if !didRestore {
-                await env.session.restore()
-                didRestore = true
+            guard !didRestore else { return }
+            // Keep the branded launch animation on screen long enough to be seen,
+            // even when session restore returns instantly (cached session).
+            let start = ContinuousClock.now
+            await env.session.restore()
+            let minimum = Duration.seconds(1.7)
+            let elapsed = start.duration(to: .now)
+            if elapsed < minimum {
+                try? await Task.sleep(for: minimum - elapsed)
             }
+            didRestore = true
         }
     }
 }
