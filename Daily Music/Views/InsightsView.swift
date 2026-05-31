@@ -80,7 +80,7 @@ struct InsightsView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
         )
         .shadow(color: .indigo.opacity(0.3), radius: 16, y: 8)
     }
@@ -102,8 +102,7 @@ struct InsightsView: View {
             }
             Spacer()
         }
-        .padding(20)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .cardStyle()
     }
 
     private func listenersCard(_ count: Int) -> some View {
@@ -122,7 +121,6 @@ struct InsightsView: View {
             }
             Spacer()
         }
-        .padding(20)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .cardStyle()
     }
 }
