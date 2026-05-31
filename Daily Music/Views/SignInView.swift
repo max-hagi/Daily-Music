@@ -58,6 +58,14 @@ struct SignInView: View {
                 .font(.subheadline)
                 .disabled(env.session.isWorking)
                 #endif
+
+                if let error = env.session.errorMessage {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 4)
+                }
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 40)

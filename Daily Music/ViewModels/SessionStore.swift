@@ -13,6 +13,8 @@ import Foundation
 final class SessionStore {
     private(set) var session: AuthSession?
     private(set) var isWorking = false
+    /// Surfaced to the sign-in screen so failures are never silent.
+    private(set) var errorMessage: String?
 
     private let auth: AuthService
 
@@ -28,15 +30,30 @@ final class SessionStore {
     }
 
     func signInWithApple() async {
-        isWorking = true
-        defer { isWorking = false }
-        session = try? await auth.signInWithApple()
+        await attempt { try await self.auth.signInWithApple() }
     }
 
     func continueAsGuest() async {
+        await attempt { try await self.auth.continueAsGuest() }
+    }
+
+    private func attempt(_ work: @escaping () async throws -> AuthSession) async {
         isWorking = true
+        errorMessage = nil
         defer { isWorking = false }
-        session = try? await auth.continueAsGuest()
+        do {
+            session = try await work()
+        } catch {
+            errorMessage = Self.describe(error)
+        }
+    }
+
+    private static func describe(_ error: Error) -> String {
+        let raw = error.localizedDescription
+        if raw.localizedCaseInsensitiveContains("anonymous") {
+            return "Sign-in isn't enabled yet: anonymous sign-ins are turned off in Supabase. Enable them in Authentication → Sign In / Providers → Anonymous."
+        }
+        return "Sign-in failed: \(raw)"
     }
 
     func signOut() async {
