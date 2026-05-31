@@ -21,7 +21,8 @@ protocol AuthService {
     /// Performs Sign in with Apple. Throws if cancelled or it fails.
     func signInWithApple() async throws -> AuthSession
     /// DEBUG-only path so we don't sign in on every run while developing.
-    func continueAsGuest() -> AuthSession
+    /// Backed by Supabase anonymous sign-in in the live service, so it's async.
+    func continueAsGuest() async throws -> AuthSession
     func signOut() async
 }
 
@@ -43,7 +44,7 @@ final class MockAuthService: AuthService {
         return fakeUser
     }
 
-    func continueAsGuest() -> AuthSession {
+    func continueAsGuest() async throws -> AuthSession {
         AuthSession(
             userID: UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!,
             displayName: "Guest",

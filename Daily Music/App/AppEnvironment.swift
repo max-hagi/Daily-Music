@@ -54,9 +54,9 @@ final class AppEnvironment {
     /// wire each of those to its real implementation.
     static func live() -> AppEnvironment {
         AppEnvironment(
-            auth: MockAuthService(),
+            auth: SupabaseAuthService(),
             entries: SupabaseEntryService(),
-            favorites: MockFavoritesService(),
+            favorites: SupabaseFavouritesService(),
             notifications: LocalNotificationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
             // Once the MusicKit capability is enabled (paid dev account),

@@ -33,8 +33,10 @@ final class SessionStore {
         session = try? await auth.signInWithApple()
     }
 
-    func continueAsGuest() {
-        session = auth.continueAsGuest()
+    func continueAsGuest() async {
+        isWorking = true
+        defer { isWorking = false }
+        session = try? await auth.continueAsGuest()
     }
 
     func signOut() async {

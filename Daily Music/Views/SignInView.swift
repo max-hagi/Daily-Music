@@ -55,9 +55,10 @@ struct SignInView: View {
 
                 #if DEBUG
                 Button("Continue as guest (debug)") {
-                    env.session.continueAsGuest()
+                    Task { await env.session.continueAsGuest() }
                 }
                 .font(.subheadline)
+                .disabled(env.session.isWorking)
                 #endif
             }
             .padding(.horizontal, 32)
