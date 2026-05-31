@@ -20,6 +20,9 @@ struct MainTabView: View {
             Tab("Favorites", systemImage: "heart") {
                 FavoritesView()
             }
+            Tab("Insights", systemImage: "chart.bar.fill") {
+                InsightsView()
+            }
         }
     }
 }

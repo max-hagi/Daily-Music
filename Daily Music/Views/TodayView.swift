@@ -44,7 +44,7 @@ struct TodayView: View {
             }
         }
         .task {
-            if model == nil { model = TodayViewModel(entries: env.entries) }
+            if model == nil { model = TodayViewModel(entries: env.entries, checkIns: env.checkIns) }
             await model?.load()
         }
     }

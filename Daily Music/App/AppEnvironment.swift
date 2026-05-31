@@ -18,6 +18,7 @@ final class AppEnvironment {
     let auth: AuthService
     let entries: EntryService
     let favorites: FavoritesService
+    let checkIns: CheckInService
     let notifications: NotificationService
     let musicPlayer: MusicPlayer
     let session: SessionStore
@@ -27,12 +28,14 @@ final class AppEnvironment {
         auth: AuthService,
         entries: EntryService,
         favorites: FavoritesService,
+        checkIns: CheckInService,
         notifications: NotificationService,
         musicEngine: MusicEngine
     ) {
         self.auth = auth
         self.entries = entries
         self.favorites = favorites
+        self.checkIns = checkIns
         self.notifications = notifications
         self.musicPlayer = MusicPlayer(engine: musicEngine)
         self.session = SessionStore(auth: auth)
@@ -45,6 +48,7 @@ final class AppEnvironment {
             auth: MockAuthService(),
             entries: MockEntryService(),
             favorites: MockFavoritesService(),
+            checkIns: MockCheckInService(),
             notifications: LocalNotificationService(),
             musicEngine: MockMusicEngine()
         )
@@ -57,6 +61,7 @@ final class AppEnvironment {
             auth: SupabaseAuthService(),
             entries: SupabaseEntryService(),
             favorites: SupabaseFavouritesService(),
+            checkIns: SupabaseCheckInService(),
             notifications: LocalNotificationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
             // Once the MusicKit capability is enabled (paid dev account),

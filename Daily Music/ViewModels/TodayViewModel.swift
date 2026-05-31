@@ -14,9 +14,11 @@ final class TodayViewModel {
     private(set) var state: LoadState<DailyEntry> = .loading
 
     private let entries: EntryService
+    private let checkIns: CheckInService
 
-    init(entries: EntryService) {
+    init(entries: EntryService, checkIns: CheckInService) {
         self.entries = entries
+        self.checkIns = checkIns
     }
 
     func load() async {
@@ -24,6 +26,8 @@ final class TodayViewModel {
         do {
             if let entry = try await entries.todayEntry() {
                 state = .loaded(entry)
+                // Opening today's song counts toward the streak. Best-effort.
+                try? await checkIns.recordToday()
             } else {
                 state = .empty
             }
