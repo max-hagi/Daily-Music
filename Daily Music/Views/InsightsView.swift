@@ -12,6 +12,7 @@ import SwiftUI
 struct InsightsView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var model: InsightsViewModel?
+    @State private var showingWrapped = false
 
     var body: some View {
         NavigationStack {
@@ -30,6 +31,9 @@ struct InsightsView: View {
                 }
             }
             .navigationTitle("Insights")
+            .fullScreenCover(isPresented: $showingWrapped) {
+                WrappedView(favoriteIDs: env.favoritesStore.ids)
+            }
         }
         .task {
             if model == nil {
@@ -49,9 +53,23 @@ struct InsightsView: View {
                 archetypeCard(stats.tasteProfile)
                 artistsCard(stats.artistsDiscovered)
                 listenersCard(stats.listenersToday)
+                wrappedButton
             }
             .padding()
         }
+    }
+
+    private var wrappedButton: some View {
+        Button {
+            showingWrapped = true
+        } label: {
+            Label("See your month", systemImage: "sparkles")
+                .font(.dmHeadline())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+        }
+        .buttonStyle(PrimaryActionButtonStyle(tint: .purple))
+        .padding(.top, 4)
     }
 
     private func archetypeCard(_ profile: TasteProfile) -> some View {
