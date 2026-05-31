@@ -22,12 +22,9 @@ struct VaultView: View {
                         emptyMessage: "Past songs will collect here day by day.",
                         onRetry: { await model.load() }
                     ) { entries in
-                        List(entries) { entry in
-                            NavigationLink(value: entry) {
-                                EntryRow(entry: entry)
-                            }
+                        ScrollView {
+                            CalendarMonthView(entries: entries)
                         }
-                        .listStyle(.plain)
                     }
                 } else {
                     ProgressView()
