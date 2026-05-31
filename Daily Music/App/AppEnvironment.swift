@@ -49,4 +49,16 @@ final class AppEnvironment {
             musicEngine: MockMusicEngine()
         )
     }
+
+    /// Live entries from Supabase; auth/favorites/music still mocked until we
+    /// wire each of those to its real implementation.
+    static func live() -> AppEnvironment {
+        AppEnvironment(
+            auth: MockAuthService(),
+            entries: SupabaseEntryService(),
+            favorites: MockFavoritesService(),
+            notifications: LocalNotificationService(),
+            musicEngine: MockMusicEngine()
+        )
+    }
 }

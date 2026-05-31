@@ -9,9 +9,9 @@ import SwiftUI
 
 @main
 struct Daily_MusicApp: App {
-    // The composition root. Swap AppEnvironment.mock() for a live-services
-    // factory when Supabase/MusicKit are wired up.
-    @State private var env = AppEnvironment.mock()
+    // The composition root. Now using live Supabase entries; the remaining
+    // services swap to live the same way, one at a time.
+    @State private var env = AppEnvironment.live()
 
     var body: some Scene {
         WindowGroup {

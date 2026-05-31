@@ -18,3 +18,4 @@ xcuserdata/
 
 # Local secrets (Supabase keys, etc.) — never commit these
 Secrets.xcconfig
+SupabaseConfig.swift
