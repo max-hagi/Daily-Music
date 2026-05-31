@@ -25,20 +25,35 @@ struct TasteProfile: Equatable {
         var songsHeard: Int
         var artistsDiscovered: Int
         var favorites: Int
+        /// Dominant genre among the user's favorites — personalizes the archetype
+        /// (everyone hears the same songs, so genre signal comes from favorites).
+        var topGenre: String? = nil
         /// Average songs per artist — the "depth" signal.
         var depth: Double { artistsDiscovered > 0 ? Double(songsHeard) / Double(artistsDiscovered) : 0 }
     }
 
     static func resolve(_ m: Metrics) -> TasteProfile {
-        rules.first { $0.match(m) }?.profile ?? steadyListener
+        // Genre-based archetypes win when we have a clear favorite genre…
+        if let genre = m.topGenre, let profile = genreArchetypes[genre] {
+            return profile
+        }
+        // …otherwise fall back to behavior-based archetypes.
+        return rules.first { $0.match(m) }?.profile ?? steadyListener
     }
 
-    static func from(seen: [DailyEntry], favorites: Int = 0) -> TasteProfile {
+    static func from(seen: [DailyEntry], favorites: Int = 0, topGenre: String? = nil) -> TasteProfile {
         resolve(Metrics(
             songsHeard: seen.count,
             artistsDiscovered: Set(seen.map(\.artist)).count,
-            favorites: favorites
+            favorites: favorites,
+            topGenre: topGenre
         ))
+    }
+
+    /// Most common non-nil genre among the given entries (e.g. a user's favorites).
+    static func dominantGenre(of entries: [DailyEntry]) -> String? {
+        let counts = entries.compactMap(\.genre).reduce(into: [:]) { $0[$1, default: 0] += 1 }
+        return counts.max { $0.value < $1.value }?.key
     }
 
     // MARK: - Archetype catalogue (edit names / rules / colors freely)
@@ -86,6 +101,47 @@ struct TasteProfile: Equatable {
             symbol: "crown.fill",
             colors: [Color(red: 0.36, green: 0.28, blue: 0.92), Color(red: 0.13, green: 0.16, blue: 0.45)]
         )),
+    ]
+
+    /// Genre → archetype. Edit names/colors and add genres freely as the catalogue
+    /// grows. Keys must match the `genre` strings you store on entries.
+    private static let genreArchetypes: [String: TasteProfile] = [
+        "Pop": TasteProfile(
+            title: "Pop Perfectionist",
+            blurb: "Crisp hooks, polished production, and choruses that land exactly where they should.",
+            symbol: "sparkles",
+            colors: [Color(red: 0.96, green: 0.28, blue: 0.55), Color(red: 0.55, green: 0.24, blue: 0.9)]
+        ),
+        "Alternative": TasteProfile(
+            title: "Indie Heart",
+            blurb: "You go for feeling over formula — songs with a little ache in them.",
+            symbol: "guitars.fill",
+            colors: [Color(red: 0.2, green: 0.6, blue: 0.55), Color(red: 0.1, green: 0.36, blue: 0.55)]
+        ),
+        "Synthwave": TasteProfile(
+            title: "Neon Romantic",
+            blurb: "Midnight drives and analog glow. You like your nostalgia in widescreen.",
+            symbol: "bolt.horizontal.fill",
+            colors: [Color(red: 0.85, green: 0.16, blue: 0.62), Color(red: 0.27, green: 0.2, blue: 0.78)]
+        ),
+        "Electronic": TasteProfile(
+            title: "Pulse Seeker",
+            blurb: "You chase the build, the drop, the groove that won't sit still.",
+            symbol: "waveform.path.ecg",
+            colors: [Color(red: 0.0, green: 0.7, blue: 0.78), Color(red: 0.18, green: 0.32, blue: 0.86)]
+        ),
+        "Rock": TasteProfile(
+            title: "Rock Purist",
+            blurb: "Guitars, grit, and a good riff. You like it loud and honest.",
+            symbol: "flame.fill",
+            colors: [Color(red: 0.82, green: 0.22, blue: 0.18), Color(red: 0.5, green: 0.12, blue: 0.1)]
+        ),
+        "Hip-Hop": TasteProfile(
+            title: "Rhythm Scholar",
+            blurb: "Bars, flow, and production you feel in your chest. Word is bond.",
+            symbol: "mic.fill",
+            colors: [Color(red: 0.95, green: 0.6, blue: 0.05), Color(red: 0.6, green: 0.18, blue: 0.4)]
+        ),
     ]
 
     private static let newListener = TasteProfile(

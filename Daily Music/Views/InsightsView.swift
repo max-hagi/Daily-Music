@@ -25,7 +25,7 @@ struct InsightsView: View {
                         state: model.state,
                         emptyTitle: "No stats yet",
                         emptyMessage: "Open a few daily songs to start your collection.",
-                        onRetry: { await model.load() }
+                        onRetry: { await model.load(favoriteIDs: env.favoritesStore.ids) }
                     ) { stats in
                         content(stats)
                     }
@@ -41,7 +41,7 @@ struct InsightsView: View {
                 WrappedView(favoriteIDs: env.favoritesStore.ids)
             }
         }
-        .task {
+        .task(id: env.favoritesStore.ids) {
             if model == nil {
                 model = InsightsViewModel(
                     entries: env.entries,
@@ -49,33 +49,28 @@ struct InsightsView: View {
                     sharedStats: env.sharedStats
                 )
             }
-            await model?.load()
+            await model?.load(favoriteIDs: env.favoritesStore.ids)
         }
     }
 
     private var favoriteCount: Int { env.favoritesStore.ids.count }
 
-    private func archetype(for stats: InsightsViewModel.Stats) -> TasteProfile {
-        TasteProfile.resolve(.init(
-            songsHeard: stats.songsHeard,
-            artistsDiscovered: stats.artistsDiscovered,
-            favorites: favoriteCount
-        ))
-    }
-
     private func content(_ stats: InsightsViewModel.Stats) -> some View {
-        let profile = archetype(for: stats)
-        return ScrollView {
+        ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
-                archetypeCard(profile)
+                archetypeCard(stats.archetype)
                 statStrip(stats)
-                depthCard(stats)
-                wrappedButton(profile)
+                if stats.topGenres.isEmpty {
+                    depthCard(stats)
+                } else {
+                    topGenresCard(stats.topGenres)
+                }
+                wrappedButton(stats.archetype)
             }
             .padding()
         }
         .background(pageBackground)
-        .animation(.easeInOut(duration: 0.4), value: profile.title)
+        .animation(.easeInOut(duration: 0.4), value: stats.archetype.title)
     }
 
     private var pageBackground: some View {
@@ -233,6 +228,46 @@ struct InsightsView: View {
         case 0.25...: "Building"
         default: "Exploring"
         }
+    }
+
+    // MARK: - Top genres (real: from favorites' genres)
+
+    private func topGenresCard(_ genres: [InsightsViewModel.GenreCount]) -> some View {
+        let total = max(genres.reduce(0) { $0 + $1.count }, 1)
+        let palette: [Color] = [
+            Color(red: 0.96, green: 0.28, blue: 0.55),
+            Color(red: 1.0, green: 0.55, blue: 0.16),
+            Color(red: 0.0, green: 0.62, blue: 0.74),
+            Color(red: 0.42, green: 0.31, blue: 0.93)
+        ]
+        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("Top genres")
+                .font(.dmTitle())
+
+            ForEach(Array(genres.prefix(4).enumerated()), id: \.element.id) { index, genre in
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    HStack {
+                        Text(genre.name)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text("\(genre.count)")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.black.opacity(0.08))
+                            Capsule().fill(palette[index % palette.count].gradient)
+                                .frame(width: max(12, proxy.size.width * Double(genre.count) / Double(total)))
+                        }
+                    }
+                    .frame(height: 9)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Theme.Spacing.lg)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
     }
 
     // MARK: - Wrapped

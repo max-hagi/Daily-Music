@@ -51,6 +51,7 @@ final class WrappedViewModel {
             guard !seen.isEmpty else { state = .empty; return }
 
             let entriesThisMonth = history.filter { thisMonth($0.date) }
+            let favoriteEntries = history.filter { favoriteIDs.contains($0.id) }
             let top = Self.mostFrequentArtist(in: seen)
 
             state = .loaded(Recap(
@@ -60,7 +61,8 @@ final class WrappedViewModel {
                 favourites: entriesThisMonth.filter { favoriteIDs.contains($0.id) }.count,
                 topArtist: top?.artist,
                 topArtistPlays: top?.count ?? 0,
-                profile: .from(seen: seen, favorites: favoriteIDs.count)
+                profile: .from(seen: seen, favorites: favoriteIDs.count,
+                               topGenre: TasteProfile.dominantGenre(of: favoriteEntries))
             ))
         } catch {
             state = .failed(error)

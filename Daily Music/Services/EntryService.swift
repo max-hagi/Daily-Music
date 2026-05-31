@@ -43,7 +43,8 @@ final class MockEntryService: EntryService {
                 work, and that's exactly why it does.
                 """,
                 appleMusicID: "1440947554",
-                spotifyURI: "spotify:track:4gphxUgq0JSFv2BCLhNDiE"
+                spotifyURI: "spotify:track:4gphxUgq0JSFv2BCLhNDiE",
+                genre: "Alternative"
             ),
             DailyEntry(
                 id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
@@ -58,7 +59,8 @@ final class MockEntryService: EntryService {
                 Built for late-night drives with nowhere in particular to be.
                 """,
                 appleMusicID: "515382567",
-                spotifyURI: "spotify:track:1WrPa4lrIddctcb0bI8HFV"
+                spotifyURI: "spotify:track:1WrPa4lrIddctcb0bI8HFV",
+                genre: "Synthwave"
             ),
             DailyEntry(
                 id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
@@ -73,7 +75,8 @@ final class MockEntryService: EntryService {
                 **Why today:** some days don't resolve neatly, and that's allowed.
                 """,
                 appleMusicID: "1097864572",
-                spotifyURI: "spotify:track:2Qwzr1AjJjPft9XYG56dn1"
+                spotifyURI: "spotify:track:2Qwzr1AjJjPft9XYG56dn1",
+                genre: "Alternative"
             ),
         ]
     }

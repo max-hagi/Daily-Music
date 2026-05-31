@@ -75,6 +75,7 @@ private struct DailyEntryRow: Decodable {
     let journal_md: String
     let apple_music_id: String
     let spotify_uri: String
+    let genre: String?
 
     func toEntry() -> DailyEntry? {
         guard let day = SupabaseEntryService.dayFormatter.date(from: date) else { return nil }
@@ -86,7 +87,8 @@ private struct DailyEntryRow: Decodable {
             albumArtURL: album_art_url.flatMap(URL.init(string:)),
             journalMarkdown: journal_md,
             appleMusicID: apple_music_id,
-            spotifyURI: spotify_uri
+            spotifyURI: spotify_uri,
+            genre: genre
         )
     }
 }

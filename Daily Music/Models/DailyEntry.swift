@@ -21,6 +21,9 @@ struct DailyEntry: Identifiable, Hashable, Codable {
     let appleMusicID: String
     /// Spotify URI (e.g. "spotify:track:...") — used for the deep-link-out button.
     let spotifyURI: String
+    /// Curated genre (e.g. "Pop", "Alternative"). Drives genre-based taste
+    /// archetypes + the top-genres signal. nil until set on the entry.
+    var genre: String? = nil
 
     /// Deep link that opens this track in the Apple Music app (or the web fallback).
     var appleMusicURL: URL? {
