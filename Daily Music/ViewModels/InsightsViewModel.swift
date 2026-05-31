@@ -16,6 +16,8 @@ final class InsightsViewModel {
         var tasteProfile: TasteProfile
         var artistsDiscovered: Int
         var listenersToday: Int
+        /// Today's album art — used to theme the screen with its color.
+        var artURL: URL?
     }
 
     private(set) var state: LoadState<Stats> = .loading
@@ -38,6 +40,7 @@ final class InsightsViewModel {
         let dates = (try? await checkIns.checkInDates()) ?? []
         let history = (try? await entries.publishedHistory()) ?? []
         let listeners = (try? await sharedStats.todaysListenerCount()) ?? 0
+        let today = (try? await entries.todayEntry()) ?? nil
 
         let calendar = Calendar.current
         let seen = history.filter { dates.contains(calendar.startOfDay(for: $0.date)) }
@@ -45,7 +48,8 @@ final class InsightsViewModel {
         state = .loaded(Stats(
             tasteProfile: .from(seen: seen),
             artistsDiscovered: Set(seen.map(\.artist)).count,
-            listenersToday: listeners
+            listenersToday: listeners,
+            artURL: today?.albumArtURL
         ))
     }
 }
