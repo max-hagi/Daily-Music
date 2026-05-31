@@ -18,12 +18,14 @@ struct SignInView: View {
             Spacer()
 
             Image(systemName: "music.note.list")
-                .font(.system(size: 64))
-                .foregroundStyle(.tint)
+                .font(.system(size: 72))
+                .foregroundStyle(
+                    LinearGradient(colors: Theme.Brand.gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
 
             VStack(spacing: 8) {
                 Text("Daily Music")
-                    .font(.largeTitle.bold())
+                    .font(.dmDisplay())
                 Text("One hand-picked song a day, with a story to go with it.")
                     .font(.body)
                     .foregroundStyle(.secondary)
@@ -45,12 +47,8 @@ struct SignInView: View {
                         }
                         Text("Sign in with Apple")
                     }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.primary)
+                .buttonStyle(PrimaryActionButtonStyle())
                 .disabled(env.session.isWorking)
 
                 #if DEBUG

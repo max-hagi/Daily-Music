@@ -16,10 +16,11 @@ struct EntryDetailView: View {
     var dateLabel: String? = nil
 
     @Environment(AppEnvironment.self) private var env
+    @State private var palette = ArtworkPalette()
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: Theme.Spacing.lg) {
                 if let dateLabel {
                     Text(dateLabel.uppercased())
                         .font(.caption.weight(.semibold))
@@ -32,7 +33,7 @@ struct EntryDetailView: View {
                     .padding(.top, dateLabel == nil ? 8 : 0)
 
                 header
-                PreviewPlayButton(entry: entry)
+                PreviewPlayButton(entry: entry, accent: palette.accent)
                 streamingActions
 
                 Divider().padding(.vertical, 4)
@@ -42,6 +43,7 @@ struct EntryDetailView: View {
             }
             .padding(.bottom, 40)
         }
+        .background(backdrop)
         .navigationTitle(entry.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -49,15 +51,28 @@ struct EntryDetailView: View {
                 FavoriteButton(entry: entry)
             }
         }
+        .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
+    }
+
+    /// Soft wash of the artwork's accent color from the top, fading out behind
+    /// the album art — the heart of the "bold & expressive" look.
+    private var backdrop: some View {
+        LinearGradient(
+            colors: [palette.accent.opacity(0.45), palette.accent.opacity(0)],
+            startPoint: .top,
+            endPoint: .center
+        )
+        .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.6), value: palette.accent)
     }
 
     private var header: some View {
         VStack(spacing: 4) {
             Text(entry.title)
-                .font(.title2.bold())
+                .font(.dmTitle())
                 .multilineTextAlignment(.center)
             Text(entry.artist)
-                .font(.headline)
+                .font(.dmHeadline())
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal)
@@ -65,7 +80,7 @@ struct EntryDetailView: View {
 
     private var streamingActions: some View {
         VStack(spacing: 12) {
-            AddToPlaylistButton(entry: entry)
+            AddToPlaylistButton(entry: entry, accent: palette.accent)
 
             HStack(spacing: 12) {
                 if let url = entry.appleMusicURL {
@@ -92,6 +107,7 @@ struct EntryDetailView: View {
 
 private struct PreviewPlayButton: View {
     let entry: DailyEntry
+    var accent: Color
     @Environment(AppEnvironment.self) private var env
 
     var body: some View {
@@ -109,12 +125,10 @@ private struct PreviewPlayButton: View {
                 }
                 Text(player.isPlaying(entry) ? "Playing preview" : "Play 30-sec preview")
             }
-            .font(.headline)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(PrimaryActionButtonStyle(tint: accent))
         .padding(.horizontal)
+        .animation(.easeInOut(duration: 0.4), value: accent)
     }
 }
 
@@ -122,6 +136,7 @@ private struct PreviewPlayButton: View {
 
 private struct AddToPlaylistButton: View {
     let entry: DailyEntry
+    var accent: Color
     @Environment(AppEnvironment.self) private var env
 
     private enum Status { case idle, working, added, failed }
@@ -137,7 +152,7 @@ private struct AddToPlaylistButton: View {
         }
         .buttonStyle(.bordered)
         .disabled(status == .working || status == .added)
-        .tint(status == .added ? .green : .accentColor)
+        .tint(status == .added ? .green : accent)
     }
 
     private var title: String {
