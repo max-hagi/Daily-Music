@@ -9,13 +9,22 @@
 //
 
 import SwiftUI
+import Combine
 
 struct SignInView: View {
     @Environment(AppEnvironment.self) private var env
+    // Real album covers (read from the public catalogue) for the montage backdrop.
+    @State private var artURLs: [URL] = []
 
     var body: some View {
         ZStack {
-            WelcomeGradientBackground()
+            // A montage of real covers when we have them; the animated gradient is
+            // the graceful fallback while they load (or if the fetch fails).
+            if artURLs.isEmpty {
+                WelcomeGradientBackground()
+            } else {
+                AlbumArtMontage(urls: artURLs)
+            }
 
             VStack(spacing: 28) {
                 Spacer(minLength: 32)
@@ -89,6 +98,58 @@ struct SignInView: View {
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
             }
+        }
+        .task { await loadArt() }
+    }
+
+    /// Pull a handful of real covers from the public catalogue for the montage.
+    private func loadArt() async {
+        let entries = (try? await env.entries.publishedHistory()) ?? []
+        artURLs = Array(entries.compactMap(\.albumArtURL).prefix(10))
+    }
+}
+
+// Cross-fades through real album covers behind a dark scrim, with a slow
+// Ken-Burns drift — a living preview of what the user will discover.
+struct AlbumArtMontage: View {
+    let urls: [URL]
+    @State private var index = 0
+    @State private var zoomIn = false
+
+    private let timer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ZStack {
+            Color.black
+
+            ForEach(Array(urls.enumerated()), id: \.offset) { offset, url in
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color.black
+                }
+                .scaleEffect(zoomIn ? 1.18 : 1.04)
+                .blur(radius: 6)
+                .opacity(offset == index ? 1 : 0)
+                .animation(.easeInOut(duration: 1.4), value: index)
+            }
+
+            // Dark scrim so the white welcome content stays readable.
+            LinearGradient(
+                colors: [.black.opacity(0.35), .black.opacity(0.55), .black.opacity(0.85)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.easeInOut(duration: 6).repeatForever(autoreverses: true)) {
+                zoomIn = true
+            }
+        }
+        .onReceive(timer) { _ in
+            guard !urls.isEmpty else { return }
+            index = (index + 1) % urls.count
         }
     }
 }
