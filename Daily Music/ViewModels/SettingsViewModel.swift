@@ -29,44 +29,46 @@ final class SettingsViewModel {
         var id: String { rawValue }
     }
 
+    // Each preference writes to UserDefaults (instant local cache + offline) AND
+    // schedules a debounced sync to Supabase (the synced source of truth).
     var reminderEnabled = false {
-        didSet { defaults.set(reminderEnabled, forKey: Keys.reminderEnabled) }
+        didSet { defaults.set(reminderEnabled, forKey: Keys.reminderEnabled); scheduleSync() }
     }
 
     var reminderTime: Date {
-        didSet { defaults.set(reminderTime, forKey: Keys.reminderTime) }
+        didSet { defaults.set(reminderTime, forKey: Keys.reminderTime); scheduleSync() }
     }
 
     var listeningMode: ListeningMode = .balanced {
-        didSet { defaults.set(listeningMode.rawValue, forKey: Keys.listeningMode) }
+        didSet { defaults.set(listeningMode.rawValue, forKey: Keys.listeningMode); scheduleSync() }
     }
 
     var startTab: StartTab = .today {
-        didSet { defaults.set(startTab.rawValue, forKey: Keys.startTab) }
+        didSet { defaults.set(startTab.rawValue, forKey: Keys.startTab); scheduleSync() }
     }
 
     var hapticsEnabled = true {
-        didSet { defaults.set(hapticsEnabled, forKey: Keys.hapticsEnabled) }
+        didSet { defaults.set(hapticsEnabled, forKey: Keys.hapticsEnabled); scheduleSync() }
     }
 
     var showExplicitSongs = true {
-        didSet { defaults.set(showExplicitSongs, forKey: Keys.showExplicitSongs) }
+        didSet { defaults.set(showExplicitSongs, forKey: Keys.showExplicitSongs); scheduleSync() }
     }
 
     var allowPersonalizedInsights = true {
-        didSet { defaults.set(allowPersonalizedInsights, forKey: Keys.allowPersonalizedInsights) }
+        didSet { defaults.set(allowPersonalizedInsights, forKey: Keys.allowPersonalizedInsights); scheduleSync() }
     }
 
     var includeJournalInShares = true {
-        didSet { defaults.set(includeJournalInShares, forKey: Keys.includeJournalInShares) }
+        didSet { defaults.set(includeJournalInShares, forKey: Keys.includeJournalInShares); scheduleSync() }
     }
 
     var includeWatermarkInShares = true {
-        didSet { defaults.set(includeWatermarkInShares, forKey: Keys.includeWatermarkInShares) }
+        didSet { defaults.set(includeWatermarkInShares, forKey: Keys.includeWatermarkInShares); scheduleSync() }
     }
 
     var weeklyRecapEnabled = true {
-        didSet { defaults.set(weeklyRecapEnabled, forKey: Keys.weeklyRecapEnabled) }
+        didSet { defaults.set(weeklyRecapEnabled, forKey: Keys.weeklyRecapEnabled); scheduleSync() }
     }
 
     private(set) var permissionDenied = false
@@ -80,7 +82,12 @@ final class SettingsViewModel {
     }
 
     private let notifications: NotificationService
+    private let settingsService: SettingsService
     private let defaults = UserDefaults.standard
+    /// Debounce handle for the cloud save, and a guard so applying a remote load
+    /// doesn't immediately echo back as a save.
+    private var syncTask: Task<Void, Never>?
+    private var isApplyingRemote = false
 
     private enum Keys {
         static let reminderEnabled = "reminderEnabled"
@@ -95,8 +102,9 @@ final class SettingsViewModel {
         static let weeklyRecapEnabled = "settings.weeklyRecapEnabled"
     }
 
-    init(notifications: NotificationService) {
+    init(notifications: NotificationService, settings: SettingsService) {
         self.notifications = notifications
+        self.settingsService = settings
         self.reminderEnabled = defaults.bool(forKey: Keys.reminderEnabled)
         self.reminderTime = defaults.object(forKey: Keys.reminderTime) as? Date
             ?? Self.defaultReminderTime
@@ -117,6 +125,64 @@ final class SettingsViewModel {
 
     func refreshPermission() async {
         permissionDenied = await notifications.authorizationStatus() == .denied
+    }
+
+    // MARK: - Cloud sync (Supabase profiles row)
+
+    /// A snapshot of the current preferences as the synced blob.
+    var currentSettings: UserSettings {
+        var s = UserSettings()
+        s.reminderEnabled = reminderEnabled
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: reminderTime)
+        s.reminderHour = comps.hour ?? 8
+        s.reminderMinute = comps.minute ?? 0
+        s.listeningMode = listeningMode.rawValue
+        s.startTab = startTab.rawValue
+        s.hapticsEnabled = hapticsEnabled
+        s.showExplicitSongs = showExplicitSongs
+        s.allowPersonalizedInsights = allowPersonalizedInsights
+        s.includeJournalInShares = includeJournalInShares
+        s.includeWatermarkInShares = includeWatermarkInShares
+        s.weeklyRecapEnabled = weeklyRecapEnabled
+        return s
+    }
+
+    /// Pull the account's saved settings and apply them, overriding local cache.
+    func loadFromCloud() async {
+        let result = try? await settingsService.load()
+        guard let remote = result ?? nil else { return }
+        isApplyingRemote = true
+        apply(remote)
+        isApplyingRemote = false
+        if reminderEnabled { await scheduleReminder() }
+    }
+
+    private func apply(_ s: UserSettings) {
+        reminderEnabled = s.reminderEnabled
+        reminderTime = Calendar.current.date(
+            bySettingHour: s.reminderHour, minute: s.reminderMinute, second: 0, of: Date()
+        ) ?? reminderTime
+        listeningMode = ListeningMode(rawValue: s.listeningMode) ?? .balanced
+        startTab = StartTab(rawValue: s.startTab) ?? .today
+        hapticsEnabled = s.hapticsEnabled
+        showExplicitSongs = s.showExplicitSongs
+        allowPersonalizedInsights = s.allowPersonalizedInsights
+        includeJournalInShares = s.includeJournalInShares
+        includeWatermarkInShares = s.includeWatermarkInShares
+        weeklyRecapEnabled = s.weeklyRecapEnabled
+    }
+
+    /// Debounced cloud save — coalesces rapid changes (e.g. dragging the time
+    /// picker) into one write ~0.6s after the last change.
+    private func scheduleSync() {
+        guard !isApplyingRemote else { return }
+        let snapshot = currentSettings
+        syncTask?.cancel()
+        syncTask = Task { [settingsService] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            try? await settingsService.save(snapshot)
+        }
     }
 
     /// Called when the toggle flips. Requests permission on first enable, then

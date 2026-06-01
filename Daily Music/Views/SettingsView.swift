@@ -24,8 +24,11 @@ struct SettingsView: View {
             .navigationTitle("Settings")
         }
         .task {
-            if model == nil { model = SettingsViewModel(notifications: env.notifications) }
+            if model == nil {
+                model = SettingsViewModel(notifications: env.notifications, settings: env.settings)
+            }
             await model?.refreshPermission()
+            await model?.loadFromCloud()
         }
     }
 }

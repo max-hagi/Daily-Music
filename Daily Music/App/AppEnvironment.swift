@@ -28,6 +28,7 @@ final class AppEnvironment {
     let checkIns: CheckInService
     let sharedStats: SharedStatsService
     let reactions: ReactionsService
+    let settings: SettingsService
     let notifications: NotificationService
     let musicPlayer: MusicPlayer
     let session: SessionStore
@@ -40,6 +41,7 @@ final class AppEnvironment {
         checkIns: CheckInService,
         sharedStats: SharedStatsService,
         reactions: ReactionsService,
+        settings: SettingsService,
         notifications: NotificationService,
         musicEngine: MusicEngine
     ) {
@@ -49,6 +51,7 @@ final class AppEnvironment {
         self.checkIns = checkIns
         self.sharedStats = sharedStats
         self.reactions = reactions
+        self.settings = settings
         self.notifications = notifications
         // These three are WRAPPERS the container builds from the injected pieces:
         // MusicPlayer wraps whichever engine (mock vs MusicKit) it's given, and the
@@ -73,6 +76,7 @@ final class AppEnvironment {
             checkIns: MockCheckInService(),
             sharedStats: MockSharedStatsService(),
             reactions: MockReactionsService(),
+            settings: MockSettingsService(),
             notifications: LocalNotificationService(),
             musicEngine: MockMusicEngine()
         )
@@ -88,6 +92,7 @@ final class AppEnvironment {
             checkIns: SupabaseCheckInService(),
             sharedStats: SupabaseSharedStatsService(),
             reactions: SupabaseReactionsService(),
+            settings: SupabaseSettingsService(),
             notifications: LocalNotificationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
             // Once the MusicKit capability is enabled (paid dev account),
