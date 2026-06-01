@@ -2,8 +2,8 @@
 //  TodayView.swift
 //  Daily Music
 //
-//  The hero tab: today's curated song + journal. Reuses EntryDetailView so it
-//  looks identical to the Vault detail.
+//  The hero tab: today's curated song + journal. Reuses EntryDetailView with
+//  Today's immersive artwork backdrop and tighter hero layout.
 //
 
 import SwiftUI

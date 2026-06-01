@@ -2,8 +2,8 @@
 //  AuthService.swift
 //  Daily Music
 //
-//  Auth seam. v1 ships MockAuthService; later we add a SupabaseAuthService that
-//  implements the same protocol using Supabase Auth + Sign in with Apple.
+//  Auth seam. The mock signs in with fake local users; the live service uses
+//  Supabase Auth today and can later link real Sign in with Apple identities.
 //
 
 import Foundation

@@ -3,8 +3,8 @@
 //  Daily Music
 //
 //  Records one "check-in" per day the user opens the daily song, which is what
-//  the streak counts. v1 ships a mock with a few seeded days; the live version
-//  (SupabaseCheckInService) writes to the `check_ins` table.
+//  the streak/counts use. The mock has seeded days; SupabaseCheckInService
+//  writes to the `check_ins` table.
 //
 
 import Foundation

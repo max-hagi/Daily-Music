@@ -27,9 +27,9 @@ struct CalendarMonthView: View {
         }
         self.entriesByDay = dict
 
-        // Open on the month of the most recent entry (falls back to today).
-        let anchor = entries.map(\.date).max() ?? Date()
-        let monthStart = cal.dateInterval(of: .month, for: anchor)?.start ?? anchor
+        // Open on the current month so today's date is visible on first load.
+        let today = Date()
+        let monthStart = cal.dateInterval(of: .month, for: today)?.start ?? today
         // To initialize an @State from init you assign its UNDERSCORE-prefixed
         // backing storage directly: `_month = State(initialValue:)`. (You can't
         // write `month = …` here because the wrapper isn't set up yet.)

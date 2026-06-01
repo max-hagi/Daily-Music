@@ -4,9 +4,9 @@
 //
 //  Personal stats only. Everyone hears the same daily song, so "songs/artists
 //  seen" is identical for all users and isn't personal — the only things that
-//  ARE personal are (a) how many days you've shown up (check-ins) and (b) what
-//  you've liked. So the archetype, genres, and artist count all come from
-//  favorites; days-logged-in comes from check-ins.
+//  ARE personal are (a) how many days you've opened Today's song (check-ins)
+//  and (b) what you've liked. So the archetype, genres, and artist count all
+//  come from favorites; days active comes from check-ins.
 //
 
 import Foundation
@@ -23,7 +23,7 @@ final class InsightsViewModel {
     }
 
     struct Stats {
-        /// Days the user opened the app (check-ins) — a count, not a streak.
+        /// Days the user opened Today's song (check-ins) — a count, not a streak.
         var daysLoggedIn: Int
         /// How many songs the user has hearted.
         var favorites: Int

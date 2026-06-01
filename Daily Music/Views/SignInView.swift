@@ -2,14 +2,13 @@
 //  SignInView.swift
 //  Daily Music
 //
-//  The unauthenticated landing screen. v1 fakes Sign in with Apple through the
-//  mock AuthService; the real ASAuthorizationAppleIDButton flow drops in here
-//  later. The "Continue as guest" button is compiled into DEBUG builds only, so
-//  it can never ship to the App Store.
+//  The unauthenticated landing screen. In live builds the primary button creates
+//  a Supabase anonymous session until real Sign in with Apple is linked in. The
+//  "Continue as guest" button is compiled into DEBUG builds only, so it can
+//  never ship to the App Store.
 //
 
 import SwiftUI
-import Combine
 
 struct SignInView: View {
     @Environment(AppEnvironment.self) private var env
@@ -18,38 +17,42 @@ struct SignInView: View {
 
     var body: some View {
         ZStack {
-            // A montage of real covers when we have them; the animated gradient is
+            // A wall of real covers when we have them; the animated gradient is
             // the graceful fallback while they load (or if the fetch fails).
             if artURLs.isEmpty {
                 WelcomeGradientBackground()
             } else {
-                AlbumArtMontage(urls: artURLs)
+                AlbumArtGridBackdrop(urls: artURLs)
             }
 
-            VStack(spacing: 28) {
-                Spacer(minLength: 32)
+            VStack(spacing: 24) {
+                Spacer(minLength: 28)
 
-                VStack(spacing: Theme.Spacing.lg) {
+                VStack(spacing: Theme.Spacing.md) {
                     MusicLoadingView(title: nil, tint: .white)
-                        .padding(22)
+                        .padding(20)
                         .background(.white.opacity(0.18), in: Circle())
                         .overlay {
                             Circle().stroke(.white.opacity(0.35), lineWidth: 1)
                         }
-                        .shadow(color: .black.opacity(0.16), radius: 24, y: 12)
+                        .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
 
                     VStack(spacing: Theme.Spacing.sm) {
                         Text("Daily Music")
-                            .font(.system(size: 46, weight: .heavy, design: .rounded))
+                            .font(.system(size: 44, weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
 
                         Text("One hand-picked song a day, with a story to go with it.")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.86))
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.9))
                             .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .padding(.horizontal, 32)
+                .padding(.horizontal, 28)
 
                 Spacer()
 
@@ -102,55 +105,82 @@ struct SignInView: View {
         .task { await loadArt() }
     }
 
-    /// Pull a handful of real covers from the public catalogue for the montage.
+    /// Pull real covers from the current entry source for the moving cover wall.
     private func loadArt() async {
         let entries = (try? await env.entries.publishedHistory()) ?? []
-        artURLs = Array(entries.compactMap(\.albumArtURL).prefix(10))
+        artURLs = Array(entries.compactMap(\.albumArtURL).prefix(24))
     }
 }
 
-// Cross-fades through real album covers behind a dark scrim, with a slow
-// Ken-Burns drift — a living preview of what the user will discover.
-struct AlbumArtMontage: View {
+// A slowly panning cover wall. Each tile stays readable; the motion comes from
+// moving the whole grid, not zooming a single cover past recognition.
+struct AlbumArtGridBackdrop: View {
     let urls: [URL]
-    @State private var index = 0
-    @State private var zoomIn = false
+    @State private var isPanning = false
 
-    private let timer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
+    private var repeatedURLs: [URL] {
+        guard !urls.isEmpty else { return [] }
+        let repeats = max(3, Int(ceil(Double(48) / Double(urls.count))))
+        return Array(repeating: urls, count: repeats).flatMap { $0 }
+    }
 
     var body: some View {
-        ZStack {
-            Color.black
+        GeometryReader { proxy in
+            let tile = max(92, min(proxy.size.width / 3.2, 132))
+            let columns = max(4, Int(ceil(proxy.size.width / tile)) + 2)
+            let gridItems = Array(repeating: GridItem(.fixed(tile), spacing: 10), count: columns)
 
-            ForEach(Array(urls.enumerated()), id: \.offset) { offset, url in
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Color.black
+            ZStack {
+                WelcomeGradientBackground()
+
+                LazyVGrid(columns: gridItems, spacing: 10) {
+                    ForEach(Array(repeatedURLs.enumerated()), id: \.offset) { _, url in
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(.white.opacity(0.14))
+                        }
+                        .frame(width: tile, height: tile)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(.white.opacity(0.16), lineWidth: 1)
+                        }
+                        .shadow(color: .black.opacity(0.24), radius: 10, y: 6)
+                    }
                 }
-                .scaleEffect(zoomIn ? 1.18 : 1.04)
-                .blur(radius: 6)
-                .opacity(offset == index ? 1 : 0)
-                .animation(.easeInOut(duration: 1.4), value: index)
-            }
+                .frame(width: CGFloat(columns) * tile + CGFloat(columns - 1) * 10)
+                .rotationEffect(.degrees(-8))
+                .scaleEffect(1.08)
+                .offset(x: isPanning ? -72 : 18, y: isPanning ? -118 : -34)
+                .opacity(0.82)
+                .animation(.easeInOut(duration: 18).repeatForever(autoreverses: true), value: isPanning)
 
-            // Dark scrim so the white welcome content stays readable.
-            LinearGradient(
-                colors: [.black.opacity(0.35), .black.opacity(0.55), .black.opacity(0.85)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+                LinearGradient(
+                    colors: [
+                        .black.opacity(0.25),
+                        .black.opacity(0.5),
+                        .black.opacity(0.86)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .overlay {
+                    RadialGradient(
+                        colors: [.clear, .black.opacity(0.26)],
+                        center: .center,
+                        startRadius: 80,
+                        endRadius: 360
+                    )
+                }
+            }
+            .ignoresSafeArea()
+            .onAppear { isPanning = true }
         }
         .ignoresSafeArea()
-        .onAppear {
-            withAnimation(.easeInOut(duration: 6).repeatForever(autoreverses: true)) {
-                zoomIn = true
-            }
-        }
-        .onReceive(timer) { _ in
-            guard !urls.isEmpty else { return }
-            index = (index + 1) % urls.count
-        }
     }
 }
 

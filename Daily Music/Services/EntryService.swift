@@ -2,9 +2,9 @@
 //  EntryService.swift
 //  Daily Music
 //
-//  Reads curated daily entries. v1 ships MockEntryService with sample content;
-//  later a SupabaseEntryService implements the same protocol with a query
-//  against `daily_entries` where `published_at <= now()`.
+//  Reads curated daily entries. MockEntryService serves sample content; the live
+//  SupabaseEntryService implements the same protocol with queries against
+//  `daily_entries` where `published_at <= now()`.
 //
 
 import Foundation

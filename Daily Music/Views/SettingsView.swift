@@ -2,8 +2,8 @@
 //  SettingsView.swift
 //  Daily Music
 //
-//  Account, Apple Music connect, and the daily reminder. The reminder uses real
-//  local notifications; everything else is mocked for v1.
+//  Account, music connection, reminders, local preferences, sharing defaults,
+//  and support/about controls for the app.
 //
 
 import SwiftUI
@@ -30,41 +30,155 @@ struct SettingsView: View {
     }
 }
 
-private struct SettingsForm: View {
-    // @Bindable lets us make two-way BINDINGS ($model.reminderEnabled) to an
-    // @Observable object's properties — needed for Toggle/DatePicker which write
-    // back. (The parent owns the model; this view just binds to it.)
-    @Bindable var model: SettingsViewModel
-    @Environment(AppEnvironment.self) private var env
+private enum SettingsNavSection: String, CaseIterable, Identifiable {
+    case account
+    case music
+    case preferences
+    case about
 
-    var body: some View {
-        // `Form` renders the grouped, inset settings-style list automatically.
-        Form {
-            accountSection
-            appleMusicSection
-            reminderSection
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .account: "Account"
+        case .music: "Music"
+        case .preferences: "Prefs"
+        case .about: "About"
         }
     }
 
-    private var accountSection: some View {
-        // A Section groups related rows under a header.
-        Section("Account") {
-            if let session = env.session.session {
-                // LabeledContent = a "label … value" row.
-                LabeledContent("Signed in as", value: session.displayName ?? "You")
-                if session.isGuest {
-                    Label("Guest mode (debug)", systemImage: "person.crop.circle.badge.questionmark")
-                        .foregroundStyle(.secondary)
+    var symbol: String {
+        switch self {
+        case .account: "person.crop.circle"
+        case .music: "music.note.list"
+        case .preferences: "slider.horizontal.3"
+        case .about: "info.circle"
+        }
+    }
+}
+
+private struct SettingsForm: View {
+    @Bindable var model: SettingsViewModel
+    @Environment(AppEnvironment.self) private var env
+    @State private var showingResetConfirmation = false
+    @State private var selectedSection: SettingsNavSection = .account
+
+    var body: some View {
+        Form {
+            currentSections
+        }
+        .safeAreaInset(edge: .bottom) {
+            settingsBottomBar
+        }
+        .confirmationDialog(
+            "Reset local settings?",
+            isPresented: $showingResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset Settings", role: .destructive) {
+                Task { await model.resetLocalPreferences() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This resets reminder, sharing, and personalization preferences on this device. Your account, favorites, and check-ins are not deleted.")
+        }
+    }
+
+    @ViewBuilder
+    private var currentSections: some View {
+        switch selectedSection {
+        case .account:
+            profileSection
+        case .music:
+            musicSection
+            reminderSection
+        case .preferences:
+            dailyExperienceSection
+            personalizationSection
+            sharingSection
+        case .about:
+            supportSection
+            appSection
+        }
+    }
+
+    private var settingsBottomBar: some View {
+        HStack(spacing: 8) {
+            ForEach(SettingsNavSection.allCases) { section in
+                Button {
+                    withAnimation(.spring(duration: 0.28)) {
+                        selectedSection = section
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: section.symbol)
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(section.title)
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 9)
+                    .foregroundStyle(selectedSection == section ? .primary : .secondary)
+                    .background {
+                        if selectedSection == section {
+                            Capsule()
+                                .fill(.primary.opacity(0.1))
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
-                // `role: .destructive` paints the button red (system convention).
+                .buttonStyle(.plain)
+                .accessibilityLabel(section.title)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .background(.regularMaterial)
+    }
+
+    private var profileSection: some View {
+        Section {
+            if let session = env.session.session {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Theme.Brand.gradient[0].gradient)
+                        Image(systemName: session.isGuest ? "person.crop.circle.badge.questionmark" : "person.crop.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 48, height: 48)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(session.displayName ?? "Daily Music Listener")
+                            .font(.headline)
+                        Text(session.isGuest ? "Guest mode" : "Signed in")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+
                 Button("Sign out", role: .destructive) {
                     Task { await env.session.signOut() }
                 }
+            } else {
+                Label("Signed out", systemImage: "person.crop.circle.badge.xmark")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Account")
+        } footer: {
+            if env.session.session?.isGuest == true {
+                Text("Guest mode is for development. Favorites and check-ins still use the current Supabase session while you test.")
             }
         }
     }
 
-    private var appleMusicSection: some View {
+    private var musicSection: some View {
         Section {
             if model.appleMusicConnected {
                 Label("Apple Music connected", systemImage: "checkmark.circle.fill")
@@ -76,42 +190,42 @@ private struct SettingsForm: View {
                     HStack {
                         Label("Connect Apple Music", systemImage: "applelogo")
                         if model.connectingAppleMusic {
-                            Spacer(); ProgressView()
+                            Spacer()
+                            ProgressView()
                         }
                     }
                 }
                 .disabled(model.connectingAppleMusic)
             }
+
+            LabeledContent("Default action", value: "Add to Library")
+            LabeledContent("Preview length", value: "30 seconds")
         } header: {
             Text("Music")
         } footer: {
-            Text("Connecting lets you add the daily song to your Daily Playlist and play full tracks.")
+            Text("MusicKit will unlock library saves and richer playback once the Apple Music entitlement is enabled.")
         }
     }
 
     private var reminderSection: some View {
-        // This Section uses the explicit header:/footer: form (vs the string shorthand).
         Section {
-            // `isOn: $model.reminderEnabled` — the `$` makes a two-way binding so the
-            // toggle reads AND writes the property. `.onChange` then runs side effects
-            // (request permission + (re)schedule) whenever the value flips. The closure
-            // gets (oldValue, newValue); we ignore the old one with `_`.
             Toggle("Daily reminder", isOn: $model.reminderEnabled)
                 .onChange(of: model.reminderEnabled) { _, enabled in
                     Task { await model.applyReminderSetting(enabled: enabled) }
                 }
 
-            // Only reveal the time picker when the reminder is on.
             if model.reminderEnabled {
                 DatePicker(
                     "Time",
                     selection: $model.reminderTime,
-                    displayedComponents: .hourAndMinute   // time only, no date
+                    displayedComponents: .hourAndMinute
                 )
                 .onChange(of: model.reminderTime) { _, _ in
-                    Task { await model.scheduleReminder() }   // reschedule at the new time
+                    Task { await model.scheduleReminder() }
                 }
             }
+
+            Toggle("Weekly recap", isOn: $model.weeklyRecapEnabled)
         } header: {
             Text("Notifications")
         } footer: {
@@ -119,8 +233,82 @@ private struct SettingsForm: View {
                 Text("Notifications are turned off in iOS Settings. Enable them there to get your daily reminder.")
                     .foregroundStyle(.red)
             } else {
-                Text("Get a nudge when each day's song is ready.")
+                Text("Get a nudge when the daily song is ready and a light recap of what you saved each week.")
             }
+        }
+    }
+
+    private var dailyExperienceSection: some View {
+        Section {
+            Picker("Open app to", selection: $model.startTab) {
+                ForEach(SettingsViewModel.StartTab.allCases) { tab in
+                    Text(tab.rawValue).tag(tab)
+                }
+            }
+
+            Toggle("Haptic feedback", isOn: $model.hapticsEnabled)
+        } header: {
+            Text("Daily Experience")
+        } footer: {
+            Text("These preferences are saved now so the app can wire them into launch and interaction behavior later.")
+        }
+    }
+
+    private var personalizationSection: some View {
+        Section {
+            Picker("Discovery style", selection: $model.listeningMode) {
+                ForEach(SettingsViewModel.ListeningMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+
+            Toggle("Personalized insights", isOn: $model.allowPersonalizedInsights)
+            Toggle("Allow explicit songs", isOn: $model.showExplicitSongs)
+        } header: {
+            Text("Personalization")
+        } footer: {
+            Text("Daily Music is curated, but these preferences give future recommendations and archetypes a clearer signal.")
+        }
+    }
+
+    private var sharingSection: some View {
+        Section {
+            Toggle("Include journal quote", isOn: $model.includeJournalInShares)
+            Toggle("Include Daily Music mark", isOn: $model.includeWatermarkInShares)
+        } header: {
+            Text("Sharing")
+        } footer: {
+            Text("Choose what appears on generated share cards by default.")
+        }
+    }
+
+    private var supportSection: some View {
+        Section("Support") {
+            Link(destination: URL(string: "mailto:support@dailymusic.app?subject=Daily%20Music%20Feedback")!) {
+                Label("Send feedback", systemImage: "envelope")
+            }
+
+            Link(destination: URL(string: "https://dailymusic.app/privacy")!) {
+                Label("Privacy policy", systemImage: "hand.raised")
+            }
+
+            Link(destination: URL(string: "https://dailymusic.app/terms")!) {
+                Label("Terms of service", systemImage: "doc.text")
+            }
+        }
+    }
+
+    private var appSection: some View {
+        Section {
+            LabeledContent("Version", value: model.appVersion)
+
+            Button("Reset local settings", role: .destructive) {
+                showingResetConfirmation = true
+            }
+        } header: {
+            Text("App")
+        } footer: {
+            Text("Resetting local settings does not remove your account, favorites, check-ins, or Supabase data.")
         }
     }
 }

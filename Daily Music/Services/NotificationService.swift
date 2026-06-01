@@ -2,9 +2,8 @@
 //  NotificationService.swift
 //  Daily Music
 //
-//  The daily reminder. This one is "real" even in v1 — UserNotifications needs
-//  no backend, so we schedule a repeating LOCAL notification on the device.
-//  v1 uses a single fixed time; custom morning/evening times come later.
+//  The daily reminder. UserNotifications needs no backend, so we schedule a
+//  repeating local notification on the device at the user's chosen time.
 //
 
 import Foundation

@@ -3,7 +3,7 @@
 //  Daily Music
 //
 //  The core content unit: one curated song + journal entry for a given day.
-//  Mirrors the `daily_entries` table in Supabase (see the v1 design spec).
+//  This is the app-facing model that Supabase rows map into.
 //
 
 import Foundation
@@ -14,8 +14,8 @@ import Foundation
 //     each row across updates without us writing `id:` everywhere.
 //   • Hashable     — lets it be used as a Set element, dictionary key, or as the
 //     value in a NavigationLink/navigationDestination.
-//   • Codable      — lets Swift automatically convert it to/from JSON, which is
-//     how Supabase rows are decoded into this struct (see SupabaseEntryService).
+//   • Codable      — lets Swift automatically convert it to/from JSON when needed.
+//     Live Supabase rows decode into DailyEntryRow, then map into this model.
 struct DailyEntry: Identifiable, Hashable, Codable {
     let id: UUID
     /// The calendar day this entry belongs to. One entry per day.

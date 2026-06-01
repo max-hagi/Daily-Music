@@ -7,10 +7,10 @@
 //  first) and returns the first match, falling back to a default.
 //
 //  Today the rules use the data we actually have — songs heard, artists
-//  discovered, favorites, and listening depth — so every archetype is earned,
-//  not hardcoded. Genre-flavored archetypes (e.g. "Pop Perfectionist") plug in
-//  here once a `genre` field exists on entries: add a Metrics.topGenre and a
-//  rule that reads it. Names/rules/colors below are meant to be edited freely.
+//  discovered, favorites, listening depth, and optional genre — so every
+//  archetype is earned, not hardcoded. Genre-flavored archetypes (e.g.
+//  "Pop Perfectionist") activate when entries/favorites carry genre values.
+//  Names/rules/colors below are meant to be edited freely.
 //
 
 import SwiftUI

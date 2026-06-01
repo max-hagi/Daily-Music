@@ -3,9 +3,9 @@
 //  Daily Music
 //
 //  The reusable presentation of a single entry — album art, preview playback,
-//  the journal, favorite heart, and the streaming actions. Today shows it inline
-//  as the hero; Vault and Favorites push it onto a navigation stack. One view,
-//  three uses, so the experience is identical everywhere.
+//  the journal, favorite heart, and the streaming actions. Today uses its
+//  immersive hero configuration; Vault and Favorites push the standard detail
+//  version onto a navigation stack.
 //
 
 import SwiftUI
@@ -317,7 +317,7 @@ private struct PreviewPlayButton: View {
     }
 }
 
-// MARK: - Add to Daily Playlist
+// MARK: - Add to Library
 
 private struct AddToPlaylistButton: View {
     let entry: DailyEntry

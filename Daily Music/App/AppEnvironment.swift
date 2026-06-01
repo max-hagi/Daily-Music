@@ -2,9 +2,9 @@
 //  AppEnvironment.swift
 //  Daily Music
 //
-//  The composition root. One place that decides which concrete services the app
-//  runs with. v1 wires the mocks; to go live you change the initializers here
-//  (e.g. SupabaseEntryService()) and nothing in the views needs to move.
+//  The composition root. One place decides which concrete services the app
+//  runs with. Views depend on protocols, so switching between mock and live
+//  services happens here without moving view code.
 //
 //  Injected into SwiftUI via `.environment(...)` and read with
 //  `@Environment(AppEnvironment.self)`.
@@ -60,11 +60,11 @@ final class AppEnvironment {
     }
 
     // Two factory methods that assemble a fully-wired container. Picking `mock()`
-    // vs `live()` in Daily_MusicApp is the single switch between fake and real
-    // backends. Add a new service by: defining its protocol + mock + Supabase
+    // vs `live()` is the switch between sample data and production-backed
+    // services. Add a new service by: defining its protocol + mock + Supabase
     // impl, adding a stored property above, and listing it in both factories.
 
-    /// The v1 environment: everything mocked except local notifications.
+    /// Sample-data environment: everything mocked except local notifications.
     static func mock() -> AppEnvironment {
         AppEnvironment(
             auth: MockAuthService(),
@@ -78,8 +78,8 @@ final class AppEnvironment {
         )
     }
 
-    /// Live entries from Supabase; auth/favorites/music still mocked until we
-    /// wire each of those to its real implementation.
+    /// Production wiring: Supabase-backed auth/content/user state, local
+    /// notifications, and a mock music engine until MusicKit is enabled.
     static func live() -> AppEnvironment {
         AppEnvironment(
             auth: SupabaseAuthService(),
