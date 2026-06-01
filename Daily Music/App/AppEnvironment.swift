@@ -12,6 +12,13 @@
 
 import SwiftUI
 
+// The dependency container, injected into the view tree (see Daily_MusicApp).
+// Each stored property is typed as a PROTOCOL (AuthService, EntryService, …) not
+// a concrete class. That's the key to the mock/live swap: views only know the
+// protocol, so we can hand them mocks in development and real Supabase-backed
+// implementations in production without touching a single view.
+// @MainActor + @Observable for the same reasons as ArtworkPalette: UI-thread
+// safe, and views re-render when observed sub-objects change.
 @MainActor
 @Observable
 final class AppEnvironment {
@@ -43,10 +50,19 @@ final class AppEnvironment {
         self.sharedStats = sharedStats
         self.reactions = reactions
         self.notifications = notifications
+        // These three are WRAPPERS the container builds from the injected pieces:
+        // MusicPlayer wraps whichever engine (mock vs MusicKit) it's given, and the
+        // two stores wrap a service to add view-facing state. The container owns
+        // them so they live as long as the app does.
         self.musicPlayer = MusicPlayer(engine: musicEngine)
         self.session = SessionStore(auth: auth)
         self.favoritesStore = FavoritesStore(service: favorites)
     }
+
+    // Two factory methods that assemble a fully-wired container. Picking `mock()`
+    // vs `live()` in Daily_MusicApp is the single switch between fake and real
+    // backends. Add a new service by: defining its protocol + mock + Supabase
+    // impl, adding a stored property above, and listing it in both factories.
 
     /// The v1 environment: everything mocked except local notifications.
     static func mock() -> AppEnvironment {

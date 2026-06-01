@@ -14,6 +14,9 @@ final class SupabaseSharedStatsService: SharedStatsService {
     private let client = Supa.client
 
     func todaysListenerCount() async throws -> Int {
+        // Another SECURITY DEFINER function call (no params). It counts distinct
+        // users across the whole check_ins table — something RLS would otherwise
+        // forbid. `.value` decodes the function's scalar result straight into Int.
         try await client
             .rpc("todays_listener_count")
             .execute()

@@ -2,9 +2,11 @@
 //  InsightsViewModel.swift
 //  Daily Music
 //
-//  Builds the discovery-focused Insights stats: artists discovered + songs heard
-//  (from check-in dates ∩ published entries), the shared listener count, the top
-//  genres among the user's favorites, and the resolved taste archetype.
+//  Personal stats only. Everyone hears the same daily song, so "songs/artists
+//  seen" is identical for all users and isn't personal — the only things that
+//  ARE personal are (a) how many days you've shown up (check-ins) and (b) what
+//  you've liked. So the archetype, genres, and artist count all come from
+//  favorites; days-logged-in comes from check-ins.
 //
 
 import Foundation
@@ -12,6 +14,8 @@ import Foundation
 @MainActor
 @Observable
 final class InsightsViewModel {
+    // Identifiable (id = name) so ForEach can list these; Equatable so SwiftUI
+    // can diff/animate them. One row of the "top genres" chart.
     struct GenreCount: Identifiable, Equatable {
         var name: String
         var count: Int
@@ -19,10 +23,15 @@ final class InsightsViewModel {
     }
 
     struct Stats {
-        var artistsDiscovered: Int
-        var songsHeard: Int
-        var listenersToday: Int
+        /// Days the user opened the app (check-ins) — a count, not a streak.
+        var daysLoggedIn: Int
+        /// How many songs the user has hearted.
+        var favorites: Int
+        /// Distinct artists among the user's favorites.
+        var artists: Int
+        /// Genre breakdown of the user's favorites.
         var topGenres: [GenreCount]
+        /// Archetype resolved from the user's favorites.
         var archetype: TasteProfile
     }
 
@@ -30,28 +39,22 @@ final class InsightsViewModel {
 
     private let entries: EntryService
     private let checkIns: CheckInService
-    private let sharedStats: SharedStatsService
 
-    init(entries: EntryService, checkIns: CheckInService, sharedStats: SharedStatsService) {
+    init(entries: EntryService, checkIns: CheckInService) {
         self.entries = entries
         self.checkIns = checkIns
-        self.sharedStats = sharedStats
     }
 
     func load(favoriteIDs: Set<UUID>) async {
         state = .loading
 
-        // Each piece degrades independently: a missing/failing optional backend
-        // (e.g. the check_ins table before it's created) shouldn't blank the page.
+        // Degrade independently so a missing optional backend doesn't blank the page.
         let dates = (try? await checkIns.checkInDates()) ?? []
         let history = (try? await entries.publishedHistory()) ?? []
-        let listeners = (try? await sharedStats.todaysListenerCount()) ?? 0
 
-        let calendar = Calendar.current
-        let seen = history.filter { dates.contains(calendar.startOfDay(for: $0.date)) }
         let favoriteEntries = history.filter { favoriteIDs.contains($0.id) }
 
-        // Genre signal comes from favorites (those differ per user).
+        // Genre breakdown of favorites.
         let genreTally = favoriteEntries
             .compactMap(\.genre)
             .reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
@@ -59,17 +62,20 @@ final class InsightsViewModel {
             .map { GenreCount(name: $0.key, count: $0.value) }
             .sorted { $0.count > $1.count }
 
+        let favoriteArtists = Set(favoriteEntries.map(\.artist)).count
+
+        // Archetype is fully personal: it reasons about what you LIKED.
         let archetype = TasteProfile.resolve(.init(
-            songsHeard: seen.count,
-            artistsDiscovered: Set(seen.map(\.artist)).count,
+            songsHeard: favoriteEntries.count,
+            artistsDiscovered: favoriteArtists,
             favorites: favoriteIDs.count,
             topGenre: TasteProfile.dominantGenre(of: favoriteEntries)
         ))
 
         state = .loaded(Stats(
-            artistsDiscovered: Set(seen.map(\.artist)).count,
-            songsHeard: seen.count,
-            listenersToday: listeners,
+            daysLoggedIn: dates.count,
+            favorites: favoriteIDs.count,
+            artists: favoriteArtists,
             topGenres: topGenres,
             archetype: archetype
         ))

@@ -9,6 +9,8 @@
 
 import Foundation
 
+// An engagement log: one row per day the user opened the song. Stored as a Set
+// of start-of-day Dates so "did they check in today?" is a fast membership test.
 protocol CheckInService {
     /// Idempotently record that the user opened today's song.
     func recordToday() async throws
@@ -24,6 +26,8 @@ actor MockCheckInService: CheckInService {
     init() {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
+        // Seed today, yesterday, and the day before (normalized to midnight so
+        // each is a distinct Set member).
         days = [
             today,
             cal.date(byAdding: .day, value: -1, to: today)!,
@@ -32,6 +36,7 @@ actor MockCheckInService: CheckInService {
     }
 
     func recordToday() async throws {
+        // Idempotent: inserting today again when it's already in the Set does nothing.
         days.insert(Calendar.current.startOfDay(for: Date()))
     }
 

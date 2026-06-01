@@ -8,6 +8,8 @@
 
 import Foundation
 
+// A small value type describing the logged-in user. Equatable so SwiftUI can
+// detect when the session changes (e.g. signed in → out) and react.
 struct AuthSession: Equatable {
     let userID: UUID
     let displayName: String?
@@ -15,6 +17,12 @@ struct AuthSession: Equatable {
     let isGuest: Bool
 }
 
+// This protocol is the "seam": it lists WHAT auth can do without saying HOW.
+// Views/stores depend on this abstraction, and we plug in either MockAuthService
+// (below) or SupabaseAuthService at composition time. `async` = may suspend
+// (network); `throws` = may fail and the caller must handle the error with
+// `try`. A method that's `async` but not `throws` (like restoreSession) just
+// returns nil instead of erroring.
 protocol AuthService {
     /// Returns an existing session on launch, or nil if signed out.
     func restoreSession() async -> AuthSession?
@@ -27,6 +35,8 @@ protocol AuthService {
 }
 
 /// In-memory stand-in. Sign-in "succeeds" instantly with a stable fake user.
+// "Conforms to" AuthService — the compiler now requires every protocol method
+// to be implemented here.
 final class MockAuthService: AuthService {
     private let fakeUser = AuthSession(
         userID: UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!,
@@ -40,6 +50,8 @@ final class MockAuthService: AuthService {
     }
 
     func signInWithApple() async throws -> AuthSession {
+        // Task.sleep suspends without blocking the thread — a cheap way to fake a
+        // network delay so the UI's loading state is visible during development.
         try? await Task.sleep(for: .milliseconds(400)) // mimic the auth round-trip
         return fakeUser
     }

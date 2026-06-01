@@ -10,6 +10,10 @@
 
 import SwiftUI
 
+// The CARD itself — just a normal SwiftUI view laid out at a fixed 320×568 (a 9:16
+// story ratio). It's a regular view, but it's also what ImageRenderer rasterizes
+// into a shareable PNG below. Takes a pre-loaded UIImage rather than a URL because
+// ImageRenderer can't wait for an async download.
 struct ShareCardView: View {
     let entry: DailyEntry
     let artwork: UIImage?
@@ -76,11 +80,15 @@ struct ShareCardView: View {
 
     /// First sentence of the journal (markdown stripped), or a short prefix.
     private var pullQuote: String {
+        // Strip the Markdown markers (* and \) and flatten newlines to spaces so
+        // the quote renders as clean prose on the card.
         let plain = entry.journalMarkdown
             .replacingOccurrences(of: "*", with: "")
             .replacingOccurrences(of: "\\", with: "")
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        // If we can find a sentence boundary (". "), cut there; otherwise just take
+        // the first 140 characters. `plain[..<range.lowerBound]` slices up to the period.
         if let range = plain.range(of: ". ") {
             return String(plain[..<range.lowerBound]) + "."
         }
@@ -94,18 +102,24 @@ struct ShareCardSheet: View {
     let artwork: UIImage?
     let accent: Color
 
+    // `@Environment(\.dismiss)` gives us a function to close this sheet — the
+    // standard way a modal dismisses itself.
     @Environment(\.dismiss) private var dismiss
+    // The rasterized card. nil until render() finishes → show a spinner meanwhile.
     @State private var rendered: Image?
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
+                // A live, scaled-down preview of the card (the same view we render).
                 ShareCardView(entry: entry, artwork: artwork, accent: accent)
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .scaleEffect(0.82)
                     .frame(maxHeight: .infinity)
 
                 if let rendered {
+                    // ShareLink presents the system share sheet. `item:` is the image
+                    // to share; `preview:` is what shows in the share UI itself.
                     ShareLink(item: rendered, preview: SharePreview(entry.title, image: rendered)) {
                         Label("Share", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
@@ -113,7 +127,7 @@ struct ShareCardSheet: View {
                     }
                     .buttonStyle(.borderedProminent)
                 } else {
-                    ProgressView().frame(height: 52)
+                    ProgressView().frame(height: 52)   // still rendering
                 }
             }
             .padding()
@@ -121,18 +135,21 @@ struct ShareCardSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { dismiss() }   // close the sheet
                 }
             }
         }
-        // Re-render if the artwork arrives after the sheet opens.
+        // Re-render if the artwork arrives after the sheet opens. Using `artwork == nil`
+        // as the id means: when that Bool flips (nil → image), re-run render().
         .task(id: artwork == nil) { render() }
     }
 
+    // @MainActor because ImageRenderer + UI types must be touched on the main thread.
     @MainActor
     private func render() {
+        // ImageRenderer rasterizes any SwiftUI view into a still image off-screen.
         let renderer = ImageRenderer(content: ShareCardView(entry: entry, artwork: artwork, accent: accent))
-        renderer.scale = 3
+        renderer.scale = 3   // render at 3× so it's crisp on Retina displays
         if let ui = renderer.uiImage {
             rendered = Image(uiImage: ui)
         }

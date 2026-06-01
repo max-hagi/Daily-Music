@@ -41,13 +41,17 @@ final class WrappedViewModel {
 
             let calendar = Calendar.current
             let now = Date()
+            // Local helper: is this date in the current month/year? `toGranularity:
+            // .month` means "same month AND year", ignoring the day.
             func thisMonth(_ date: Date) -> Bool {
                 calendar.isDate(date, equalTo: now, toGranularity: .month)
             }
 
+            // Songs this month that the user actually opened (in history AND checked in).
             let seen = history.filter {
                 thisMonth($0.date) && dates.contains(calendar.startOfDay(for: $0.date))
             }
+            // No qualifying songs → nothing to recap. (`; return` exits early.)
             guard !seen.isEmpty else { state = .empty; return }
 
             let entriesThisMonth = history.filter { thisMonth($0.date) }
@@ -55,10 +59,12 @@ final class WrappedViewModel {
             let top = Self.mostFrequentArtist(in: seen)
 
             state = .loaded(Recap(
+                // `.formatted(.dateTime.month(.wide))` → full month name, e.g. "June".
                 monthName: now.formatted(.dateTime.month(.wide)),
                 songsHeard: seen.count,
                 artistsDiscovered: Set(seen.map(\.artist)).count,
                 favourites: entriesThisMonth.filter { favoriteIDs.contains($0.id) }.count,
+                // `top` is an optional tuple; `?.artist` / `?? 0` unwrap it safely.
                 topArtist: top?.artist,
                 topArtistPlays: top?.count ?? 0,
                 profile: .from(seen: seen, favorites: favoriteIDs.count,
@@ -69,6 +75,10 @@ final class WrappedViewModel {
         }
     }
 
+    // Returns the most-played artist and their play count, or nil if empty.
+    // `Dictionary(grouping:by:)` buckets entries by artist; `.mapValues(\.count)`
+    // turns each bucket (an array) into its length; `.max { … }` finds the biggest;
+    // `.map { ... }` reshapes the winning (key, value) pair into a named tuple.
     private static func mostFrequentArtist(in entries: [DailyEntry]) -> (artist: String, count: Int)? {
         let tally = Dictionary(grouping: entries, by: \.artist).mapValues(\.count)
         return tally.max { $0.value < $1.value }.map { ($0.key, $0.value) }

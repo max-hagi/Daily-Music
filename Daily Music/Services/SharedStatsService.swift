@@ -15,9 +15,11 @@ protocol SharedStatsService {
     func todaysListenerCount() async throws -> Int
 }
 
+// Note this is a plain `struct`, not an actor: it holds no mutable state (just
+// returns a constant), so there's nothing to protect against concurrent access.
 struct MockSharedStatsService: SharedStatsService {
     func todaysListenerCount() async throws -> Int {
         try? await Task.sleep(for: .milliseconds(200))
-        return 8423
+        return 8423   // a believable hardcoded number for the mock
     }
 }

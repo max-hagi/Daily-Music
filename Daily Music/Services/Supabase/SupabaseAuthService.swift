@@ -19,6 +19,9 @@ final class SupabaseAuthService: AuthService {
     private let client = Supa.client
 
     func restoreSession() async -> AuthSession? {
+        // `client.auth.session` throws if there's no persisted session. `try?`
+        // turns that into nil → guard bails → we report "signed out". The SDK
+        // persists the session to the keychain, so a returning user is restored.
         guard let session = try? await client.auth.session else { return nil }
         return Self.map(session.user)
     }
@@ -33,6 +36,8 @@ final class SupabaseAuthService: AuthService {
     }
 
     func continueAsGuest() async throws -> AuthSession {
+        // Creates a real auth.users row with a JWT — that's what favourites/check-ins
+        // RLS policies key off (auth.uid() = user_id).
         let session = try await client.auth.signInAnonymously()
         return Self.map(session.user)
     }
@@ -41,6 +46,9 @@ final class SupabaseAuthService: AuthService {
         try? await client.auth.signOut()
     }
 
+    // Translate the SDK's `User` into OUR small AuthSession value. `Self` refers to
+    // the type (SupabaseAuthService); `static` because it needs no instance state.
+    // Keeping this mapping here means the rest of the app never sees Supabase types.
     private static func map(_ user: User) -> AuthSession {
         AuthSession(
             userID: user.id,

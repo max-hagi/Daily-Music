@@ -17,6 +17,9 @@ struct FavoritesView: View {
         NavigationStack {
             Group {
                 if let model {
+                    // Unlike the other screens (which use LoadStateView), this one
+                    // switches the state by hand so each case gets its own bespoke,
+                    // on-brand layout instead of the generic placeholders.
                     switch model.state {
                     case .loaded(let entries): loaded(entries)
                     case .empty: emptyState
@@ -33,6 +36,10 @@ struct FavoritesView: View {
                 EntryDetailView(entry: entry)
             }
         }
+        // KEY: `.task(id: env.favoritesStore.ids)` re-runs whenever the favorites
+        // SET changes. So un-hearting a song on the detail screen flips the shared
+        // store, which changes `ids`, which re-runs this task → the list updates
+        // live without any manual refresh wiring.
         .task(id: env.favoritesStore.ids) {
             if model == nil { model = FavoritesViewModel(entries: env.entries) }
             await model?.load(favoriteIDs: env.favoritesStore.ids)
@@ -92,6 +99,7 @@ struct FavoritesView: View {
                     .font(.caption.weight(.heavy))
                     .foregroundStyle(.white.opacity(0.75))
             }
+            // Inline ternary handles singular/plural ("1 favorite" vs "3 favorites").
             Text("\(count) \(count == 1 ? "favorite" : "favorites")")
                 .font(.system(size: 36, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
@@ -131,6 +139,8 @@ struct FavoritesView: View {
     }
 
     private var failedState: some View {
+        // The label/actions closure form of ContentUnavailableView lets us add a
+        // custom Retry button alongside the standard "empty" presentation.
         ContentUnavailableView {
             Label("Couldn't load favorites", systemImage: "exclamationmark.triangle")
         } actions: {

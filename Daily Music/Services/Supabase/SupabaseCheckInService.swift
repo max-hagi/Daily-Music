@@ -16,6 +16,9 @@ final class SupabaseCheckInService: CheckInService {
     func recordToday() async throws {
         let userID = try await client.auth.session.user.id
         let today = Self.dayFormatter.string(from: Date())
+        // upsert = insert-or-update. `onConflict: "user_id,date"` names the unique
+        // constraint: if a row for this user+day already exists, do nothing harmful
+        // instead of erroring. That's what makes opening the app twice a no-op.
         try await client
             .from("check_ins")
             .upsert(CheckInRow(user_id: userID, date: today), onConflict: "user_id,date")
@@ -25,9 +28,10 @@ final class SupabaseCheckInService: CheckInService {
     func checkInDates() async throws -> Set<Date> {
         let rows: [CheckInRow] = try await client
             .from("check_ins")
-            .select("user_id,date")
+            .select("user_id,date")   // RLS scopes this to the current user
             .execute()
             .value
+        // Parse each "yyyy-MM-dd" back into a Date; compactMap drops any that fail.
         return Set(rows.compactMap { Self.dayFormatter.date(from: $0.date) })
     }
 
@@ -40,6 +44,8 @@ final class SupabaseCheckInService: CheckInService {
     }()
 }
 
+// Codable (= Decodable + Encodable) here because this one struct is used for BOTH
+// the upsert body (encode) and the select result (decode).
 private struct CheckInRow: Codable {
     let user_id: UUID
     let date: String

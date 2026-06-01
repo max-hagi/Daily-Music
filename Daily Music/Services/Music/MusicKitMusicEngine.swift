@@ -25,11 +25,13 @@
 //
 
 import Foundation
-import MusicKit
-import AVFoundation
+import MusicKit        // Apple Music catalog + library APIs
+import AVFoundation    // AVPlayer, used to play the preview audio file
 
 final class MusicKitMusicEngine: MusicEngine {
     private static let playlistName = "Daily Music"
+    // Held as a property so the player isn't deallocated mid-playback (a local
+    // var would be freed the instant play() returns, cutting off the audio).
     private var previewPlayer: AVPlayer?
 
     // MARK: MusicEngine
@@ -37,27 +39,34 @@ final class MusicKitMusicEngine: MusicEngine {
     func play(appleMusicID: String) async throws {
         try await ensureAuthorized()
         let song = try await fetchSong(id: appleMusicID)
+        // previewAssets are the free 30-sec clips (no subscription needed). Optional
+        // chain + guard: if there's no preview URL, surface a clear error.
         guard let previewURL = song.previewAssets?.first?.url else {
             throw MusicEngineError.noPreviewAvailable
         }
+        // AVPlayer streams the preview file directly.
         let player = AVPlayer(url: previewURL)
         previewPlayer = player
         player.play()
     }
 
+    // `?.` no-ops safely if nothing is loaded yet.
     func pause() async {
         previewPlayer?.pause()
     }
 
     func stop() async {
         previewPlayer?.pause()
-        previewPlayer = nil
+        previewPlayer = nil   // release the player so it can be torn down
     }
 
     func addToDailyPlaylist(appleMusicID: String) async throws {
         try await ensureAuthorized()
         let song = try await fetchSong(id: appleMusicID)
 
+        // Find-or-create: fetch the user's library playlists, reuse ours if present,
+        // otherwise create it seeded with this song. `_ =` discards the returned
+        // playlist since we don't need it here.
         let existing = try await MusicLibraryRequest<Playlist>().response().items
         if let playlist = existing.first(where: { $0.name == Self.playlistName }) {
             try await MusicLibrary.shared.add(song, to: playlist)
@@ -68,12 +77,16 @@ final class MusicKitMusicEngine: MusicEngine {
 
     // MARK: Helpers
 
+    // Gate every operation on permission. If already authorized, return early;
+    // otherwise show the system prompt and throw if the user declines.
     private func ensureAuthorized() async throws {
         if MusicAuthorization.currentStatus == .authorized { return }
         let status = await MusicAuthorization.request()
         guard status == .authorized else { throw MusicEngineError.notAuthorized }
     }
 
+    // Look the song up in the Apple Music catalog by its ID. `matching: \.id` is a
+    // KEY PATH — a type-safe reference to the Song.id property the request filters on.
     private func fetchSong(id: String) async throws -> Song {
         let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(id))
         let response = try await request.response()
@@ -82,11 +95,15 @@ final class MusicKitMusicEngine: MusicEngine {
     }
 }
 
+// Conforming to LocalizedError means `errorDescription` is what users see if this
+// error is shown. Each case maps to friendly copy.
 enum MusicEngineError: LocalizedError {
     case notAuthorized
     case songNotFound
     case noPreviewAvailable
 
+    // Note the bodies have no `return` — single-expression switch cases in Swift
+    // return implicitly.
     var errorDescription: String? {
         switch self {
         case .notAuthorized:    "Apple Music access wasn't granted."

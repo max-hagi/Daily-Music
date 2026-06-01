@@ -12,6 +12,10 @@ import SwiftUI
 
 struct EntryDetailView: View {
     let entry: DailyEntry
+    // These four `var … = default` props are the CONFIGURATION knobs that let one
+    // view serve three contexts. Today passes its own values (immersive backdrop,
+    // no nav title); Vault/Favorites take the defaults. Callers only override what
+    // they need.
     /// Optional caption shown above the art (Today passes the date here).
     var dateLabel: String? = nil
     var showsNavigationTitle = true
@@ -19,6 +23,8 @@ struct EntryDetailView: View {
     var usesImmersiveBackdrop = false
 
     @Environment(AppEnvironment.self) private var env
+    // Each detail view owns its own palette; @State so it survives redraws and the
+    // view re-renders as the accent color resolves from the artwork.
     @State private var palette = ArtworkPalette()
     @State private var showingShare = false
 
@@ -53,19 +59,24 @@ struct EntryDetailView: View {
                 }
                 .padding(.bottom, 40)
             }
+            // Hide the real content (opacity 0) until the artwork has resolved, so
+            // we don't flash an un-themed screen before fading in.
             .opacity(isWaitingForArtwork ? 0 : 1)
 
+            // Overlaid loading screen, shown only during the immersive-mode wait.
             if isWaitingForArtwork {
                 ArtworkLoadingScreen(entry: entry)
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
-        .background(backdrop)
-        .scrollContentBackground(.hidden)
+        .background(backdrop)                          // the artwork-tinted wash (computed below)
+        .scrollContentBackground(.hidden)              // let our background show through the ScrollView
         .navigationTitle(showsNavigationTitle ? entry.title : "")
         .navigationBarTitleDisplayMode(.inline)
+        // In immersive mode, hide the bar backgrounds so the wash bleeds edge-to-edge.
         .toolbarBackground(usesImmersiveBackdrop ? .hidden : .automatic, for: .navigationBar, .tabBar)
         .toolbar {
+            // Two trailing toolbar items: the favorite heart and the share button.
             ToolbarItem(placement: .topBarTrailing) {
                 FavoriteButton(entry: entry)
             }
@@ -81,6 +92,8 @@ struct EntryDetailView: View {
         .sheet(isPresented: $showingShare) {
             ShareCardSheet(entry: entry, artwork: palette.image, accent: palette.accent)
         }
+        // Load the palette when shown, and RELOAD if we navigate to a different
+        // entry (id changes) — the `id:` is what makes that re-trigger happen.
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
     }
 
@@ -110,6 +123,8 @@ struct EntryDetailView: View {
         .animation(.easeInOut(duration: 0.35), value: palette.didFinishLoading)
     }
 
+    // Only the immersive (Today) presentation waits on artwork; pushed details
+    // render immediately.
     private var isWaitingForArtwork: Bool {
         usesImmersiveBackdrop && !palette.didFinishLoading
     }
@@ -157,6 +172,8 @@ struct EntryDetailView: View {
             AddToPlaylistButton(entry: entry, accent: palette.accent)
 
             HStack(spacing: 12) {
+                // `Link` opens a URL externally (deep-links into the Apple Music /
+                // Spotify apps, or their web pages). Only shown if the URL parsed.
                 if let url = entry.appleMusicURL {
                     Link(destination: url) {
                         Label("Apple Music", systemImage: "applelogo")
@@ -181,6 +198,8 @@ struct EntryDetailView: View {
     }
 }
 
+// A hand-drawn Spotify-style glyph (three stacked sound waves in a green circle),
+// built from primitive shapes since we can't ship Spotify's trademarked logo asset.
 private struct SpotifyLogoIcon: View {
     var body: some View {
         ZStack {
@@ -204,6 +223,8 @@ private struct SpotifyLogoIcon: View {
     }
 }
 
+// The full-screen "spinning disc" placeholder shown (immersive mode only) while
+// the artwork downloads, so Today never appears half-themed.
 private struct ArtworkLoadingScreen: View {
     let entry: DailyEntry
     @State private var isAnimating = false
@@ -271,6 +292,8 @@ private struct PreviewPlayButton: View {
     @Environment(AppEnvironment.self) private var env
 
     var body: some View {
+        // The shared MusicPlayer is observed: when its state changes, this button
+        // re-renders to show play/pause/spinner. `isActive` = is THIS entry loaded?
         let player = env.musicPlayer
         let isActive = player.nowPlayingEntryID == entry.id
 
@@ -278,6 +301,8 @@ private struct PreviewPlayButton: View {
             Task { await player.toggle(entry) }
         } label: {
             HStack(spacing: 10) {
+                // Show a spinner only while THIS entry is buffering, otherwise the
+                // play/pause icon depending on whether it's currently playing.
                 if isActive && player.state == .buffering {
                     ProgressView().tint(.white)
                 } else {
@@ -286,9 +311,9 @@ private struct PreviewPlayButton: View {
                 Text(player.isPlaying(entry) ? "Playing preview" : "Play 30-sec preview")
             }
         }
-        .buttonStyle(PrimaryActionButtonStyle(tint: accent))
+        .buttonStyle(PrimaryActionButtonStyle(tint: accent))   // tinted by the artwork accent
         .padding(.horizontal)
-        .animation(.easeInOut(duration: 0.4), value: accent)
+        .animation(.easeInOut(duration: 0.4), value: accent)   // smoothly cross-fade the tint
     }
 }
 
@@ -299,6 +324,9 @@ private struct AddToPlaylistButton: View {
     var accent: Color
     @Environment(AppEnvironment.self) private var env
 
+    // A tiny state machine: the button's label/icon/enabled-ness all derive from
+    // this one @State enum. Modeling UI states as an enum (vs scattered bools)
+    // keeps "impossible" combinations from happening.
     private enum Status { case idle, working, added, failed }
     @State private var status: Status = .idle
 
@@ -306,15 +334,16 @@ private struct AddToPlaylistButton: View {
         Button {
             Task { await add() }
         } label: {
-            Label(title, systemImage: icon)
+            Label(title, systemImage: icon)   // both `title` and `icon` switch on `status`
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
         }
         .buttonStyle(.bordered)
-        .disabled(status == .working || status == .added)
+        .disabled(status == .working || status == .added)   // no re-tapping mid-add / once added
         .tint(status == .added ? .green : accent)
     }
 
+    // Computed label text for each state.
     private var title: String {
         switch status {
         case .idle: "Add to Library"
@@ -324,6 +353,7 @@ private struct AddToPlaylistButton: View {
         }
     }
 
+    // Computed icon for each state (`default` covers idle + working).
     private var icon: String {
         switch status {
         case .added: "checkmark.circle.fill"
@@ -332,6 +362,7 @@ private struct AddToPlaylistButton: View {
         }
     }
 
+    // Drive the state machine through working → added/failed around the async call.
     private func add() async {
         status = .working
         do {
@@ -350,6 +381,9 @@ private struct FavoriteButton: View {
     @Environment(AppEnvironment.self) private var env
 
     var body: some View {
+        // Reads the SHARED FavoritesStore — so the heart here stays in sync with
+        // the same entry shown anywhere else, and the optimistic toggle updates
+        // every screen at once.
         let store = env.favoritesStore
         let isFav = store.isFavorite(entry)
 

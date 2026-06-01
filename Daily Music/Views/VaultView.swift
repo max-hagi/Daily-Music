@@ -35,6 +35,10 @@ struct VaultView: View {
             }
             .navigationTitle("Vault")
             .toolbarBackground(.hidden, for: .navigationBar)
+            // The OTHER half of data-driven navigation: this registers what to show
+            // when a DailyEntry value is pushed (by any NavigationLink(value:) in
+            // this stack — the calendar cells, the hero, the recent rows). One
+            // destination, many sources.
             .navigationDestination(for: DailyEntry.self) { entry in
                 EntryDetailView(entry: entry)
             }
@@ -45,6 +49,8 @@ struct VaultView: View {
         }
     }
 
+    // The loaded layout. Broken into named helper functions (vaultHero, etc.) that
+    // each take the entries and return a piece of the screen — keeps `body` readable.
     private func content(_ entries: [DailyEntry]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
@@ -202,6 +208,8 @@ struct VaultView: View {
                 .font(.dmTitle())
 
             VStack(spacing: 10) {
+                // `.prefix(5)` takes at most the first five; ForEach needs an Array,
+                // and no `id:` is required because DailyEntry is Identifiable.
                 ForEach(Array(entries.prefix(5))) { entry in
                     NavigationLink(value: entry) {
                         EntryRow(entry: entry)
@@ -209,18 +217,20 @@ struct VaultView: View {
                             .padding(Theme.Spacing.md)
                             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plain)   // keep our custom row look, not the default link styling
                 }
             }
         }
     }
 
+    // Count entries whose date is in the current month (toGranularity: .month).
     private func entriesThisMonth(_ entries: [DailyEntry]) -> Int {
         entries.filter { calendar.isDate($0.date, equalTo: Date(), toGranularity: .month) }.count
     }
 }
 
 /// A compact row used by both the Vault and Favorites lists.
+// Defined once and reused in two screens — the payoff of small composable views.
 struct EntryRow: View {
     let entry: DailyEntry
 

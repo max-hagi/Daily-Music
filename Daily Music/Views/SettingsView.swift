@@ -31,10 +31,14 @@ struct SettingsView: View {
 }
 
 private struct SettingsForm: View {
+    // @Bindable lets us make two-way BINDINGS ($model.reminderEnabled) to an
+    // @Observable object's properties — needed for Toggle/DatePicker which write
+    // back. (The parent owns the model; this view just binds to it.)
     @Bindable var model: SettingsViewModel
     @Environment(AppEnvironment.self) private var env
 
     var body: some View {
+        // `Form` renders the grouped, inset settings-style list automatically.
         Form {
             accountSection
             appleMusicSection
@@ -43,13 +47,16 @@ private struct SettingsForm: View {
     }
 
     private var accountSection: some View {
+        // A Section groups related rows under a header.
         Section("Account") {
             if let session = env.session.session {
+                // LabeledContent = a "label … value" row.
                 LabeledContent("Signed in as", value: session.displayName ?? "You")
                 if session.isGuest {
                     Label("Guest mode (debug)", systemImage: "person.crop.circle.badge.questionmark")
                         .foregroundStyle(.secondary)
                 }
+                // `role: .destructive` paints the button red (system convention).
                 Button("Sign out", role: .destructive) {
                     Task { await env.session.signOut() }
                 }
@@ -83,20 +90,26 @@ private struct SettingsForm: View {
     }
 
     private var reminderSection: some View {
+        // This Section uses the explicit header:/footer: form (vs the string shorthand).
         Section {
+            // `isOn: $model.reminderEnabled` — the `$` makes a two-way binding so the
+            // toggle reads AND writes the property. `.onChange` then runs side effects
+            // (request permission + (re)schedule) whenever the value flips. The closure
+            // gets (oldValue, newValue); we ignore the old one with `_`.
             Toggle("Daily reminder", isOn: $model.reminderEnabled)
                 .onChange(of: model.reminderEnabled) { _, enabled in
                     Task { await model.applyReminderSetting(enabled: enabled) }
                 }
 
+            // Only reveal the time picker when the reminder is on.
             if model.reminderEnabled {
                 DatePicker(
                     "Time",
                     selection: $model.reminderTime,
-                    displayedComponents: .hourAndMinute
+                    displayedComponents: .hourAndMinute   // time only, no date
                 )
                 .onChange(of: model.reminderTime) { _, _ in
-                    Task { await model.scheduleReminder() }
+                    Task { await model.scheduleReminder() }   // reschedule at the new time
                 }
             }
         } header: {

@@ -46,9 +46,13 @@ struct SignInView: View {
 
                 VStack(spacing: 12) {
                     Button {
+                        // Kick off async sign-in. The Button action itself is sync,
+                        // so wrap the await in a Task.
                         Task { await env.session.signInWithApple() }
                     } label: {
                         HStack {
+                            // Swap the Apple logo for the bouncing-bars spinner while
+                            // a sign-in is in flight (isWorking is observed → live).
                             if env.session.isWorking {
                                 MusicLoadingView(title: nil, tint: .white)
                                     .scaleEffect(0.42)
@@ -59,9 +63,11 @@ struct SignInView: View {
                             Text("Sign in with Apple")
                         }
                     }
-                    .buttonStyle(PrimaryActionButtonStyle(tint: .black))
-                    .disabled(env.session.isWorking)
+                    .buttonStyle(PrimaryActionButtonStyle(tint: .black))   // our custom style from Styles.swift
+                    .disabled(env.session.isWorking)   // prevent double-taps mid-request
 
+                    // `#if DEBUG` is a COMPILE-TIME flag: this button only exists in
+                    // debug builds, so the guest bypass can never ship to the App Store.
                     #if DEBUG
                     Button("Continue as guest (debug)") {
                         Task { await env.session.continueAsGuest() }
@@ -71,6 +77,7 @@ struct SignInView: View {
                     .disabled(env.session.isWorking)
                     #endif
 
+                    // Conditionally show an error message if sign-in failed.
                     if let error = env.session.errorMessage {
                         Text(error)
                             .font(.footnote)
@@ -86,10 +93,14 @@ struct SignInView: View {
     }
 }
 
+// The animated, color-shifting backdrop used on the splash + sign-in screens.
+// Reused (not duplicated) so both screens match.
 struct WelcomeGradientBackground: View {
     @State private var isAnimating = false
 
     var body: some View {
+        // A diagonal gradient. The start/end POINTS swap based on isAnimating, so
+        // toggling it makes the gradient slowly sweep across the screen.
         LinearGradient(
             colors: [
                 Color(red: 0.95, green: 0.24, blue: 0.43),
@@ -100,9 +111,10 @@ struct WelcomeGradientBackground: View {
             startPoint: isAnimating ? .bottomLeading : .topLeading,
             endPoint: isAnimating ? .topTrailing : .bottomTrailing
         )
-        .hueRotation(.degrees(isAnimating ? 18 : -8))
-        .ignoresSafeArea()
+        .hueRotation(.degrees(isAnimating ? 18 : -8))   // also drift the hue for shimmer
+        .ignoresSafeArea()   // extend under the notch / home indicator, full-bleed
         .overlay {
+            // A second gradient layered on top adds a soft light/shadow sheen.
             LinearGradient(
                 colors: [.white.opacity(0.24), .clear, .black.opacity(0.2)],
                 startPoint: isAnimating ? .leading : .top,
@@ -110,6 +122,7 @@ struct WelcomeGradientBackground: View {
             )
             .ignoresSafeArea()
         }
+        // Slow, infinitely reversing animation tied to isAnimating → endless drift.
         .animation(.easeInOut(duration: 5.5).repeatForever(autoreverses: true), value: isAnimating)
         .onAppear { isAnimating = true }
     }

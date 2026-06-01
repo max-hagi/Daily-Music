@@ -9,10 +9,12 @@
 import SwiftUI
 
 struct WrappedView: View {
+    // Passed IN from Insights (which already knows the favorites) rather than read
+    // here — the caller owns that data.
     let favoriteIDs: Set<UUID>
 
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) private var dismiss   // to close itself (it's shown as a sheet)
     @State private var model: WrappedViewModel?
 
     var body: some View {
@@ -46,6 +48,7 @@ struct WrappedView: View {
         }
     }
 
+    // Assembles the recap from the same small card helpers (hero/archetype/bigStat).
     private func content(_ recap: WrappedViewModel.Recap) -> some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -53,10 +56,12 @@ struct WrappedView: View {
                 archetype(recap.profile)
 
                 HStack(spacing: 16) {
+                    // `"\(recap.songsHeard)"` interpolates the Int into a String for display.
                     bigStat("\(recap.songsHeard)", "songs heard")
                     bigStat("\(recap.artistsDiscovered)", "artists")
                 }
 
+                // Only show the top-artist card if there is one.
                 if let top = recap.topArtist {
                     topArtistCard(top, plays: recap.topArtistPlays)
                 }

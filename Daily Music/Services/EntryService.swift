@@ -9,6 +9,8 @@
 
 import Foundation
 
+// The content-reading seam. Three queries the UI needs; the live version runs
+// these against Supabase, the mock serves the array below.
 protocol EntryService {
     /// Today's curated entry, or nil if none is published yet (→ empty state).
     func todayEntry() async throws -> DailyEntry?
@@ -22,9 +24,14 @@ protocol EntryService {
 final class MockEntryService: EntryService {
     private let entries: [DailyEntry]
 
+    // `init` builds three sample days relative to today so the content always
+    // looks "current" no matter when you run it.
     init() {
         let cal = Calendar.current
+        // startOfDay normalizes to midnight so day comparisons ignore the clock time.
         let today = cal.startOfDay(for: Date())
+        // A local helper function: today + offset days. The `!` force-unwraps because
+        // date arithmetic here can't realistically fail.
         func day(_ offset: Int) -> Date { cal.date(byAdding: .day, value: offset, to: today)! }
 
         entries = [
@@ -34,6 +41,10 @@ final class MockEntryService: EntryService {
                 title: "Nightswimming",
                 artist: "R.E.M.",
                 albumArtURL: URL(string: "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/97/1a/9b/971a9bf7-b6dc-8712-ac3a-1d4351512c8b/17CRGIM03466.rgb.jpg/1200x1200bb.jpg"),
+                // `"""` is a multi-line string literal. A trailing `\` joins the
+                // next source line WITHOUT inserting a newline — so these wrap
+                // nicely in code but render as one flowing paragraph. The text is
+                // Markdown (note *italics* / **bold**), rendered later by JournalText.
                 journalMarkdown: """
                 There's a particular kind of quiet that only exists at 2am, and \
                 this song lives inside it. Mike Mills wrote the piano part first \
@@ -82,8 +93,10 @@ final class MockEntryService: EntryService {
     }
 
     func todayEntry() async throws -> DailyEntry? {
-        try? await Task.sleep(for: .milliseconds(300))
+        try? await Task.sleep(for: .milliseconds(300))   // fake network latency
         let today = Calendar.current.startOfDay(for: Date())
+        // `.first { … }` returns the first element matching the closure, or nil.
+        // `$0` is each entry; isDate(_:inSameDayAs:) ignores time-of-day.
         return entries.first { Calendar.current.isDate($0.date, inSameDayAs: today) }
     }
 
@@ -95,7 +108,7 @@ final class MockEntryService: EntryService {
         try? await Task.sleep(for: .milliseconds(300))
         let now = Date()
         return entries
-            .filter { $0.date <= now }
-            .sorted { $0.date > $1.date }
+            .filter { $0.date <= now }    // only days that have actually arrived
+            .sorted { $0.date > $1.date } // `>` → newest first
     }
 }

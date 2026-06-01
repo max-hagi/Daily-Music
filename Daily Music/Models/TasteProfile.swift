@@ -15,12 +15,18 @@
 
 import SwiftUI
 
+// Equatable lets two TasteProfiles be compared with `==`. SwiftUI uses that to
+// know whether the value actually changed and a view needs re-rendering.
+// `symbol` is an SF Symbol name (Apple's built-in icon set, drawn via
+// Image(systemName:)); `colors` is the gradient used to tint the archetype card.
 struct TasteProfile: Equatable {
     let title: String
     let blurb: String
     let symbol: String
     let colors: [Color]
 
+    // The raw inputs the rules engine reasons about. A nested struct keeps the
+    // "facts about a user's listening" bundled together and named.
     struct Metrics {
         var songsHeard: Int
         var artistsDiscovered: Int
@@ -28,19 +34,30 @@ struct TasteProfile: Equatable {
         /// Dominant genre among the user's favorites — personalizes the archetype
         /// (everyone hears the same songs, so genre signal comes from favorites).
         var topGenre: String? = nil
-        /// Average songs per artist — the "depth" signal.
+        /// Average songs per artist — the "depth" signal. Computed each read; guards
+        /// against divide-by-zero by returning 0 when no artists are known yet.
         var depth: Double { artistsDiscovered > 0 ? Double(songsHeard) / Double(artistsDiscovered) : 0 }
     }
 
+    // `static` = belongs to the type itself, not an instance. You call it as
+    // TasteProfile.resolve(...) without having a TasteProfile in hand.
     static func resolve(_ m: Metrics) -> TasteProfile {
-        // Genre-based archetypes win when we have a clear favorite genre…
+        // `if let genre = …, let profile = …` is optional binding: BOTH unwraps
+        // must succeed (topGenre is non-nil AND that genre exists in the lookup)
+        // for the branch to run. Genre-based archetypes win when both hold…
         if let genre = m.topGenre, let profile = genreArchetypes[genre] {
             return profile
         }
-        // …otherwise fall back to behavior-based archetypes.
+        // …otherwise fall back to behavior-based archetypes. `rules.first { … }`
+        // returns the first Rule whose closure returns true; `?.profile` reads its
+        // profile if found, and `?? steadyListener` is the default when none match.
         return rules.first { $0.match(m) }?.profile ?? steadyListener
     }
 
+    // Convenience entry point: build Metrics from a list of entries the user has
+    // seen, then resolve. `favorites`/`topGenre` have default values so callers
+    // can omit them. `seen.map(\.artist)` pulls every artist name; wrapping in a
+    // Set dedupes them, and `.count` gives the number of DISTINCT artists.
     static func from(seen: [DailyEntry], favorites: Int = 0, topGenre: String? = nil) -> TasteProfile {
         resolve(Metrics(
             songsHeard: seen.count,
@@ -52,17 +69,29 @@ struct TasteProfile: Equatable {
 
     /// Most common non-nil genre among the given entries (e.g. a user's favorites).
     static func dominantGenre(of entries: [DailyEntry]) -> String? {
+        // compactMap drops the nil genres; reduce(into:) tallies a [genre: count]
+        // dictionary ($0 is the running dict, $1 is each genre). Then max(by:)
+        // finds the entry with the highest count and `?.key` returns its name.
         let counts = entries.compactMap(\.genre).reduce(into: [:]) { $0[$1, default: 0] += 1 }
         return counts.max { $0.value < $1.value }?.key
     }
 
     // MARK: - Archetype catalogue (edit names / rules / colors freely)
+    // (`// MARK:` lines are Xcode navigation markers — they show up as section
+    //  headers in the jump bar; purely organizational.)
 
+    // A Rule pairs a predicate (a closure taking Metrics, returning a Bool) with
+    // the profile to award when that predicate is true. `private` hides it from
+    // the rest of the app — it's an internal implementation detail of this engine.
     private struct Rule {
         let match: (Metrics) -> Bool
         let profile: TasteProfile
     }
 
+    // ORDER MATTERS: resolve() returns the first match, so the most specific /
+    // highest-priority rules go first. Each `{ $0.songsHeard == 0 }` is a closure
+    // where `$0` is the Metrics passed in. Colors use Color(red:green:blue:) with
+    // 0–1 channel values rather than 0–255.
     private static let rules: [Rule] = [
         Rule(match: { $0.songsHeard == 0 }, profile: newListener),
         Rule(match: { $0.songsHeard < 5 }, profile: TasteProfile(

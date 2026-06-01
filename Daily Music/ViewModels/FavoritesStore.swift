@@ -22,6 +22,7 @@ final class FavoritesStore {
     }
 
     func load() async {
+        // `try?` → on any failure just fall back to an empty set (no crash).
         ids = (try? await service.favoriteIDs()) ?? []
     }
 
@@ -29,6 +30,10 @@ final class FavoritesStore {
         ids.contains(entry.id)
     }
 
+    // OPTIMISTIC UPDATE pattern: change the local state immediately so the heart
+    // animates instantly, then perform the slow network write. If the write fails,
+    // undo the local change so the UI doesn't lie. Because `ids` is observed, both
+    // the flip and any rollback re-render every screen showing this entry.
     func toggle(_ entry: DailyEntry) async {
         let wantFavorite = !ids.contains(entry.id)
 
