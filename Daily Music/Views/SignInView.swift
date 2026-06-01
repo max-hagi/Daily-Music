@@ -14,6 +14,7 @@ struct SignInView: View {
     @Environment(AppEnvironment.self) private var env
     // Real album covers (read from the public catalogue) for the montage backdrop.
     @State private var artURLs: [URL] = []
+    @State private var showingEmail = false
 
     var body: some View {
         ZStack {
@@ -78,6 +79,17 @@ struct SignInView: View {
                     .buttonStyle(PrimaryActionButtonStyle(tint: .black))   // our custom style from Styles.swift
                     .disabled(env.session.isWorking)   // prevent double-taps mid-request
 
+                    Button {
+                        showingEmail = true
+                    } label: {
+                        Label("Continue with email", systemImage: "envelope.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .disabled(env.session.isWorking)
+
                     // `#if DEBUG` is a COMPILE-TIME flag: this button only exists in
                     // debug builds, so the guest bypass can never ship to the App Store.
                     #if DEBUG
@@ -103,6 +115,9 @@ struct SignInView: View {
             }
         }
         .task { await loadArt() }
+        .sheet(isPresented: $showingEmail) {
+            EmailSignInSheet()
+        }
     }
 
     /// Pull real covers from the current entry source for the moving cover wall.

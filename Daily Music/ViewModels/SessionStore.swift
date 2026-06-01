@@ -43,6 +43,26 @@ final class SessionStore {
         await attempt { try await self.auth.continueAsGuest() }
     }
 
+    /// Step 1 of email sign-in. Returns true if the code was sent, so the UI can
+    /// advance to the code-entry step.
+    func sendEmailCode(to email: String) async -> Bool {
+        isWorking = true
+        errorMessage = nil
+        defer { isWorking = false }
+        do {
+            try await auth.sendEmailCode(to: email)
+            return true
+        } catch {
+            errorMessage = "Couldn't send the code: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    /// Step 2 of email sign-in — verifying signs the user in (sets `session`).
+    func verifyEmailCode(_ code: String, email: String) async {
+        await attempt { try await self.auth.verifyEmailCode(code, email: email) }
+    }
+
     // `work` is the operation to run. `@escaping` means the closure may outlive
     // this function call (it's awaited), so Swift needs to retain it.
     private func attempt(_ work: @escaping () async throws -> AuthSession) async {

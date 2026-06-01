@@ -42,6 +42,21 @@ final class SupabaseAuthService: AuthService {
         return Self.map(session.user)
     }
 
+    func sendEmailCode(to email: String) async throws {
+        // Sends the email; with a 6-digit token in the template the user types it
+        // back (no deep-link needed). Creates the user if they're new.
+        try await client.auth.signInWithOTP(email: email)
+    }
+
+    func verifyEmailCode(_ code: String, email: String) async throws -> AuthSession {
+        let response = try await client.auth.verifyOTP(email: email, token: code, type: .email)
+        guard let session = response.session else {
+            throw NSError(domain: "Auth", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "That code didn't work. Try again."])
+        }
+        return Self.map(session.user)
+    }
+
     func signOut() async {
         try? await client.auth.signOut()
     }

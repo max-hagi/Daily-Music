@@ -31,6 +31,10 @@ protocol AuthService {
     /// DEBUG-only path so we don't sign in on every run while developing.
     /// Backed by Supabase anonymous sign-in in the live service, so it's async.
     func continueAsGuest() async throws -> AuthSession
+    /// Email magic-link, step 1: send a one-time code to the address.
+    func sendEmailCode(to email: String) async throws
+    /// Email magic-link, step 2: exchange the code for a real session.
+    func verifyEmailCode(_ code: String, email: String) async throws -> AuthSession
     func signOut() async
 }
 
@@ -61,6 +65,19 @@ final class MockAuthService: AuthService {
             userID: UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!,
             displayName: "Guest",
             isGuest: true
+        )
+    }
+
+    func sendEmailCode(to email: String) async throws {
+        try? await Task.sleep(for: .milliseconds(300))
+    }
+
+    func verifyEmailCode(_ code: String, email: String) async throws -> AuthSession {
+        try? await Task.sleep(for: .milliseconds(300))
+        return AuthSession(
+            userID: UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!,
+            displayName: email,
+            isGuest: false
         )
     }
 
