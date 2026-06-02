@@ -24,7 +24,7 @@
 
 /* Begin PBXFileReference section */
 		0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Daily MusicTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TasteMirrorTests.swift; path = TasteMirrorTests.swift; sourceTree = "<group>"; };
+		57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteMirrorTests.swift; sourceTree = "<group>"; };
 		94B1382F2FCB6F1100752257 /* Daily Music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Daily Music.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1C88CA3CCE154F540A6D0EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
@@ -32,8 +32,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		94B138312FCB6F1100752257 /* Daily Music */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "Daily Music";
 			sourceTree = "<group>";
 		};
@@ -64,7 +62,6 @@
 			children = (
 				57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */,
 			);
-			name = "Daily MusicTests";
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
 		};
