@@ -10,6 +10,8 @@
 		1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */; };
 		89D4107636FC55A192B171A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1C88CA3CCE154F540A6D0EE /* Foundation.framework */; };
 		94B1387E2FCB7CB200752257 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 94B1387D2FCB7CB200752257 /* Supabase */; };
+		A1B2C3D4E5F6A1B2C3D4E5F6 /* StreamingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */; };
+		B2C3D4E5F6A1B2C3D4E5F6A1 /* CatalogInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,6 +28,8 @@
 		0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Daily MusicTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteMirrorTests.swift; sourceTree = "<group>"; };
 		94B1382F2FCB6F1100752257 /* Daily Music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Daily Music.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreamingServiceTests.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogInfoTests.swift; sourceTree = "<group>"; };
 		D1C88CA3CCE154F540A6D0EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
@@ -61,6 +65,8 @@
 			isa = PBXGroup;
 			children = (
 				57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */,
+				A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */,
+				B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -205,6 +211,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */,
+				A1B2C3D4E5F6A1B2C3D4E5F6 /* StreamingServiceTests.swift in Sources */,
+				B2C3D4E5F6A1B2C3D4E5F6A1 /* CatalogInfoTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
