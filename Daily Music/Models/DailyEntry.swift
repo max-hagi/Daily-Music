@@ -33,6 +33,16 @@ struct DailyEntry: Identifiable, Hashable, Codable {
     /// Curated genre (e.g. "Pop", "Alternative"). Drives genre-based taste
     /// archetypes + the top-genres signal. nil until set on the entry.
     var genre: String? = nil
+    /// Release year (e.g. 1986). Decade is derived from it. nil until tagged.
+    var year: Int? = nil
+    /// Emotional tone — one of `Mood`'s raw values. nil until tagged.
+    var mood: String? = nil
+    /// Arousal/intensity, 1 (intimate) … 5 (explosive). nil until tagged.
+    var energy: Int? = nil
+    /// What the song is about — one of `Theme`'s raw values. nil until tagged.
+    var theme: String? = nil
+    /// Language/origin (e.g. "English"). nil/blank treated as untagged.
+    var language: String? = nil
 
     // These are COMPUTED properties: they store nothing, they run their body
     // every time you read them (derived from the stored fields above). Handy for
@@ -51,5 +61,11 @@ struct DailyEntry: Identifiable, Hashable, Codable {
         // if the split somehow produced nothing.
         let trackID = spotifyURI.split(separator: ":").last.map(String.init) ?? spotifyURI
         return URL(string: "https://open.spotify.com/track/\(trackID)")
+    }
+
+    /// Decade label derived from `year`, e.g. 1986 → "1980s". nil if untagged.
+    var decade: String? {
+        guard let year else { return nil }
+        return "\((year / 10) * 10)s"
     }
 }
