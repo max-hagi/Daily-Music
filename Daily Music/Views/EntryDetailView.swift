@@ -67,6 +67,7 @@ struct EntryDetailView: View {
                     }
                     PreviewPlayButton(entry: entry, accent: palette.accent)
                     FavoriteButton(entry: entry, accent: palette.accent)
+                    RatingBar(entry: entry, accent: palette.accent)
                     // The same reactions component can be interactive on Today and
                     // read-only in Vault, controlled by the caller's context.
                     ReactionsBar(entry: entry, accent: palette.accent, isReadOnly: reactionsAreReadOnly)
