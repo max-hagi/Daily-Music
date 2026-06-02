@@ -26,10 +26,12 @@ final class WrappedViewModel {
 
     private let entries: EntryService
     private let checkIns: CheckInService
+    private let ratings: RatingService
 
-    init(entries: EntryService, checkIns: CheckInService) {
+    init(entries: EntryService, checkIns: CheckInService, ratings: RatingService) {
         self.entries = entries
         self.checkIns = checkIns
+        self.ratings = ratings
     }
 
     func load(favoriteIDs: Set<UUID>) async {
@@ -55,8 +57,15 @@ final class WrappedViewModel {
             guard !seen.isEmpty else { state = .empty; return }
 
             let entriesThisMonth = history.filter { thisMonth($0.date) }
-            let favoriteEntries = history.filter { favoriteIDs.contains($0.id) }
             let top = Self.mostFrequentArtist(in: seen)
+
+            // Archetype comes from the same rating-based taste mirror as Insights:
+            // join the user's 👍/👎 ratings with the tagged catalog, then resolve.
+            let myRatings = (try? await ratings.myRatings()) ?? [:]
+            let rated = history.compactMap { entry in
+                myRatings[entry.id].map { RatedSong(entry: entry, value: $0) }
+            }
+            let mirror = TasteMirror.build(from: rated)
 
             state = .loaded(Recap(
                 // `.formatted(.dateTime.month(.wide))` → full month name, e.g. "June".
@@ -67,8 +76,8 @@ final class WrappedViewModel {
                 // `top` is an optional tuple; `?.artist` / `?? 0` unwrap it safely.
                 topArtist: top?.artist,
                 topArtistPlays: top?.count ?? 0,
-                profile: .from(seen: seen, favorites: favoriteIDs.count,
-                               topGenre: TasteProfile.dominantGenre(of: favoriteEntries))
+                // `?? .balancedDefault` covers the "not enough ratings yet" case.
+                profile: mirror.archetype ?? .balancedDefault
             ))
         } catch {
             state = .failed(error)

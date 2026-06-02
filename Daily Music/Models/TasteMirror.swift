@@ -77,9 +77,13 @@ struct TasteMirror: Equatable {
         let language = dimension(id: "language", title: "Language", from: rated, overall: overall, totalRated: total) { $0.language }
         // --- energy ---
         let energy = energyInsight(from: rated, overall: overall, totalRated: total)
-        // --- archetype (replaced in Task 12) ---
-        let archetype: TasteProfile? = nil
-        let isArchetypeUnlocked = false
+        // --- archetype ---
+        let isArchetypeUnlocked = total >= Thresholds.minRatedArchetype
+        let archetype: TasteProfile? = isArchetypeUnlocked
+            ? TasteProfile.resolve(mood: mood.topStandout?.name,
+                                   decade: decade.topStandout?.name,
+                                   theme: theme.topStandout?.name)
+            : nil
 
         return TasteMirror(
             totalRated: total, overallLikeRate: overall,

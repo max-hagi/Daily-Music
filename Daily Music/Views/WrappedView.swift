@@ -43,7 +43,7 @@ struct WrappedView: View {
         }
         .task {
             if model == nil {
-                model = WrappedViewModel(entries: env.entries, checkIns: env.checkIns)
+                model = WrappedViewModel(entries: env.entries, checkIns: env.checkIns, ratings: env.ratings)
             }
             await model?.load(favoriteIDs: favoriteIDs)
         }

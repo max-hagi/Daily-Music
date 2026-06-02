@@ -96,4 +96,22 @@ struct TasteMirrorTests {
         #expect(m.mood.topStandout?.name == "Melancholy")   // over-index present
         #expect(m.decade.topStandout?.name == "1980s")       // dominant fallback
     }
+
+    @Test func archetypeLockedUntilTwentyRatings() {
+        let m = TasteMirror.build(from: Self.workedExample())   // 30 ratings, melancholy+1980s
+        #expect(m.isArchetypeUnlocked == true)
+        #expect(m.archetype?.id == "MELANCHOLY_1980S")
+    }
+
+    @Test func archetypeNilBelowThreshold() {
+        let m = TasteMirror.build(from: Self.mood("Melancholy", likes: 8, dislikes: 2, year: 1985))
+        #expect(m.isArchetypeUnlocked == false)
+        #expect(m.archetype == nil)
+    }
+
+    @Test func archetypeFallsBackToMoodOnly() {
+        // 24 melancholy songs, no year → no decade standout → mood-only default.
+        let m = TasteMirror.build(from: Self.mood("Melancholy", likes: 18, dislikes: 6))
+        #expect(m.archetype?.id == "MELANCHOLY_DEFAULT")
+    }
 }
