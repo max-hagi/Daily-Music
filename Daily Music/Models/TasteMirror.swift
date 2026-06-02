@@ -69,10 +69,12 @@ struct TasteMirror: Equatable {
         let likes = rated.filter { $0.value > 0 }.count
         let overall = total > 0 ? Double(likes) / Double(total) : 0
 
-        // --- dimensions (replaced in Task 5) ---
-        let empty = DimensionInsight(id: "", title: "", categories: [],
-                                     dominant: nil, overIndex: nil, skip: nil, isUnlocked: false)
-        let mood = empty, decade = empty, theme = empty, genre = empty, language = empty
+        // --- dimensions ---
+        let mood = dimension(id: "mood", title: "Mood", from: rated, overall: overall, totalRated: total) { $0.mood }
+        let decade = dimension(id: "decade", title: "Decade", from: rated, overall: overall, totalRated: total) { $0.decade }
+        let theme = dimension(id: "theme", title: "Theme", from: rated, overall: overall, totalRated: total) { $0.theme }
+        let genre = dimension(id: "genre", title: "Genre", from: rated, overall: overall, totalRated: total) { $0.genre }
+        let language = dimension(id: "language", title: "Language", from: rated, overall: overall, totalRated: total) { $0.language }
         // --- energy (replaced in Task 6) ---
         let energy = EnergyInsight(likedMean: nil, leanLabel: nil, bands: [], isUnlocked: false)
         // --- archetype (replaced in Task 12) ---
@@ -84,5 +86,40 @@ struct TasteMirror: Equatable {
             mood: mood, decade: decade, theme: theme, genre: genre, language: language,
             energy: energy, archetype: archetype, isArchetypeUnlocked: isArchetypeUnlocked
         )
+    }
+}
+
+extension TasteMirror {
+    /// Build one categorical dimension. `key` returns the category for a song, or
+    /// nil to exclude it (untagged → never guessed).
+    static func dimension(
+        id: String, title: String,
+        from rated: [RatedSong], overall: Double, totalRated: Int,
+        key: (DailyEntry) -> String?
+    ) -> DimensionInsight {
+        var likes: [String: Int] = [:]
+        var dislikes: [String: Int] = [:]
+        for r in rated {
+            guard let name = key(r.entry), !name.isEmpty else { continue }
+            if r.value > 0 { likes[name, default: 0] += 1 } else { dislikes[name, default: 0] += 1 }
+        }
+        let names = Set(likes.keys).union(dislikes.keys)
+        let cats = names
+            .map { CategoryStat(name: $0, likes: likes[$0] ?? 0, dislikes: dislikes[$0] ?? 0) }
+            .sorted { ($0.likes, $0.total, $1.name) > ($1.likes, $1.total, $0.name) }
+
+        let eligible = cats.filter { $0.total >= Thresholds.minPerCategory }
+        let dominant = cats.first { $0.likes > 0 }
+        let overIndex = eligible
+            .filter { $0.likeRate >= overall + Thresholds.overIndexMargin }
+            .max { ($0.likeRate, Double($0.total)) < ($1.likeRate, Double($1.total)) }
+        let skip = eligible
+            .filter { $0.likeRate < overall }
+            .min { ($0.likeRate, -Double($0.total)) < ($1.likeRate, -Double($1.total)) }
+        let unlocked = totalRated >= Thresholds.minRatedDimension && eligible.count >= 2
+
+        return DimensionInsight(id: id, title: title, categories: cats,
+                                dominant: dominant, overIndex: overIndex, skip: skip,
+                                isUnlocked: unlocked)
     }
 }

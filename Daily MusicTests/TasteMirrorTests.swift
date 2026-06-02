@@ -48,4 +48,30 @@ struct TasteMirrorTests {
         #expect(m.totalRated == 30)
         #expect(abs(m.overallLikeRate - 0.6) < 0.0001)
     }
+
+    @Test func moodDominantIsMostLiked() {
+        let m = TasteMirror.build(from: Self.workedExample())
+        #expect(m.mood.dominant?.name == "Melancholy")
+        #expect(m.mood.dominant?.likes == 9)
+    }
+
+    @Test func moodOverIndexIsHighestRateAboveOverall() {
+        // Overall 0.6; eligible >0.70. Melancholy .818, Tender .80 → highest wins.
+        let m = TasteMirror.build(from: Self.workedExample())
+        #expect(m.mood.overIndex?.name == "Melancholy")
+    }
+
+    @Test func moodSkipIsLowestRateBelowOverall() {
+        let m = TasteMirror.build(from: Self.workedExample())
+        #expect(m.mood.skip?.name == "Euphoric")
+    }
+
+    @Test func smallCategoriesAreIneligibleForStandouts() {
+        // "Serene" has only 2 ratings (< minPerCategory) at a perfect rate; it must
+        // NOT become the over-index, but must still be listed.
+        let data = Self.workedExample() + Self.mood("Serene", likes: 2, dislikes: 0)
+        let m = TasteMirror.build(from: data)
+        #expect(m.mood.overIndex?.name == "Melancholy")
+        #expect(m.mood.categories.contains { $0.name == "Serene" })
+    }
 }
