@@ -2,10 +2,10 @@
 //  InsightsView.swift
 //  Daily Music
 //
-//  The taste mirror: synthesized archetype hero, a "what stands out" strip, and a
-//  per-dimension like-rate breakdown — all from real 👍/👎 data via TasteMirror.
-//  Progressive reveal: each piece stays "forming" until it has enough ratings.
-//  Insights uses the archetype's color, not album art.
+//  The taste mirror. The whole screen bleeds the archetype's color. At a glance:
+//  the archetype hero + a 2×2 grid of Liquid-Glass standout tiles (Mood/Era/
+//  Theme/Energy) plus slim Genre/Language rows. Tap any standout to open an
+//  editorial detail sheet (StandoutDetailView). No charts anywhere.
 //
 
 import SwiftUI
@@ -14,6 +14,7 @@ struct InsightsView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var model: InsightsViewModel?
     @State private var showingWrapped = false
+    @State private var detail: StandoutDetail?
 
     var body: some View {
         NavigationStack {
@@ -30,15 +31,15 @@ struct InsightsView: View {
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(pageBackground)
                 }
             }
             .navigationTitle("Insights")
             .toolbarBackground(.hidden, for: .navigationBar)
-            .background(pageBackground)
+            .background(wash)
             .fullScreenCover(isPresented: $showingWrapped) {
                 WrappedView(favoriteIDs: env.favoritesStore.ids)
             }
+            .sheet(item: $detail) { StandoutDetailView(detail: $0) }
         }
         .task(id: env.favoritesStore.ids) {
             if model == nil {
@@ -48,69 +49,94 @@ struct InsightsView: View {
         }
     }
 
-    private var pageBackground: some View {
-        LinearGradient(colors: Theme.Surface.insightsBackground,
-                       startPoint: .topLeading, endPoint: .bottomTrailing)
-            .ignoresSafeArea()
+    // MARK: archetype color bleed
+
+    /// The whole screen washes with the archetype's color (neutral while forming).
+    private var wash: some View {
+        let c = washColors
+        return LinearGradient(
+            colors: [c[0].opacity(0.55),
+                     (c.count > 1 ? c[1] : c[0]).opacity(0.22),
+                     Color(.systemBackground)],
+            startPoint: .top, endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.6), value: c)
     }
 
+    private var washColors: [Color] {
+        if case .loaded(let m) = model?.state { return (m.archetype ?? .balancedDefault).colors }
+        return TasteProfile.balancedDefault.colors
+    }
+
+    // MARK: content
+
     private func content(_ mirror: TasteMirror) -> some View {
-        ScrollView {
+        let accent = (mirror.archetype ?? .balancedDefault).colors[0]
+        return ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
                 hero(mirror)
-                standoutStrip(mirror)
-                breakdown(mirror)
-                wrappedButton(mirror)
+
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 14),
+                                    GridItem(.flexible(), spacing: 14)], spacing: 14) {
+                    marqueeTile(mirror.mood, lead: "Mood", accent: accent)
+                    marqueeTile(mirror.decade, lead: "Era", accent: accent)
+                    marqueeTile(mirror.theme, lead: "Theme", accent: accent)
+                    energyTile(mirror.energy, accent: accent)
+                }
+
+                secondaryRow(mirror.genre, lead: "Genre", accent: accent)
+                secondaryRow(mirror.language, lead: "Language", accent: accent)
+
+                wrappedButton(accent)
             }
             .padding()
         }
-        .background(pageBackground)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: hero
 
-    @ViewBuilder
     private func hero(_ mirror: TasteMirror) -> some View {
-        if let archetype = mirror.archetype {
-            heroCard(profile: archetype, headline: archetype.title,
-                     subtitle: heroWhy(mirror), badge: "YOUR ARCHETYPE")
-        } else {
-            let remaining = max(TasteMirror.Thresholds.minRatedArchetype - mirror.totalRated, 0)
-            heroCard(profile: .balancedDefault, headline: "\(remaining) to go",
-                     subtitle: "Your portrait takes shape at \(TasteMirror.Thresholds.minRatedArchetype) ratings.",
-                     badge: "FORMING")
-        }
-    }
+        let profile = mirror.archetype ?? .balancedDefault
+        let unlocked = mirror.archetype != nil
+        let remaining = max(TasteMirror.Thresholds.minRatedArchetype - mirror.totalRated, 0)
+        return ZStack(alignment: .bottomTrailing) {
+            Image(systemName: profile.symbol)
+                .font(.system(size: 168, weight: .bold))
+                .foregroundStyle(.white.opacity(0.13))
+                .offset(x: 28, y: 22)
 
-    private func heroCard(profile: TasteProfile, headline: String, subtitle: String, badge: String) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            HStack(alignment: .top) {
-                Image(systemName: profile.symbol)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 58, height: 58)
-                    .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                Spacer()
-                Text(badge).font(.caption.weight(.heavy)).foregroundStyle(.white.opacity(0.72))
-            }
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text(headline)
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                HStack {
+                    Image(systemName: profile.symbol)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 52, height: 52)
+                        .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    Spacer()
+                    Text(unlocked ? "YOUR ARCHETYPE" : "FORMING")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                Text(unlocked ? profile.title : "\(remaining) to go")
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(subtitle)
+                Text(unlocked ? heroWhy(mirror)
+                              : "Your portrait takes shape at \(TasteMirror.Thresholds.minRatedArchetype) ratings.")
                     .font(.callout.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.88))
+                    .foregroundStyle(.white.opacity(0.9))
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Theme.Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(colors: profile.colors, startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
-        )
-        .shadow(color: profile.colors[0].opacity(0.28), radius: 18, y: 10)
+        .background(LinearGradient(colors: profile.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: profile.colors[0].opacity(0.35), radius: 20, y: 10)
     }
 
     /// Templated "why it's you" from the real standouts — never generated text.
@@ -123,133 +149,175 @@ struct InsightsView: View {
         return "Because you keep \(moodName)\(era) songs more than anything else (\(pct)% yes vs \(overall)% overall)."
     }
 
-    // MARK: standout strip
-
-    private func standoutStrip(_ mirror: TasteMirror) -> some View {
-        VStack(spacing: Theme.Spacing.md) {
-            tile(mirror.mood, lead: "Top mood")
-            tile(mirror.decade, lead: "The era you live in")
-            tile(mirror.theme, lead: "Your recurring theme")
-            energyTile(mirror.energy)
-        }
-    }
+    // MARK: marquee tiles
 
     @ViewBuilder
-    private func tile(_ dim: DimensionInsight, lead: String) -> some View {
+    private func marqueeTile(_ dim: DimensionInsight, lead: String, accent: Color) -> some View {
         if dim.isUnlocked, let s = dim.topStandout {
-            standoutCard(lead: lead, headline: s.name,
-                         detail: "You keep \(s.likes) of \(s.total) (\(Int(s.likeRate * 100))%).")
+            tileButton(lead: lead,
+                       headline: s.name,
+                       icon: categorySymbol(dim.id, s.name) ?? dimIcon(dim.id),
+                       accent: accent) {
+                detail = makeDetail(dim: dim, accent: accent)
+            }
         } else {
-            lockedCard(lead: lead)
+            lockedTile(lead: lead, icon: dimIcon(dim.id))
         }
     }
 
     @ViewBuilder
-    private func energyTile(_ energy: EnergyInsight) -> some View {
-        if energy.isUnlocked, let lean = energy.leanLabel, let mean = energy.likedMean {
-            standoutCard(lead: "Your energy lean", headline: lean,
-                         detail: "Your liked songs average \(String(format: "%.1f", mean))/5.")
-        } else {
-            lockedCard(lead: "Your energy lean")
-        }
-    }
-
-    private func standoutCard(lead: String, headline: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(lead.uppercased()).font(.caption2.weight(.bold)).foregroundStyle(.secondary)
-            Text(headline).font(.system(size: 22, weight: .heavy, design: .rounded))
-            Text(detail).font(.subheadline).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Theme.Spacing.md)
-        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.Surface.cardStroke, lineWidth: 1) }
-    }
-
-    private func lockedCard(lead: String) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Image(systemName: "lock.fill").foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(lead).font(.subheadline.weight(.semibold))
-                Text("Keep rating to reveal this.").font(.caption).foregroundStyle(.secondary)
+    private func energyTile(_ energy: EnergyInsight, accent: Color) -> some View {
+        if energy.isUnlocked, let lean = energy.leanLabel {
+            tileButton(lead: "Energy", headline: lean, icon: "bolt.fill", accent: accent) {
+                detail = makeEnergyDetail(energy, accent: accent)
             }
+        } else {
+            lockedTile(lead: "Energy", icon: "bolt.fill")
+        }
+    }
+
+    private func tileButton(lead: String, headline: String, icon: String,
+                            accent: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: icon)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 40, height: 40)
+                    .background(accent.opacity(0.18), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                Spacer(minLength: 0)
+                Text(lead.uppercased())
+                    .font(.caption2.weight(.heavy))
+                    .foregroundStyle(accent.opacity(0.85))
+                Text(headline)
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+            .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
+            .padding(Theme.Spacing.md)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.tint(accent.opacity(0.16)).interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private func lockedTile(lead: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: "lock.fill")
+                .font(.title3)
+                .foregroundStyle(.secondary)
             Spacer(minLength: 0)
+            Text(lead.uppercased())
+                .font(.caption2.weight(.heavy))
+                .foregroundStyle(.secondary)
+            Text("Keep rating")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
         .padding(Theme.Spacing.md)
-        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.Surface.cardStroke, lineWidth: 1) }
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .opacity(0.85)
     }
 
-    // MARK: breakdown
+    // MARK: secondary rows (genre / language)
 
     @ViewBuilder
-    private func breakdown(_ mirror: TasteMirror) -> some View {
-        let dims = [mirror.mood, mirror.theme, mirror.genre, mirror.decade, mirror.language]
-            .filter { $0.isUnlocked && !$0.categories.isEmpty }
-        if !dims.isEmpty {
-            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                Text("The breakdown").font(.dmTitle())
-                ForEach(dims) { dim in dimensionSection(dim) }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Theme.Spacing.lg)
-            .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous).stroke(Theme.Surface.cardStroke, lineWidth: 1) }
-        }
-    }
-
-    private func dimensionSection(_ dim: DimensionInsight) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text(dim.title).font(.subheadline.weight(.bold))
-            ForEach(dim.categories.prefix(6)) { cat in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        if let symbol = categorySymbol(dim: dim, category: cat.name) {
-                            Image(systemName: symbol)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 16)
-                        }
-                        Text(cat.name).font(.footnote.weight(.semibold))
-                        if dim.overIndex?.id == cat.id {
-                            Text("↑ stands out").font(.caption2.weight(.bold)).foregroundStyle(.green)
-                        } else if dim.skip?.id == cat.id {
-                            Text("you skip").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Text("\(cat.likes)/\(cat.total) · \(Int(cat.likeRate * 100))%")
-                            .font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    }
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Theme.Surface.subtleTrack)
-                            Capsule().fill((dim.overIndex?.id == cat.id ? Color.green : Color.accentColor).gradient)
-                                .frame(width: max(8, proxy.size.width * cat.likeRate))
-                        }
-                    }
-                    .frame(height: 8)
+    private func secondaryRow(_ dim: DimensionInsight, lead: String, accent: Color) -> some View {
+        if dim.isUnlocked, let s = dim.topStandout {
+            Button {
+                detail = makeDetail(dim: dim, accent: accent)
+            } label: {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: dimIcon(dim.id))
+                        .font(.headline)
+                        .foregroundStyle(accent)
+                        .frame(width: 26)
+                    Text(lead)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(s.name)
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
                 }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, 15)
             }
-        }
-    }
-
-    /// Per-category SF Symbol from the taxonomy (mood/theme dimensions only).
-    private func categorySymbol(dim: DimensionInsight, category: String) -> String? {
-        switch dim.id {
-        case "mood":  return Mood(rawValue: category)?.symbol
-        case "theme": return SongTheme(rawValue: category)?.symbol
-        default:      return nil
+            .buttonStyle(.plain)
+            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
 
     // MARK: wrapped
 
-    private func wrappedButton(_ mirror: TasteMirror) -> some View {
+    private func wrappedButton(_ accent: Color) -> some View {
         Button { showingWrapped = true } label: {
             Label("See your month", systemImage: "sparkles").frame(maxWidth: .infinity)
         }
-        .buttonStyle(PrimaryActionButtonStyle(tint: (mirror.archetype ?? .balancedDefault).colors[0]))
+        .buttonStyle(PrimaryActionButtonStyle(tint: accent))
         .padding(.top, Theme.Spacing.xs)
+    }
+
+    // MARK: detail builders
+
+    private func makeDetail(dim: DimensionInsight, accent: Color) -> StandoutDetail? {
+        guard let featured = dim.topStandout else { return nil }
+        let rows = dim.categories
+            .filter { $0.id != featured.id }
+            .map { StandoutRow(id: $0.id, name: $0.name, symbol: categorySymbol(dim.id, $0.name),
+                               likes: $0.likes, total: $0.total) }
+        return StandoutDetail(
+            id: dim.title, title: dim.title, accent: accent,
+            featuredName: featured.name,
+            featuredSymbol: categorySymbol(dim.id, featured.name) ?? dimIcon(dim.id),
+            featuredLine: "You keep \(featured.likes) of \(featured.total) — \(Int(featured.likeRate * 100))% yes.",
+            rows: rows,
+            standoutID: dim.overIndex?.id,
+            skipID: dim.skip?.id
+        )
+    }
+
+    private func makeEnergyDetail(_ energy: EnergyInsight, accent: Color) -> StandoutDetail? {
+        guard let lean = energy.leanLabel, let mean = energy.likedMean else { return nil }
+        let order = ["Low": 0, "Medium": 1, "High": 2]
+        let rows = energy.bands
+            .sorted { (order[$0.name] ?? 9) < (order[$1.name] ?? 9) }
+            .map { StandoutRow(id: $0.id, name: "\($0.name) energy", symbol: nil,
+                               likes: $0.likes, total: $0.total) }
+        return StandoutDetail(
+            id: "Energy", title: "Energy", accent: accent,
+            featuredName: lean,
+            featuredSymbol: "bolt.fill",
+            featuredLine: "Your liked songs average \(String(format: "%.1f", mean)) out of 5.",
+            rows: rows, standoutID: nil, skipID: nil
+        )
+    }
+
+    // MARK: symbols
+
+    private func dimIcon(_ dimID: String) -> String {
+        switch dimID {
+        case "mood":     "theatermasks.fill"
+        case "decade":   "calendar"
+        case "theme":    "text.quote"
+        case "genre":    "guitars.fill"
+        case "language": "globe"
+        case "energy":   "bolt.fill"
+        default:         "star.fill"
+        }
+    }
+
+    /// Per-category SF Symbol from the taxonomy (mood/theme only); nil otherwise.
+    private func categorySymbol(_ dimID: String, _ name: String) -> String? {
+        switch dimID {
+        case "mood":  Mood(rawValue: name)?.symbol
+        case "theme": SongTheme(rawValue: name)?.symbol
+        default:      nil
+        }
     }
 }

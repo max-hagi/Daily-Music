@@ -2,9 +2,11 @@
 //  RatingBar.swift
 //  Daily Music
 //
-//  The everyday taste judgment: 👍 / 👎 on a song. Three states (like/dislike/
-//  none); tapping the active one clears it. Optimistic, mirrors ReactionsBar.
-//  This is the primary signal behind the Insights taste mirror.
+//  The everyday taste judgment: 👍 / 👎 on a song, as two Liquid Glass circles.
+//  Idle = clear interactive glass tinted by the artwork accent; tapping fills the
+//  circle GREEN (like) or RED (dislike). Three states (like/dislike/none); tapping
+//  the active one clears it. Optimistic + haptic. The primary signal behind the
+//  Insights taste mirror.
 //
 
 import SwiftUI
@@ -25,10 +27,10 @@ final class RatingModel {
     func tap(_ value: Int, entryID: UUID, allowsPersistence: Bool = true) async {
         guard allowsPersistence, !isSaving else { return }
         let next = (mine == value) ? nil : value
-        mine = next
+        mine = next                       // optimistic
         isSaving = true
         do { try await service.setRating(next, entryID: entryID) }
-        catch { await load(entryID: entryID) }
+        catch { await load(entryID: entryID) }   // re-sync on failure
         isSaving = false
     }
 }
@@ -41,36 +43,45 @@ struct RatingBar: View {
     @State private var model: RatingModel?
 
     var body: some View {
-        HStack(spacing: 10) {
-            button(value: 1, symbol: "hand.thumbsup", filled: "hand.thumbsup.fill", label: "Like")
-            button(value: -1, symbol: "hand.thumbsdown", filled: "hand.thumbsdown.fill", label: "Dislike")
+        // GlassEffectContainer lets the two circles share one glass "pour" so they
+        // refract together and morph fluidly when tapped (iOS 26 Liquid Glass).
+        GlassEffectContainer(spacing: 22) {
+            HStack(spacing: 22) {
+                circle(value: 1,  symbol: "hand.thumbsup.fill",   tint: .green, label: "Like")
+                circle(value: -1, symbol: "hand.thumbsdown.fill", tint: .red,   label: "Dislike")
+            }
         }
-        .padding(.horizontal)
+        // Light haptic whenever the selection changes (incl. clearing).
+        .sensoryFeedback(.impact(weight: .light), trigger: model?.mine ?? 0)
         .task(id: loadID) {
             if model == nil { model = RatingModel(service: env.ratings) }
             await model?.load(entryID: entry.id, includesMine: !isGuestSession)
         }
     }
 
-    private func button(value: Int, symbol: String, filled: String, label: String) -> some View {
+    private func circle(value: Int, symbol: String, tint: Color, label: String) -> some View {
         let selected = model?.mine == value
         return Button {
             Task { await model?.tap(value, entryID: entry.id, allowsPersistence: !isGuestSession) }
         } label: {
-            Image(systemName: selected ? filled : symbol)
-                .font(.headline.weight(.semibold))
+            Image(systemName: symbol)
+                .font(.system(size: 23, weight: .bold))
+                // White on the saturated fill when chosen; the accent when idle.
                 .foregroundStyle(selected ? .white : accent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    selected ? AnyShapeStyle(accent) : AnyShapeStyle(.quaternary),
-                    in: RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                )
+                .frame(width: 62, height: 62)
         }
         .buttonStyle(.plain)
+        // Selected → tinted, saturated glass (green/red). Idle → clear interactive
+        // glass. `.interactive()` gives the touch-reactive Liquid Glass wobble.
+        .glassEffect(selected ? .regular.tint(tint).interactive()
+                              : .regular.interactive(),
+                     in: .circle)
+        .scaleEffect(selected ? 1.06 : 1.0)
+        .animation(.spring(response: 0.34, dampingFraction: 0.6), value: selected)
         .disabled(model?.isSaving == true || isGuestSession)
-        .animation(.spring(duration: 0.3), value: selected)
+        .opacity(isGuestSession ? 0.5 : 1)
         .accessibilityLabel(label)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 
     private var isGuestSession: Bool { env.session.session?.isGuest == true }
