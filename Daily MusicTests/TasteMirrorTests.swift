@@ -74,4 +74,20 @@ struct TasteMirrorTests {
         #expect(m.mood.overIndex?.name == "Melancholy")
         #expect(m.mood.categories.contains { $0.name == "Serene" })
     }
+
+    @Test func dimensionLocksBelowMinimumRatings() {
+        let data = Self.mood("Melancholy", likes: 4, dislikes: 2) // 6 < 10
+        let m = TasteMirror.build(from: data)
+        #expect(m.mood.isUnlocked == false)
+    }
+
+    @Test func energyLeanFromLikedSongs() {
+        // Liked energies 1,2,3 → mean 2.0 → "Intimate"; disliked energy ignored.
+        let liked = [1, 2, 3].map { RatedSong(entry: Self.entry(id: 900 + $0, energy: $0), value: 1) }
+        let disliked = [RatedSong(entry: Self.entry(id: 950, energy: 5), value: -1)]
+        let pad = (0..<8).map { RatedSong(entry: Self.entry(id: 960 + $0, energy: 2), value: $0.isMultiple(of: 2) ? 1 : -1) }
+        let m = TasteMirror.build(from: liked + disliked + pad)
+        #expect(m.energy.leanLabel == "Intimate")
+        #expect(m.energy.likedMean != nil)
+    }
 }

@@ -75,8 +75,8 @@ struct TasteMirror: Equatable {
         let theme = dimension(id: "theme", title: "Theme", from: rated, overall: overall, totalRated: total) { $0.theme }
         let genre = dimension(id: "genre", title: "Genre", from: rated, overall: overall, totalRated: total) { $0.genre }
         let language = dimension(id: "language", title: "Language", from: rated, overall: overall, totalRated: total) { $0.language }
-        // --- energy (replaced in Task 6) ---
-        let energy = EnergyInsight(likedMean: nil, leanLabel: nil, bands: [], isUnlocked: false)
+        // --- energy ---
+        let energy = energyInsight(from: rated, overall: overall, totalRated: total)
         // --- archetype (replaced in Task 12) ---
         let archetype: TasteProfile? = nil
         let isArchetypeUnlocked = false
@@ -121,5 +121,24 @@ extension TasteMirror {
         return DimensionInsight(id: id, title: title, categories: cats,
                                 dominant: dominant, overIndex: overIndex, skip: skip,
                                 isUnlocked: unlocked)
+    }
+
+    static func energyInsight(from rated: [RatedSong], overall: Double, totalRated: Int) -> EnergyInsight {
+        let likedEnergies = rated.filter { $0.value > 0 }.compactMap { $0.entry.energy }
+        let mean = likedEnergies.isEmpty ? nil
+            : Double(likedEnergies.reduce(0, +)) / Double(likedEnergies.count)
+        let lean: String? = mean.map {
+            switch $0 {
+            case ...2.0: "Intimate"
+            case 3.5...: "Explosive"
+            default:     "Balanced"
+            }
+        }
+        let banded = dimension(id: "energy", title: "Energy", from: rated,
+                               overall: overall, totalRated: totalRated) { entry in
+            entry.energy.map { EnergyBand.band(for: $0).rawValue }
+        }
+        return EnergyInsight(likedMean: mean, leanLabel: lean,
+                             bands: banded.categories, isUnlocked: banded.isUnlocked)
     }
 }
