@@ -64,6 +64,7 @@ private struct SettingsForm: View {
     @Bindable var model: SettingsViewModel
     @Environment(AppEnvironment.self) private var env
     @State private var showingResetConfirmation = false
+    @State private var showingDeleteConfirmation = false
     @State private var selectedSection: SettingsNavSection = .account
 
     var body: some View {
@@ -84,6 +85,18 @@ private struct SettingsForm: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This resets reminder, sharing, and personalization preferences on this device. Your account, favorites, and check-ins are not deleted.")
+        }
+        .confirmationDialog(
+            "Delete your account?",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Account", role: .destructive) {
+                Task { await env.session.deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes your account and all your data — favorites, reactions, check-ins, and preferences. This can't be undone.")
         }
     }
 
@@ -174,6 +187,20 @@ private struct SettingsForm: View {
                 Button("Sign out", role: .destructive) {
                     Task { await env.session.signOut() }
                 }
+                .disabled(env.session.isWorking)
+
+                Button(role: .destructive) {
+                    showingDeleteConfirmation = true
+                } label: {
+                    HStack {
+                        Text("Delete account")
+                        if env.session.isWorking {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(env.session.isWorking)
             } else {
                 Label("Signed out", systemImage: "person.crop.circle.badge.xmark")
                     .foregroundStyle(.secondary)
@@ -181,8 +208,14 @@ private struct SettingsForm: View {
         } header: {
             Text("Account")
         } footer: {
-            if env.session.session?.isGuest == true {
-                Text("Guest mode is for development. Favorites and check-ins still use the current Supabase session while you test.")
+            VStack(alignment: .leading, spacing: 6) {
+                if let error = env.session.errorMessage {
+                    Text(error)
+                        .foregroundStyle(.red)
+                }
+                if env.session.session?.isGuest == true {
+                    Text("Guest mode is for development. Favorites and check-ins still use the current Supabase session while you test.")
+                }
             }
         }
     }

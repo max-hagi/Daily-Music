@@ -90,4 +90,21 @@ final class SessionStore {
         await auth.signOut()
         session = nil
     }
+
+    /// Permanently deletes the account, then clears the session so RootView swaps
+    /// back to the sign-in screen. Returns false (with `errorMessage` set) on
+    /// failure so the UI can keep the user on the screen to retry.
+    func deleteAccount() async -> Bool {
+        isWorking = true
+        errorMessage = nil
+        defer { isWorking = false }
+        do {
+            try await auth.deleteAccount()
+            session = nil
+            return true
+        } catch {
+            errorMessage = "Couldn't delete your account: \(error.localizedDescription)"
+            return false
+        }
+    }
 }

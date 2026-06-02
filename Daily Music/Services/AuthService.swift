@@ -36,6 +36,10 @@ protocol AuthService {
     /// Email magic-link, step 2: exchange the code for a real session.
     func verifyEmailCode(_ code: String, email: String) async throws -> AuthSession
     func signOut() async
+    /// Permanently delete the current user's account and all their data, then end
+    /// the session. Required by App Store guideline 5.1.1(v) for any app that lets
+    /// users create an account. Throws if the deletion fails.
+    func deleteAccount() async throws
 }
 
 /// In-memory stand-in. Sign-in "succeeds" instantly with a stable fake user.
@@ -82,4 +86,9 @@ final class MockAuthService: AuthService {
     }
 
     func signOut() async {}
+
+    func deleteAccount() async throws {
+        // Nothing to delete in the in-memory mock; just simulate a round-trip.
+        try? await Task.sleep(for: .milliseconds(300))
+    }
 }

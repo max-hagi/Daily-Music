@@ -63,6 +63,19 @@ final class SupabaseAuthService: AuthService {
         try? await client.auth.signOut()
     }
 
+    func deleteAccount() async throws {
+        // The client only holds the ANON key, which (correctly) can't delete an
+        // auth.users row. So we call the `delete-account` Edge Function: it runs
+        // server-side with the service-role key, removes the user's rows
+        // (reactions, check_ins, favourites, profiles) and then the auth user.
+        // The current JWT is attached automatically, so the function knows who
+        // the caller is — no user id is sent from the client.
+        try await client.functions.invoke("delete-account")
+        // Clear the now-orphaned local session/keychain so the app returns to
+        // the signed-out state. `try?`: the user is already gone server-side.
+        try? await client.auth.signOut()
+    }
+
     private func normalizedEmail(_ email: String) -> String {
         email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
