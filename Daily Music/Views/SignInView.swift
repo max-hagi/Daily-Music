@@ -2,10 +2,12 @@
 //  SignInView.swift
 //  Daily Music
 //
-//  The unauthenticated landing screen. In live builds the primary button creates
-//  a Supabase anonymous session until real Sign in with Apple is linked in. The
-//  "Continue as guest" button is compiled into DEBUG builds only, so it can
-//  never ship to the App Store.
+//  The unauthenticated landing screen. The only shipping sign-in path is email
+//  (a real Supabase OTP account). Real Sign in with Apple needs the paid-account
+//  entitlement and will be added back here once that's available — until then we
+//  do NOT show a fake Apple button, since a non-functional one fails App Review.
+//  The "Continue as guest" button is compiled into DEBUG builds only, so anonymous
+//  sessions can never ship to the App Store.
 //
 
 import SwiftUI
@@ -66,34 +68,11 @@ struct SignInView: View {
                     .buttonStyle(PrimaryActionButtonStyle(tint: Theme.Brand.gradient[0]))
                     .disabled(env.session.isWorking)   // prevent double-taps mid-request
 
-                    Button {
-                        // Kick off async sign-in. The Button action itself is sync,
-                        // so wrap the await in a Task.
-                        Task { await env.session.signInWithApple() }
-                    } label: {
-                        HStack(spacing: 8) {
-                            // Swap the Apple logo for the bouncing-bars spinner while
-                            // a sign-in is in flight (isWorking is observed → live).
-                            if env.session.isWorking {
-                                ProgressView()
-                                    .tint(.white)
-                                    .scaleEffect(0.82)
-                            } else {
-                                Image(systemName: "applelogo")
-                            }
-                            Text("Sign in with Apple")
-                        }
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                                    .stroke(.white.opacity(0.24), lineWidth: 1)
-                            }
-                    }
-                    .disabled(env.session.isWorking)
+                    // NOTE: The real "Sign in with Apple" button goes here once the
+                    // paid-account entitlement is set up. It must use ASAuthorization
+                    // (SignInWithAppleButton) and link to the Supabase user — not the
+                    // current anonymous placeholder. A fake Apple button fails review,
+                    // so nothing is shown until the real flow exists.
 
                     // `#if DEBUG` is a COMPILE-TIME flag: this button only exists in
                     // debug builds, so the guest bypass can never ship to the App Store.
