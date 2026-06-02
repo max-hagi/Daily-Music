@@ -18,6 +18,11 @@ struct SignInView: View {
     @State private var artURLs: [URL] = []
     @State private var showingEmail = false
 
+    #if DEBUG
+    // Dev-only: which backend the app runs against (read by Daily_MusicApp).
+    @AppStorage("dev_useMock") private var useMock = false
+    #endif
+
     var body: some View {
         ZStack {
             // A wall of real covers when we have them; the animated gradient is
@@ -83,6 +88,20 @@ struct SignInView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.88))
                     .disabled(env.session.isWorking)
+
+                    // Dev-only switch: continue as guest against the LIVE Supabase
+                    // backend, or the seeded MOCK build (populated Insights data).
+                    // Tapping swaps the whole AppEnvironment (see Daily_MusicApp).
+                    Button {
+                        useMock.toggle()
+                    } label: {
+                        Label(useMock ? "Data: Mock · tap for Live"
+                                      : "Data: Live · tap for Mock",
+                              systemImage: "arrow.left.arrow.right.circle")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(.top, 2)
                     #endif
 
                     // Conditionally show an error message if sign-in failed.
