@@ -90,4 +90,10 @@ struct TasteMirrorTests {
         #expect(m.energy.leanLabel == "Intimate")
         #expect(m.energy.likedMean != nil)
     }
+
+    @Test func topStandoutPrefersOverIndexThenDominant() {
+        let m = TasteMirror.build(from: Self.workedExample())
+        #expect(m.mood.topStandout?.name == "Melancholy")   // over-index present
+        #expect(m.decade.topStandout?.name == "1980s")       // dominant fallback
+    }
 }

@@ -142,3 +142,8 @@ extension TasteMirror {
                              bands: banded.categories, isUnlocked: banded.isUnlocked)
     }
 }
+
+extension DimensionInsight {
+    /// The headline category: a genuine over-index if present, else the most-liked.
+    var topStandout: CategoryStat? { overIndex ?? dominant }
+}
