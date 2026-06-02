@@ -71,6 +71,10 @@ final class SettingsViewModel {
         didSet { defaults.set(weeklyRecapEnabled, forKey: Keys.weeklyRecapEnabled); scheduleSync() }
     }
 
+    var preferredStreamingService: StreamingService = .appleMusic {
+        didSet { defaults.set(preferredStreamingService.rawValue, forKey: Keys.preferredStreamingService); scheduleSync() }
+    }
+
     private(set) var permissionDenied = false
     private(set) var appleMusicConnected = false
     private(set) var connectingAppleMusic = false
@@ -100,6 +104,7 @@ final class SettingsViewModel {
         static let includeJournalInShares = "settings.includeJournalInShares"
         static let includeWatermarkInShares = "settings.includeWatermarkInShares"
         static let weeklyRecapEnabled = "settings.weeklyRecapEnabled"
+        static let preferredStreamingService = "settings.preferredStreamingService"
     }
 
     init(notifications: NotificationService, settings: SettingsService) {
@@ -116,6 +121,7 @@ final class SettingsViewModel {
         self.includeJournalInShares = Self.storedBool(Keys.includeJournalInShares, default: true, defaults: defaults)
         self.includeWatermarkInShares = Self.storedBool(Keys.includeWatermarkInShares, default: true, defaults: defaults)
         self.weeklyRecapEnabled = Self.storedBool(Keys.weeklyRecapEnabled, default: true, defaults: defaults)
+        self.preferredStreamingService = Self.storedEnum(Keys.preferredStreamingService, default: .appleMusic, defaults: defaults)
     }
 
     /// 8:00 AM today as a sensible default time-of-day.
@@ -144,6 +150,7 @@ final class SettingsViewModel {
         s.includeJournalInShares = includeJournalInShares
         s.includeWatermarkInShares = includeWatermarkInShares
         s.weeklyRecapEnabled = weeklyRecapEnabled
+        s.preferredStreamingService = preferredStreamingService.rawValue
         return s
     }
 
@@ -170,6 +177,7 @@ final class SettingsViewModel {
         includeJournalInShares = s.includeJournalInShares
         includeWatermarkInShares = s.includeWatermarkInShares
         weeklyRecapEnabled = s.weeklyRecapEnabled
+        preferredStreamingService = StreamingService(rawValue: s.preferredStreamingService) ?? .appleMusic
     }
 
     /// Debounced cloud save — coalesces rapid changes (e.g. dragging the time
@@ -227,6 +235,7 @@ final class SettingsViewModel {
         includeJournalInShares = true
         includeWatermarkInShares = true
         weeklyRecapEnabled = true
+        preferredStreamingService = .appleMusic
         await notifications.cancelDailyReminder()
         await refreshPermission()
     }

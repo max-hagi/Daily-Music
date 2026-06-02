@@ -240,8 +240,11 @@ private struct SettingsForm: View {
                 .disabled(model.connectingAppleMusic)
             }
 
-            LabeledContent("Default action", value: "Add to Library")
-            LabeledContent("Preview length", value: "30 seconds")
+            Picker("Default streaming service", selection: $model.preferredStreamingService) {
+                ForEach(StreamingService.allCases) { service in
+                    Text(service.displayName).tag(service)
+                }
+            }
         } header: {
             Text("Music")
         } footer: {

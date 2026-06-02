@@ -23,13 +23,14 @@ struct UserSettings: Codable, Equatable {
     var includeJournalInShares = true
     var includeWatermarkInShares = true
     var weeklyRecapEnabled = true
+    var preferredStreamingService = "Apple Music"
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case reminderEnabled, reminderHour, reminderMinute, listeningMode, startTab
         case hapticsEnabled, showExplicitSongs, allowPersonalizedInsights
-        case includeJournalInShares, includeWatermarkInShares, weeklyRecapEnabled
+        case includeJournalInShares, includeWatermarkInShares, weeklyRecapEnabled, preferredStreamingService
     }
 
     init(from decoder: Decoder) throws {
@@ -46,6 +47,7 @@ struct UserSettings: Codable, Equatable {
         s.includeJournalInShares = try c.decodeIfPresent(Bool.self, forKey: .includeJournalInShares) ?? s.includeJournalInShares
         s.includeWatermarkInShares = try c.decodeIfPresent(Bool.self, forKey: .includeWatermarkInShares) ?? s.includeWatermarkInShares
         s.weeklyRecapEnabled = try c.decodeIfPresent(Bool.self, forKey: .weeklyRecapEnabled) ?? s.weeklyRecapEnabled
+        s.preferredStreamingService = try c.decodeIfPresent(String.self, forKey: .preferredStreamingService) ?? s.preferredStreamingService
         self = s
     }
 }
