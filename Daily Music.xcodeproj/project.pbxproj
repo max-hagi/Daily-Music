@@ -7,16 +7,33 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */; };
+		89D4107636FC55A192B171A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1C88CA3CCE154F540A6D0EE /* Foundation.framework */; };
 		94B1387E2FCB7CB200752257 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 94B1387D2FCB7CB200752257 /* Supabase */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		745F721C1DF77B483AA125B0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 94B138272FCB6F1100752257 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 94B1382E2FCB6F1100752257;
+			remoteInfo = "Daily Music";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Daily MusicTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TasteMirrorTests.swift; path = TasteMirrorTests.swift; sourceTree = "<group>"; };
 		94B1382F2FCB6F1100752257 /* Daily Music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Daily Music.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D1C88CA3CCE154F540A6D0EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		94B138312FCB6F1100752257 /* Daily Music */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "Daily Music";
 			sourceTree = "<group>";
 		};
@@ -31,14 +48,41 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C782504B9A98BBD2A316653F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				89D4107636FC55A192B171A5 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		474DB509253B3672F8A852C1 /* Daily MusicTests */ = {
+			isa = PBXGroup;
+			children = (
+				57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */,
+			);
+			name = "Daily MusicTests";
+			path = "Daily MusicTests";
+			sourceTree = "<group>";
+		};
+		50956E9C0A92DD6B4BB9826E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F94510787CBBEEB8525DEB20 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		94B138262FCB6F1100752257 = {
 			isa = PBXGroup;
 			children = (
 				94B138312FCB6F1100752257 /* Daily Music */,
 				94B138302FCB6F1100752257 /* Products */,
+				50956E9C0A92DD6B4BB9826E /* Frameworks */,
+				474DB509253B3672F8A852C1 /* Daily MusicTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -46,8 +90,17 @@
 			isa = PBXGroup;
 			children = (
 				94B1382F2FCB6F1100752257 /* Daily Music.app */,
+				0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F94510787CBBEEB8525DEB20 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				D1C88CA3CCE154F540A6D0EE /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -75,6 +128,24 @@
 			productName = "Daily Music";
 			productReference = 94B1382F2FCB6F1100752257 /* Daily Music.app */;
 			productType = "com.apple.product-type.application";
+		};
+		E3337D4BD109404AE5A22276 /* Daily MusicTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EC1155978C0C67B4D2AC439F /* Build configuration list for PBXNativeTarget "Daily MusicTests" */;
+			buildPhases = (
+				6789B102B0603D9006D93D6A /* Sources */,
+				C782504B9A98BBD2A316653F /* Frameworks */,
+				1579B884B3B5B5F89B25AF99 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6E9594312FE467D3307573FC /* PBXTargetDependency */,
+			);
+			name = "Daily MusicTests";
+			productName = "Daily MusicTests";
+			productReference = 0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -109,11 +180,19 @@
 			projectRoot = "";
 			targets = (
 				94B1382E2FCB6F1100752257 /* Daily Music */,
+				E3337D4BD109404AE5A22276 /* Daily MusicTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		1579B884B3B5B5F89B25AF99 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		94B1382D2FCB6F1100752257 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,6 +203,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		6789B102B0603D9006D93D6A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		94B1382B2FCB6F1100752257 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -133,7 +220,47 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		6E9594312FE467D3307573FC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "Daily Music";
+			target = 94B1382E2FCB6F1100752257 /* Daily Music */;
+			targetProxy = 745F721C1DF77B483AA125B0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		097C686D205F99F2C88CAF47 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				PRODUCT_BUNDLE_IDENTIFIER = "maxhagi.Daily-MusicTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Daily Music.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Daily Music";
+			};
+			name = Debug;
+		};
+		4298F98F0782A14924407B87 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				PRODUCT_BUNDLE_IDENTIFIER = "maxhagi.Daily-MusicTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Daily Music.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Daily Music";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		94B138382FCB6F1300752257 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -336,6 +463,15 @@
 			buildConfigurations = (
 				94B1383B2FCB6F1300752257 /* Debug */,
 				94B1383C2FCB6F1300752257 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EC1155978C0C67B4D2AC439F /* Build configuration list for PBXNativeTarget "Daily MusicTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4298F98F0782A14924407B87 /* Release */,
+				097C686D205F99F2C88CAF47 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
