@@ -53,7 +53,7 @@ struct StandoutDetailView: View {
             }
             .padding(Theme.Spacing.lg)
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
         .presentationBackground(.regularMaterial)
         .presentationCornerRadius(34)
         .presentationDragIndicator(.visible)

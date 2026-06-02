@@ -39,7 +39,7 @@ struct EntryDetailView: View {
     var body: some View {
         ZStack {
             ScrollView {
-                VStack(spacing: usesImmersiveBackdrop ? Theme.Spacing.md : Theme.Spacing.lg) {
+                VStack(spacing: usesImmersiveBackdrop ? Theme.Spacing.sm : Theme.Spacing.lg) {
                     if let dateLabel, !usesImmersiveBackdrop {
                         Text(dateLabel.uppercased())
                             .font(.caption.weight(.semibold))
@@ -66,8 +66,13 @@ struct EntryDetailView: View {
                         header
                     }
                     PreviewPlayButton(entry: entry, accent: palette.accent)
-                    FavoriteButton(entry: entry, accent: palette.accent)
-                    RatingBar(entry: entry, accent: palette.accent)
+                    // Favorite + 👍/👎 share one row so they don't each eat a full
+                    // vertical slot — keeps Today fitting without scrolling.
+                    HStack(spacing: 12) {
+                        FavoriteButton(entry: entry, accent: palette.accent)
+                        RatingBar(entry: entry, accent: palette.accent)
+                    }
+                    .padding(.horizontal)
                     // The same reactions component can be interactive on Today and
                     // read-only in Vault, controlled by the caller's context.
                     ReactionsBar(entry: entry, accent: palette.accent, isReadOnly: reactionsAreReadOnly)
@@ -429,7 +434,6 @@ private struct FavoriteButton: View {
                 }
         }
         .buttonStyle(.plain)
-        .padding(.horizontal)
         .accessibilityLabel(isFav ? "Remove from favorites" : "Add to favorites")
     }
 }

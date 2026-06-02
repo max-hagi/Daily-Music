@@ -36,7 +36,7 @@ struct TodayView: View {
                             dateLabel: todayString,
                             preArtworkMessage: todayPrompt,
                             showsNavigationTitle: false,
-                            albumArtHorizontalPadding: 24,
+                            albumArtHorizontalPadding: 68,
                             usesImmersiveBackdrop: true
                         )
                     }

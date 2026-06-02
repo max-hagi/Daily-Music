@@ -45,8 +45,9 @@ struct RatingBar: View {
     var body: some View {
         // GlassEffectContainer lets the two circles share one glass "pour" so they
         // refract together and morph fluidly when tapped (iOS 26 Liquid Glass).
-        GlassEffectContainer(spacing: 22) {
-            HStack(spacing: 22) {
+        // Compact (not full-width) so it sits beside the favorite button.
+        GlassEffectContainer(spacing: 12) {
+            HStack(spacing: 12) {
                 circle(value: 1,  symbol: "hand.thumbsup.fill",   tint: .green, label: "Like")
                 circle(value: -1, symbol: "hand.thumbsdown.fill", tint: .red,   label: "Dislike")
             }
@@ -65,16 +66,16 @@ struct RatingBar: View {
             Task { await model?.tap(value, entryID: entry.id, allowsPersistence: !isGuestSession) }
         } label: {
             Image(systemName: symbol)
-                .font(.system(size: 23, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 // White on the saturated fill when chosen; the accent when idle.
                 .foregroundStyle(selected ? .white : accent)
-                .frame(width: 62, height: 62)
+                .frame(width: 52, height: 52)
         }
         .buttonStyle(.plain)
-        // Selected → tinted, saturated glass (green/red). Idle → clear interactive
-        // glass. `.interactive()` gives the touch-reactive Liquid Glass wobble.
-        .glassEffect(selected ? .regular.tint(tint).interactive()
-                              : .regular.interactive(),
+        // Transparent CLEAR Liquid Glass that lets the artwork show through; fills
+        // green/red only when chosen. `.interactive()` adds the touch-reactive wobble.
+        .glassEffect(selected ? .clear.tint(tint).interactive()
+                              : .clear.interactive(),
                      in: .circle)
         .scaleEffect(selected ? 1.06 : 1.0)
         .animation(.spring(response: 0.34, dampingFraction: 0.6), value: selected)
