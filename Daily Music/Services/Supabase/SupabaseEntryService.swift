@@ -97,6 +97,11 @@ private struct DailyEntryRow: Decodable {
     let apple_music_id: String
     let spotify_uri: String
     let genre: String?
+    let year: Int?
+    let mood: String?
+    let energy: Int?
+    let theme: String?
+    let language: String?
 
     // Convert the raw row into the app's model. Returns optional because a row
     // with an unparseable date is treated as invalid (guard → nil).
@@ -113,7 +118,12 @@ private struct DailyEntryRow: Decodable {
             journalMarkdown: journal_md,
             appleMusicID: apple_music_id,
             spotifyURI: spotify_uri,
-            genre: genre
+            genre: genre,
+            year: year,
+            mood: mood,
+            energy: energy,
+            theme: theme,
+            language: language
         )
     }
 }
