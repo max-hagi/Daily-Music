@@ -48,11 +48,7 @@ struct FavoritesView: View {
 
     private var background: some View {
         LinearGradient(
-            colors: [
-                Color(red: 0.99, green: 0.94, blue: 0.95),
-                Color(red: 0.96, green: 0.93, blue: 0.99),
-                Color(red: 1.0, green: 0.92, blue: 0.9)
-            ],
+            colors: Theme.Surface.favoritesBackground,
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -60,7 +56,9 @@ struct FavoritesView: View {
     }
 
     private var loadingState: some View {
-        MusicLoadingView(title: "Gathering your favorites", tint: .pink)
+        // Plain system spinner — matches Today's loading look. Kept on the
+        // favorites gradient so the background doesn't flash.
+        ProgressView()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(background)
     }
@@ -75,7 +73,11 @@ struct FavoritesView: View {
                         NavigationLink(value: entry) {
                             EntryRow(entry: entry)
                                 .padding(Theme.Spacing.md)
-                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+                                }
                         }
                         .buttonStyle(.plain)
                     }

@@ -13,23 +13,30 @@ struct CalendarMonthView: View {
     // Pre-indexed lookup: day (midnight) → entry, so each cell can ask "is there
     // an entry for this day?" in O(1) instead of scanning the array.
     private let entriesByDay: [Date: DailyEntry]
+    private let monthPages: [Date]
+    private let onSelect: ((DailyEntry) -> Void)?
     // Which month is on screen. @State so the chevrons can change it and redraw.
     @State private var month: Date
     private let calendar = Calendar.current
 
     // A CUSTOM init. Normally SwiftUI synthesizes one, but here we transform the
     // input and seed @State from a computed value.
-    init(entries: [DailyEntry]) {
+    init(entries: [DailyEntry], onSelect: ((DailyEntry) -> Void)? = nil) {
         let cal = Calendar.current
         var dict: [Date: DailyEntry] = [:]
         for entry in entries {
             dict[cal.startOfDay(for: entry.date)] = entry
         }
         self.entriesByDay = dict
+        self.onSelect = onSelect
 
         // Open on the current month so today's date is visible on first load.
         let today = Date()
         let monthStart = cal.dateInterval(of: .month, for: today)?.start ?? today
+        let earliestMonth = entries
+            .compactMap { cal.dateInterval(of: .month, for: $0.date)?.start }
+            .min() ?? monthStart
+        self.monthPages = Self.months(from: earliestMonth, through: monthStart, calendar: cal)
         // To initialize an @State from init you assign its UNDERSCORE-prefixed
         // backing storage directly: `_month = State(initialValue:)`. (You can't
         // write `month = …` here because the wrapper isn't set up yet.)
@@ -42,7 +49,7 @@ struct CalendarMonthView: View {
         VStack(spacing: 16) {
             monthHeader
             weekdayHeader
-            grid
+            monthPager
             Spacer(minLength: 0)   // push everything to the top
         }
         .padding(.vertical)
@@ -52,7 +59,7 @@ struct CalendarMonthView: View {
         HStack {
             // Button(action:label:) trailing-closure form: the first `{ }` is the
             // tap action, `label: { }` is what's drawn.
-            Button { changeMonth(by: -1) } label: {
+            Button { changeMonth(by: -1, animated: true) } label: {
                 Image(systemName: "chevron.left")
             }
             Spacer()
@@ -60,7 +67,7 @@ struct CalendarMonthView: View {
             Text(month.formatted(.dateTime.month(.wide).year()))
                 .font(.headline)
             Spacer()
-            Button { changeMonth(by: 1) } label: {
+            Button { changeMonth(by: 1, animated: true) } label: {
                 Image(systemName: "chevron.right")
             }
             .disabled(isCurrentOrFutureMonth)   // can't page into the future
@@ -81,12 +88,29 @@ struct CalendarMonthView: View {
     }
 
     private var grid: some View {
+        grid(for: month)
+    }
+
+    private var monthPager: some View {
+        TabView(selection: $month) {
+            ForEach(monthPages, id: \.self) { visibleMonth in
+                grid(for: visibleMonth)
+                    .tag(visibleMonth)
+                    .padding(.horizontal, 1)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(height: gridHeight(for: month))
+        .animation(.snappy(duration: 0.28), value: month)
+    }
+
+    private func grid(for visibleMonth: Date) -> some View {
         // 7 equal flexible columns = a week. LazyVGrid lays children into those
         // columns top-to-bottom. `.enumerated()` pairs each element with its index;
         // `id: \.offset` uses that index as identity (days can be nil, so we can't
         // use the value itself).
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-            ForEach(Array(days.enumerated()), id: \.offset) { _, day in
+            ForEach(Array(days(for: visibleMonth).enumerated()), id: \.offset) { _, day in
                 if let day {
                     dayCell(day)            // a real day
                 } else {
@@ -103,10 +127,9 @@ struct CalendarMonthView: View {
     private func dayCell(_ day: Date) -> some View {
         let number = calendar.component(.day, from: day)   // day-of-month integer
         if let entry = entriesByDay[calendar.startOfDay(for: day)] {
-            // NavigationLink(value:) is the modern data-driven nav: tapping pushes
-            // a value, and a `.navigationDestination(for:)` elsewhere decides what
-            // screen that value opens (see VaultView). The entry must be Hashable.
-            NavigationLink(value: entry) {
+            Button {
+                onSelect?(entry)
+            } label: {
                 VStack(spacing: 3) {
                     Text("\(number)")
                         .font(.callout.weight(.semibold))
@@ -145,9 +168,13 @@ struct CalendarMonthView: View {
     /// Cells for the displayed month: leading nils to align the 1st under its
     /// weekday, then one Date per day.
     private var days: [Date?] {
-        guard let interval = calendar.dateInterval(of: .month, for: month) else { return [] }
+        days(for: month)
+    }
+
+    private func days(for visibleMonth: Date) -> [Date?] {
+        guard let interval = calendar.dateInterval(of: .month, for: visibleMonth) else { return [] }
         let firstDay = interval.start
-        let dayCount = calendar.range(of: .day, in: .month, for: month)?.count ?? 0
+        let dayCount = calendar.range(of: .day, in: .month, for: visibleMonth)?.count ?? 0
         let weekdayOfFirst = calendar.component(.weekday, from: firstDay)
         // How many blank cells before the 1st so it sits under the right weekday
         // column. The `+ 7) % 7` keeps the result in 0...6 regardless of which day
@@ -181,9 +208,32 @@ struct CalendarMonthView: View {
         calendar.isDateInToday(day)
     }
 
-    private func changeMonth(by value: Int) {
-        if let newMonth = calendar.date(byAdding: .month, value: value, to: month) {
-            month = newMonth
+    private func changeMonth(by value: Int, animated: Bool = false) {
+        if let newMonth = calendar.date(byAdding: .month, value: value, to: month),
+           monthPages.contains(newMonth) {
+            if animated {
+                withAnimation(.snappy(duration: 0.28)) {
+                    month = newMonth
+                }
+            } else {
+                month = newMonth
+            }
         }
+    }
+
+    private func gridHeight(for visibleMonth: Date) -> CGFloat {
+        let rowCount = ceil(Double(days(for: visibleMonth).count) / 7.0)
+        return CGFloat(rowCount) * 40 + CGFloat(max(rowCount - 1, 0)) * 8
+    }
+
+    private static func months(from start: Date, through end: Date, calendar: Calendar) -> [Date] {
+        var pages: [Date] = []
+        var cursor = start
+        while cursor <= end {
+            pages.append(cursor)
+            guard let next = calendar.date(byAdding: .month, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return pages
     }
 }

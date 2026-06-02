@@ -16,11 +16,19 @@ struct EntryDetailView: View {
     // view serve three contexts. Today passes its own values (immersive backdrop,
     // no nav title); Vault/Favorites take the defaults. Callers only override what
     // they need.
-    /// Optional caption shown above the art (Today passes the date here).
+    /// Optional caption shown above the art in standard details and in the header on Today.
     var dateLabel: String? = nil
+    /// Optional personalized line shown before the album art.
+    var preArtworkMessage: String? = nil
     var showsNavigationTitle = true
     var albumArtHorizontalPadding: CGFloat = 40
     var usesImmersiveBackdrop = false
+    /// False when a parent screen owns the top trailing toolbar item.
+    /// Vault uses this so its toolbar can show "listened" instead of share.
+    var showsShareToolbarButton = true
+    /// True for archival Vault details: reactions are shown as historical counts,
+    /// but tapping them should not change old entries.
+    var reactionsAreReadOnly = false
 
     @Environment(AppEnvironment.self) private var env
     // Each detail view owns its own palette; @State so it survives redraws and the
@@ -39,6 +47,15 @@ struct EntryDetailView: View {
                             .padding(.top, 8)
                     }
 
+                    if let preArtworkMessage {
+                        Text(preArtworkMessage)
+                            .font(.callout.weight(.semibold))
+                            .foregroundStyle(usesImmersiveBackdrop ? .primary : .secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, Theme.Spacing.lg)
+                            .padding(.top, usesImmersiveBackdrop ? Theme.Spacing.sm : 0)
+                    }
+
                     AlbumArtView(url: entry.albumArtURL, cornerRadius: usesImmersiveBackdrop ? 24 : 16)
                         .padding(.horizontal, albumArtHorizontalPadding)
                         .padding(.top, usesImmersiveBackdrop ? 0 : (dateLabel == nil ? 8 : 0))
@@ -49,7 +66,10 @@ struct EntryDetailView: View {
                         header
                     }
                     PreviewPlayButton(entry: entry, accent: palette.accent)
-                    ReactionsBar(entry: entry, accent: palette.accent)
+                    FavoriteButton(entry: entry, accent: palette.accent)
+                    // The same reactions component can be interactive on Today and
+                    // read-only in Vault, controlled by the caller's context.
+                    ReactionsBar(entry: entry, accent: palette.accent, isReadOnly: reactionsAreReadOnly)
                     streamingActions
 
                     Divider().padding(.vertical, 4)
@@ -68,25 +88,27 @@ struct EntryDetailView: View {
                 ArtworkLoadingScreen(entry: entry)
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
+
         }
         .background(backdrop)                          // the artwork-tinted wash (computed below)
         .scrollContentBackground(.hidden)              // let our background show through the ScrollView
         .navigationTitle(showsNavigationTitle ? entry.title : "")
         .navigationBarTitleDisplayMode(.inline)
         // In immersive mode, hide the bar backgrounds so the wash bleeds edge-to-edge.
-        .toolbarBackground(usesImmersiveBackdrop ? .hidden : .automatic, for: .navigationBar, .tabBar)
+        .toolbarBackground(usesImmersiveBackdrop ? .hidden : .automatic, for: .navigationBar)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .toolbar {
-            // Two trailing toolbar items: the favorite heart and the share button.
-            ToolbarItem(placement: .topBarTrailing) {
-                FavoriteButton(entry: entry)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingShare = true
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
+            // Most detail contexts own their share button here. Vault disables it
+            // because its fullscreen toolbar uses the trailing slot for "listened".
+            if showsShareToolbarButton {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingShare = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Share")
                 }
-                .accessibilityLabel("Share")
             }
         }
         .sheet(isPresented: $showingShare) {
@@ -378,6 +400,7 @@ private struct AddToPlaylistButton: View {
 
 private struct FavoriteButton: View {
     let entry: DailyEntry
+    var accent: Color
     @Environment(AppEnvironment.self) private var env
 
     var body: some View {
@@ -390,9 +413,22 @@ private struct FavoriteButton: View {
         Button {
             Task { await store.toggle(entry) }
         } label: {
-            Image(systemName: isFav ? "heart.fill" : "heart")
-                .foregroundStyle(isFav ? .red : .secondary)
+            Label(isFav ? "Saved to Favorites" : "Save to Favorites", systemImage: isFav ? "heart.fill" : "heart")
+                .font(.subheadline.weight(.bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(isFav ? .white : accent)
+                .background(
+                    isFav ? Color.red.gradient : accent.opacity(0.14).gradient,
+                    in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                        .stroke(isFav ? .clear : accent.opacity(0.28), lineWidth: 1)
+                }
         }
+        .buttonStyle(.plain)
+        .padding(.horizontal)
         .accessibilityLabel(isFav ? "Remove from favorites" : "Add to favorites")
     }
 }

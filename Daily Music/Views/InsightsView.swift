@@ -31,13 +31,17 @@ struct InsightsView: View {
                         content(stats)
                     }
                 } else {
-                    MusicLoadingView(title: "Reading your taste", tint: .orange)
+                    // Plain system spinner while the view model is built — matches
+                    // Today's loading look. Kept on the page gradient so the
+                    // background doesn't flash.
+                    ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(pageBackground)
                 }
             }
             .navigationTitle("Insights")
             .toolbarBackground(.hidden, for: .navigationBar)
+            .background(pageBackground)
             // Like `.sheet`, but `.fullScreenCover` slides up edge-to-edge (no
             // peek of the screen behind) — fitting for the immersive Wrapped recap.
             .fullScreenCover(isPresented: $showingWrapped) {
@@ -79,11 +83,7 @@ struct InsightsView: View {
 
     private var pageBackground: some View {
         LinearGradient(
-            colors: [
-                Color(red: 0.98, green: 0.95, blue: 0.9),
-                Color(red: 0.9, green: 0.98, blue: 0.98),
-                Color(red: 0.99, green: 0.91, blue: 0.86)
-            ],
+            colors: Theme.Surface.insightsBackground,
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -209,7 +209,11 @@ struct InsightsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Spacing.md)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+        }
     }
 
     /// Shown when the user hasn't favorited anything with a genre yet.
@@ -225,7 +229,11 @@ struct InsightsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Spacing.lg)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+        }
     }
 
     // MARK: - Top genres (real: from favorites' genres)
@@ -264,7 +272,7 @@ struct InsightsView: View {
                     // genre's share (count / total) of the available width.
                     GeometryReader { proxy in
                         ZStack(alignment: .leading) {
-                            Capsule().fill(.black.opacity(0.08))
+                            Capsule().fill(Theme.Surface.subtleTrack)
                             Capsule().fill(palette[index % palette.count].gradient)
                                 .frame(width: max(12, proxy.size.width * Double(genre.count) / Double(total)))
                         }
@@ -275,7 +283,11 @@ struct InsightsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Spacing.lg)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+        }
     }
 
     // MARK: - Wrapped

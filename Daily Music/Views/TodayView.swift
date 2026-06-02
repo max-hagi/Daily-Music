@@ -34,6 +34,7 @@ struct TodayView: View {
                         EntryDetailView(
                             entry: entry,
                             dateLabel: todayString,
+                            preArtworkMessage: todayPrompt,
                             showsNavigationTitle: false,
                             albumArtHorizontalPadding: 24,
                             usesImmersiveBackdrop: true
@@ -80,6 +81,19 @@ struct TodayView: View {
     // e.g. "Monday, Jun 1" — today, formatted for the detail header.
     private var todayString: String {
         Date().formatted(.dateTime.weekday(.wide).month().day())
+    }
+
+    private var todayPrompt: String {
+        "Hey \(listenerName), today's song is ready."
+    }
+
+    private var listenerName: String {
+        guard let displayName = env.session.session?.displayName, !displayName.isEmpty else {
+            return "there"
+        }
+
+        let name = displayName.split(separator: "@").first.map(String.init) ?? displayName
+        return name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

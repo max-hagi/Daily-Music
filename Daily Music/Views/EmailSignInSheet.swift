@@ -21,7 +21,9 @@ struct EmailSignInSheet: View {
             Form {
                 if !codeSent {
                     Section {
-                        TextField("you@example.com", text: $email)
+                        TextField(text: $email, prompt: Text("you@example.com").foregroundStyle(.secondary)) {
+                            Text("Email address")
+                        }
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)

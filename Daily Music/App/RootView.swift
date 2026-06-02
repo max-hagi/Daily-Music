@@ -14,6 +14,7 @@ struct RootView: View {
     // Local UI flag owned by this view: have we finished restoring the session?
     // Drives the splash → content swap. @State because the view mutates it.
     @State private var didRestore = false
+    @State private var isCompletingSignIn = false
 
     var body: some View {
         // ZStack layers views back-to-front. Here only one branch is shown at a
@@ -21,10 +22,15 @@ struct RootView: View {
         ZStack {
             if !didRestore {
                 // Phase 1: branded splash while we restore the session.
-                MusicLoadingView(title: "Daily Music", tint: Theme.Brand.gradient[2])
+                MusicLoadingView(title: "Daily Music", tint: .white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(WelcomeGradientBackground())
+                    .background(AppLoadingBackdrop())
                     .transition(.opacity)        // fade when this branch leaves
+            } else if isCompletingSignIn {
+                MusicLoadingView(title: "Daily Music", tint: .white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppLoadingBackdrop())
+                    .transition(.opacity)
             } else if env.session.isSignedIn {
                 // Phase 2a: signed in → main app. `.task` kicks off favorites
                 // loading once MainTabView appears (and cancels if it leaves).
@@ -49,6 +55,15 @@ struct RootView: View {
         // `isSignedIn` changes, animate the resulting view swap with this spring.
         .animation(.spring(response: 0.65, dampingFraction: 0.86), value: didRestore)
         .animation(.spring(response: 0.75, dampingFraction: 0.84), value: env.session.isSignedIn)
+        .onChange(of: env.session.isSignedIn) { oldValue, newValue in
+            guard didRestore, !oldValue, newValue else { return }
+            isCompletingSignIn = true
+
+            Task {
+                try? await Task.sleep(for: .milliseconds(1200))
+                isCompletingSignIn = false
+            }
+        }
         // `.task` runs this async work when RootView first appears. SwiftUI
         // automatically cancels it if the view goes away.
         .task {
@@ -66,5 +81,69 @@ struct RootView: View {
             }
             didRestore = true                    // flip the flag → triggers the animated swap above
         }
+    }
+}
+
+private struct AppLoadingBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var isAnimating = false
+
+    var body: some View {
+        LinearGradient(
+            colors: backgroundColors,
+            startPoint: isAnimating ? .bottomLeading : .topLeading,
+            endPoint: isAnimating ? .topTrailing : .bottomTrailing
+        )
+        .ignoresSafeArea()
+        .overlay {
+            LinearGradient(
+                colors: overlayColors,
+                startPoint: isAnimating ? .leading : .top,
+                endPoint: isAnimating ? .trailing : .bottom
+            )
+            .ignoresSafeArea()
+        }
+        .overlay {
+            VStack(spacing: 18) {
+                ForEach(0..<5, id: \.self) { _ in
+                    Capsule(style: .continuous)
+                        .fill(lineColor)
+                        .frame(height: 1)
+                }
+            }
+            .padding(.horizontal, 44)
+            .rotationEffect(.degrees(-8))
+            .opacity(0.5)
+        }
+        .animation(.easeInOut(duration: 5.5).repeatForever(autoreverses: true), value: isAnimating)
+        .onAppear { isAnimating = true }
+    }
+
+    private var backgroundColors: [Color] {
+        if colorScheme == .dark {
+            [
+                Color(red: 0.09, green: 0.052, blue: 0.064),
+                Color(red: 0.18, green: 0.105, blue: 0.13),
+                Color(red: 0.075, green: 0.058, blue: 0.052),
+                Color(red: 0.13, green: 0.09, blue: 0.07)
+            ]
+        } else {
+            [
+                Color(red: 0.98, green: 0.38, blue: 0.5),
+                Color(red: 0.56, green: 0.36, blue: 0.7),
+                Color(red: 0.74, green: 0.52, blue: 0.48),
+                Color(red: 0.98, green: 0.74, blue: 0.58)
+            ]
+        }
+    }
+
+    private var overlayColors: [Color] {
+        colorScheme == .dark
+            ? [.white.opacity(0.08), .clear, .black.opacity(0.28)]
+            : [.white.opacity(0.24), .clear, .black.opacity(0.18)]
+    }
+
+    private var lineColor: Color {
+        .white.opacity(colorScheme == .dark ? 0.08 : 0.14)
     }
 }

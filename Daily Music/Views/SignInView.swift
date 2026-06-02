@@ -59,34 +59,39 @@ struct SignInView: View {
 
                 VStack(spacing: 12) {
                     Button {
+                        showingEmail = true
+                    } label: {
+                        Label("Continue with email", systemImage: "envelope.fill")
+                    }
+                    .buttonStyle(PrimaryActionButtonStyle(tint: Theme.Brand.gradient[0]))
+                    .disabled(env.session.isWorking)   // prevent double-taps mid-request
+
+                    Button {
                         // Kick off async sign-in. The Button action itself is sync,
                         // so wrap the await in a Task.
                         Task { await env.session.signInWithApple() }
                     } label: {
-                        HStack {
+                        HStack(spacing: 8) {
                             // Swap the Apple logo for the bouncing-bars spinner while
                             // a sign-in is in flight (isWorking is observed → live).
                             if env.session.isWorking {
-                                MusicLoadingView(title: nil, tint: .white)
-                                    .scaleEffect(0.42)
-                                    .frame(width: 24, height: 24)
+                                ProgressView()
+                                    .tint(.white)
+                                    .scaleEffect(0.82)
                             } else {
                                 Image(systemName: "applelogo")
                             }
                             Text("Sign in with Apple")
                         }
-                    }
-                    .buttonStyle(PrimaryActionButtonStyle(tint: .black))   // our custom style from Styles.swift
-                    .disabled(env.session.isWorking)   // prevent double-taps mid-request
-
-                    Button {
-                        showingEmail = true
-                    } label: {
-                        Label("Continue with email", systemImage: "envelope.fill")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 12)
+                            .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                                    .stroke(.white.opacity(0.24), lineWidth: 1)
+                            }
                     }
                     .disabled(env.session.isWorking)
 
@@ -146,7 +151,7 @@ struct AlbumArtGridBackdrop: View {
             let gridItems = Array(repeating: GridItem(.fixed(tile), spacing: 10), count: columns)
 
             ZStack {
-                WelcomeGradientBackground()
+                AlbumWallStageBackground()
 
                 LazyVGrid(columns: gridItems, spacing: 10) {
                     ForEach(Array(repeatedURLs.enumerated()), id: \.offset) { _, url in
@@ -194,6 +199,43 @@ struct AlbumArtGridBackdrop: View {
             }
             .ignoresSafeArea()
             .onAppear { isPanning = true }
+        }
+        .ignoresSafeArea()
+    }
+}
+
+struct AlbumWallStageBackground: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.02, green: 0.025, blue: 0.035),
+                    Color(red: 0.055, green: 0.045, blue: 0.07),
+                    Color(red: 0.015, green: 0.035, blue: 0.04)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    Color(red: 0.95, green: 0.24, blue: 0.43).opacity(0.32),
+                    .clear
+                ],
+                center: .topLeading,
+                startRadius: 40,
+                endRadius: 360
+            )
+
+            RadialGradient(
+                colors: [
+                    Color(red: 0.0, green: 0.62, blue: 0.74).opacity(0.24),
+                    .clear
+                ],
+                center: .bottomTrailing,
+                startRadius: 60,
+                endRadius: 420
+            )
         }
         .ignoresSafeArea()
     }

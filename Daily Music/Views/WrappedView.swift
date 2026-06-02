@@ -34,6 +34,7 @@ struct WrappedView: View {
             }
             .navigationTitle("Your Recap")
             .navigationBarTitleDisplayMode(.inline)
+            .background(recapBackground)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
@@ -71,6 +72,16 @@ struct WrappedView: View {
             }
             .padding()
         }
+        .background(recapBackground)
+    }
+
+    private var recapBackground: some View {
+        LinearGradient(
+            colors: Theme.Surface.insightsBackground,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
     }
 
     private func hero(_ recap: WrappedViewModel.Recap) -> some View {

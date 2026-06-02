@@ -127,7 +127,11 @@ private struct SettingsForm: View {
                     .background {
                         if selectedSection == section {
                             Capsule()
-                                .fill(.primary.opacity(0.1))
+                                .fill(Theme.Brand.gradient[0].opacity(0.18))
+                                .glassEffect(
+                                    .regular.tint(Theme.Brand.gradient[0]).interactive(),
+                                    in: Capsule()
+                                )
                         }
                     }
                     .contentShape(Rectangle())
@@ -139,7 +143,9 @@ private struct SettingsForm: View {
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .padding(.bottom, 10)
-        .background(.regularMaterial)
+        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
     }
 
     private var profileSection: some View {

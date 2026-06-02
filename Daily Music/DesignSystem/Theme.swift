@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // A caseless `enum` used purely as a NAMESPACE. It has no cases, so you can never
 // create a `Theme` value — it just groups related constants under dotted names
@@ -36,6 +37,72 @@ enum Theme {
     enum Brand {
         /// Fallback gradient when no artwork color is available.
         static let gradient = [Color.purple, Color.indigo, Color.cyan, Color.orange]
+    }
+
+    enum Surface {
+        static let card = adaptiveColor(
+            light: UIColor(white: 1.0, alpha: 0.72),
+            dark: UIColor(red: 0.12, green: 0.13, blue: 0.16, alpha: 0.86)
+        )
+        static let cardStroke = adaptiveColor(
+            light: UIColor(white: 1.0, alpha: 0.65),
+            dark: UIColor(white: 1.0, alpha: 0.1)
+        )
+        static let subtleTrack = adaptiveColor(
+            light: UIColor(white: 0.0, alpha: 0.08),
+            dark: UIColor(white: 1.0, alpha: 0.14)
+        )
+
+        static let favoritesBackground = [
+            adaptiveColor(
+                light: UIColor(red: 0.99, green: 0.94, blue: 0.95, alpha: 1),
+                dark: UIColor(red: 0.12, green: 0.05, blue: 0.08, alpha: 1)
+            ),
+            adaptiveColor(
+                light: UIColor(red: 0.96, green: 0.93, blue: 0.99, alpha: 1),
+                dark: UIColor(red: 0.08, green: 0.07, blue: 0.14, alpha: 1)
+            ),
+            adaptiveColor(
+                light: UIColor(red: 1.0, green: 0.92, blue: 0.9, alpha: 1),
+                dark: UIColor(red: 0.18, green: 0.07, blue: 0.06, alpha: 1)
+            )
+        ]
+
+        static let insightsBackground = [
+            adaptiveColor(
+                light: UIColor(red: 0.98, green: 0.95, blue: 0.9, alpha: 1),
+                dark: UIColor(red: 0.08, green: 0.07, blue: 0.05, alpha: 1)
+            ),
+            adaptiveColor(
+                light: UIColor(red: 0.9, green: 0.98, blue: 0.98, alpha: 1),
+                dark: UIColor(red: 0.04, green: 0.1, blue: 0.11, alpha: 1)
+            ),
+            adaptiveColor(
+                light: UIColor(red: 0.99, green: 0.91, blue: 0.86, alpha: 1),
+                dark: UIColor(red: 0.13, green: 0.07, blue: 0.05, alpha: 1)
+            )
+        ]
+
+        static let vaultBackground = [
+            adaptiveColor(
+                light: UIColor(red: 0.98, green: 0.96, blue: 0.92, alpha: 1),
+                dark: UIColor(red: 0.06, green: 0.07, blue: 0.06, alpha: 1)
+            ),
+            adaptiveColor(
+                light: UIColor(red: 0.9, green: 0.97, blue: 0.96, alpha: 1),
+                dark: UIColor(red: 0.04, green: 0.11, blue: 0.11, alpha: 1)
+            ),
+            adaptiveColor(
+                light: UIColor(red: 0.98, green: 0.9, blue: 0.86, alpha: 1),
+                dark: UIColor(red: 0.13, green: 0.07, blue: 0.05, alpha: 1)
+            )
+        ]
+    }
+
+    private static func adaptiveColor(light: UIColor, dark: UIColor) -> Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark ? dark : light
+        })
     }
 }
 

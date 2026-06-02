@@ -20,12 +20,13 @@ struct CardModifier: ViewModifier {
         content
             .padding(Theme.Spacing.lg)
             .background(
-                // `.quaternary` is a semantic system fill that adapts to light/dark
-                // mode automatically. The `in:` shape clips the fill to a rounded
-                // rect; `.continuous` gives the smoother "squircle" corner.
-                .quaternary.opacity(0.5),
+                Theme.Surface.card,
                 in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
             )
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                    .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+            }
     }
 }
 

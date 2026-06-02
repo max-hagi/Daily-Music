@@ -12,6 +12,7 @@ import SwiftUI
 struct VaultView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var model: VaultViewModel?
+    @State private var selectedVaultEntry: DailyEntry?
 
     private let calendar = Calendar.current
 
@@ -28,20 +29,17 @@ struct VaultView: View {
                         content(entries)
                     }
                 } else {
-                    MusicLoadingView(title: "Opening the vault", tint: .orange)
+                    // Plain system spinner while the view model is built — matches
+                    // Today's loading look. Kept on the vault gradient so the
+                    // background doesn't flash.
+                    ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(vaultBackground)
                 }
             }
             .navigationTitle("Vault")
             .toolbarBackground(.hidden, for: .navigationBar)
-            // The OTHER half of data-driven navigation: this registers what to show
-            // when a DailyEntry value is pushed (by any NavigationLink(value:) in
-            // this stack — the calendar cells, the hero, the recent rows). One
-            // destination, many sources.
-            .navigationDestination(for: DailyEntry.self) { entry in
-                EntryDetailView(entry: entry)
-            }
+            .background(vaultBackground)
         }
         .task {
             if model == nil { model = VaultViewModel(entries: env.entries) }
@@ -62,15 +60,17 @@ struct VaultView: View {
             .padding()
         }
         .background(vaultBackground)
+        // Tapping any Vault song presents a dedicated fullscreen detail instead of
+        // pushing inside this NavigationStack. This keeps the Vault list/calendar
+        // state intact while letting the song screen mimic Today's immersive layout.
+        .fullScreenCover(item: $selectedVaultEntry) { entry in
+            VaultEntryDetail(entry: entry, onClose: { selectedVaultEntry = nil })
+        }
     }
 
     private var vaultBackground: some View {
         LinearGradient(
-            colors: [
-                Color(red: 0.98, green: 0.96, blue: 0.92),
-                Color(red: 0.9, green: 0.97, blue: 0.96),
-                Color(red: 0.98, green: 0.9, blue: 0.86)
-            ],
+            colors: Theme.Surface.vaultBackground,
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -106,33 +106,10 @@ struct VaultView: View {
             }
 
             if let latest = entries.first {
-                NavigationLink(value: latest) {
-                    HStack(spacing: Theme.Spacing.md) {
-                        AlbumArtView(url: latest.albumArtURL, cornerRadius: 12)
-                            .frame(width: 56, height: 56)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Latest archive pick")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.white.opacity(0.68))
-                            Text(latest.title)
-                                .font(.headline.weight(.bold))
-                                .foregroundStyle(.white)
-                                .lineLimit(1)
-                            Text(latest.artist)
-                                .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.72))
-                                .lineLimit(1)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                    .padding(Theme.Spacing.md)
-                    .background(.white.opacity(0.16), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                Button {
+                    selectedVaultEntry = latest
+                } label: {
+                    VaultTintedEntryRow(entry: latest, eyebrow: "Latest archive pick")
                 }
                 .buttonStyle(.plain)
             }
@@ -178,7 +155,11 @@ struct VaultView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Spacing.md)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+        }
     }
 
     private func calendarSection(_ entries: [DailyEntry]) -> some View {
@@ -196,10 +177,16 @@ struct VaultView: View {
                     .foregroundStyle(.teal)
             }
 
-            CalendarMonthView(entries: entries)
+            CalendarMonthView(entries: entries) { entry in
+                selectedVaultEntry = entry
+            }
         }
         .padding(Theme.Spacing.lg)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+        }
     }
 
     private func recentSection(_ entries: [DailyEntry]) -> some View {
@@ -211,11 +198,10 @@ struct VaultView: View {
                 // `.prefix(5)` takes at most the first five; ForEach needs an Array,
                 // and no `id:` is required because DailyEntry is Identifiable.
                 ForEach(Array(entries.prefix(5))) { entry in
-                    NavigationLink(value: entry) {
-                        EntryRow(entry: entry)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(Theme.Spacing.md)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    Button {
+                        selectedVaultEntry = entry
+                    } label: {
+                        VaultTintedEntryRow(entry: entry)
                     }
                     .buttonStyle(.plain)   // keep our custom row look, not the default link styling
                 }
@@ -226,6 +212,123 @@ struct VaultView: View {
     // Count entries whose date is in the current month (toGranularity: .month).
     private func entriesThisMonth(_ entries: [DailyEntry]) -> Int {
         entries.filter { calendar.isDate($0.date, equalTo: Date(), toGranularity: .month) }.count
+    }
+
+    private func releaseDateLabel(for entry: DailyEntry) -> String {
+        "Released \(entry.date.formatted(.dateTime.month(.wide).day().year()))"
+    }
+}
+
+// Fullscreen presentation for a single archived song.
+//
+// Earlier versions used a swipeable pager with its own floating chrome/backdrop.
+// That created non-scrollable top/bottom regions where the album-art color wash
+// could get clipped. This intentionally shows one song at a time and lets
+// EntryDetailView own the scroll view + edge-to-edge artwork bleed, matching Today.
+private struct VaultEntryDetail: View {
+    let entry: DailyEntry
+    let onClose: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            // Reuse the Today-style immersive detail surface, but turn off the
+            // built-in share button and reaction mutation because Vault is archival.
+            EntryDetailView(
+                entry: entry,
+                dateLabel: releaseDateLabel,
+                showsNavigationTitle: false,
+                albumArtHorizontalPadding: 24,
+                usesImmersiveBackdrop: true,
+                showsShareToolbarButton: false,
+                reactionsAreReadOnly: true
+            )
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    // In Vault this replaces Today's settings gear: it dismisses
+                    // the fullscreen cover and returns to the archive.
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
+                }
+                // No trailing stat: the old "N listened" badge showed a fabricated
+                // number. It stays out until a real per-entry listener count exists
+                // (would need a Postgres function that totals opens for one entry).
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
+        }
+    }
+
+    private var releaseDateLabel: String {
+        "Released \(entry.date.formatted(.dateTime.month(.wide).day().year()))"
+    }
+}
+
+private struct VaultTintedEntryRow: View {
+    let entry: DailyEntry
+    var eyebrow: String?
+
+    @State private var palette = ArtworkPalette()
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AlbumArtView(url: entry.albumArtURL, cornerRadius: 8)
+                .frame(width: 56, height: 56)
+
+            VStack(alignment: .leading, spacing: 2) {
+                if let eyebrow {
+                    Text(eyebrow)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                }
+
+                Text(entry.title)
+                    .font(.headline)
+                    .lineLimit(1)
+
+                Text(entry.artist)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Text(entry.date.formatted(.dateTime.month().day().year()))
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(palette.accent.opacity(0.72))
+        }
+        .padding(Theme.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(rowBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(palette.accent.opacity(palette.isLoaded ? 0.28 : 0.12), lineWidth: 1)
+        }
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(palette.accent.opacity(palette.isLoaded ? 0.58 : 0.22))
+                .frame(width: 3)
+                .padding(.vertical, 14)
+        }
+        .animation(.easeInOut(duration: 0.35), value: palette.accent)
+        .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
+    }
+
+    private var rowBackground: some ShapeStyle {
+        LinearGradient(
+            colors: [
+                palette.accent.opacity(palette.isLoaded ? 0.20 : 0.08),
+                Theme.Surface.card,
+                Theme.Surface.card
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 }
 

@@ -14,9 +14,11 @@ final class SupabaseReactionsService: ReactionsService {
     private let client = Supa.client
 
     func myReaction(entryID: UUID) async throws -> String? {
+        let userID = try await client.auth.session.user.id
         let rows: [ReactionRow] = try await client
             .from("reactions")
             .select("emoji")
+            .eq("user_id", value: userID)
             .eq("entry_id", value: entryID)
             .limit(1)
             .execute()
@@ -25,20 +27,23 @@ final class SupabaseReactionsService: ReactionsService {
     }
 
     func setReaction(_ emoji: String?, entryID: UUID) async throws {
+        let userID = try await client.auth.session.user.id
+
         if let emoji {
             // upsert on (user_id, entry_id): picking a new emoji REPLACES the old
             // one rather than adding a second row — one reaction per user per entry.
-            let userID = try await client.auth.session.user.id
             try await client
                 .from("reactions")
                 .upsert(ReactionInsert(user_id: userID, entry_id: entryID, emoji: emoji),
                         onConflict: "user_id,entry_id")
                 .execute()
         } else {
-            // nil emoji = clear my reaction (RLS limits the delete to my own row).
+            // nil emoji = clear my reaction. Filter by user_id explicitly so the UI
+            // reflects exactly the current user's stored row, independent of RLS shape.
             try await client
                 .from("reactions")
                 .delete()
+                .eq("user_id", value: userID)
                 .eq("entry_id", value: entryID)
                 .execute()
         }

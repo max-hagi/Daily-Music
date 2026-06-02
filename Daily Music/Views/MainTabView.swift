@@ -27,5 +27,6 @@ struct MainTabView: View {
                 InsightsView()
             }
         }
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
     }
 }
