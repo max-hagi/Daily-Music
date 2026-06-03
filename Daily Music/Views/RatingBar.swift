@@ -43,6 +43,7 @@ struct RatingBar: View {
     var spacing: CGFloat = 12
 
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: RatingModel?
 
     var body: some View {
@@ -80,8 +81,8 @@ struct RatingBar: View {
         .glassEffect(selected ? .clear.tint(tint).interactive()
                               : .clear.interactive(),
                      in: .circle)
-        .scaleEffect(selected ? 1.06 : 1.0)
-        .animation(.spring(response: 0.34, dampingFraction: 0.6), value: selected)
+        .scaleEffect(selected && !reduceMotion ? 1.06 : 1.0)
+        .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.6), value: selected)
         .disabled(model?.isSaving == true || isGuestSession)
         .opacity(isGuestSession ? 0.5 : 1)
         .accessibilityLabel(label)

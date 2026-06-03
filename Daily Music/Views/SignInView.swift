@@ -134,6 +134,7 @@ struct SignInView: View {
 // moving the whole grid, not zooming a single cover past recognition.
 struct AlbumArtGridBackdrop: View {
     let urls: [URL]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPanning = false
 
     private var repeatedURLs: [URL] {
@@ -175,7 +176,7 @@ struct AlbumArtGridBackdrop: View {
                 .scaleEffect(1.08)
                 .offset(x: isPanning ? -72 : 18, y: isPanning ? -118 : -34)
                 .opacity(0.82)
-                .animation(.easeInOut(duration: 18).repeatForever(autoreverses: true), value: isPanning)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 18).repeatForever(autoreverses: true), value: isPanning)
 
                 LinearGradient(
                     colors: [
@@ -196,7 +197,7 @@ struct AlbumArtGridBackdrop: View {
                 }
             }
             .ignoresSafeArea()
-            .onAppear { isPanning = true }
+            .onAppear { isPanning = !reduceMotion }
         }
         .ignoresSafeArea()
     }
@@ -242,6 +243,7 @@ struct AlbumWallStageBackground: View {
 // The animated, color-shifting backdrop used on the splash + sign-in screens.
 // Reused (not duplicated) so both screens match.
 struct WelcomeGradientBackground: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
     var body: some View {
@@ -269,7 +271,7 @@ struct WelcomeGradientBackground: View {
             .ignoresSafeArea()
         }
         // Slow, infinitely reversing animation tied to isAnimating → endless drift.
-        .animation(.easeInOut(duration: 5.5).repeatForever(autoreverses: true), value: isAnimating)
-        .onAppear { isAnimating = true }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 5.5).repeatForever(autoreverses: true), value: isAnimating)
+        .onAppear { isAnimating = !reduceMotion }
     }
 }

@@ -55,6 +55,7 @@ struct OpenInSection: View {
                     .frame(width: 48, height: 48)
                     .glassEffect(.regular.interactive(), in: .circle)
             }
+            .accessibilityLabel("More streaming services")
         }
         .padding(.horizontal)
     }

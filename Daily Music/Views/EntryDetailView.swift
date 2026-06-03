@@ -26,9 +26,12 @@ struct EntryDetailView: View {
     var reactionsAreReadOnly = false
 
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var palette = ArtworkPalette()
     @State private var showingShare = false
     @State private var showingInfo = false
+    // One-time tip explaining that 👍/👎 shapes Insights (Today only).
+    @AppStorage("hasSeenRatingNudge") private var hasSeenRatingNudge = false
 
     var body: some View {
         ZStack {
@@ -70,6 +73,12 @@ struct EntryDetailView: View {
         .sheet(isPresented: $showingInfo) {
             SongInfoSheet(entry: entry)
         }
+        .overlay(alignment: .bottom) {
+            if usesImmersiveBackdrop && !hasSeenRatingNudge && !isWaitingForArtwork {
+                ratingNudge.padding(.bottom, 74)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut, value: hasSeenRatingNudge)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
     }
 
@@ -136,6 +145,35 @@ struct EntryDetailView: View {
                 .foregroundStyle(.secondary)
                 .padding(.bottom, Theme.Spacing.xs)
         }
+        // Clamp accessibility text sizes so the one-screen song zone stays intact;
+        // the journal (reading) text below is left fully scalable.
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
+    }
+
+    /// One-time floating tip (Today) that 👍/👎 powers Insights.
+    private var ratingNudge: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+            Text("Rate with 👍 / 👎 — it shapes your Insights.")
+                .font(.caption.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                hasSeenRatingNudge = true
+            } label: {
+                Image(systemName: "xmark.circle.fill").font(.callout)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss tip")
+        }
+        .foregroundStyle(.primary)
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 1))
+        .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
+        .padding(.horizontal, Theme.Spacing.lg)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .accessibilityElement(children: .combine)
     }
 
     private var journalZone: some View {
@@ -155,8 +193,8 @@ struct EntryDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .scrollTransition { content, phase in
             content
-                .opacity(phase.isIdentity ? 1 : 0)
-                .offset(y: phase.isIdentity ? 0 : 40)
+                .opacity(reduceMotion || phase.isIdentity ? 1 : 0)
+                .offset(y: reduceMotion ? 0 : (phase.isIdentity ? 0 : 40))
         }
     }
 
@@ -267,9 +305,9 @@ struct EntryDetailView: View {
             )
             .ignoresSafeArea()
         }
-        .animation(.easeInOut(duration: 0.6), value: palette.accent)
-        .animation(.easeInOut(duration: 0.6), value: palette.isLoaded)
-        .animation(.easeInOut(duration: 0.35), value: palette.didFinishLoading)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: palette.accent)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: palette.isLoaded)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: palette.didFinishLoading)
     }
 
     private var isWaitingForArtwork: Bool {
@@ -346,6 +384,7 @@ struct EntryDetailView: View {
 // the artwork downloads, so Today never appears half-themed.
 private struct ArtworkLoadingScreen: View {
     let entry: DailyEntry
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
     var body: some View {
@@ -399,6 +438,6 @@ private struct ArtworkLoadingScreen: View {
             .ignoresSafeArea()
             .animation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true), value: isAnimating)
         }
-        .onAppear { isAnimating = true }
+        .onAppear { isAnimating = !reduceMotion }
     }
 }

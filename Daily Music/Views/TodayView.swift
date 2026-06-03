@@ -101,6 +101,7 @@ struct TodayView: View {
 // same file because it's only used here.
 private struct TodayToolbarLiveBadge: View {
     let count: Int?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPulsing = false
 
     var body: some View {
@@ -129,7 +130,7 @@ private struct TodayToolbarLiveBadge: View {
         .padding(.horizontal, 11)
         .padding(.vertical, 7)
         .background(.regularMaterial, in: Capsule())   // frosted-glass pill
-        .onAppear { isPulsing = true }
+        .onAppear { isPulsing = !reduceMotion }
     }
 
     // Show the formatted count once we have it, otherwise just "Live".

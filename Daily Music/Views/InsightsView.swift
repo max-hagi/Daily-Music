@@ -12,6 +12,7 @@ import SwiftUI
 
 struct InsightsView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: InsightsViewModel?
     @State private var showingWrapped = false
     @State private var detail: StandoutDetail?
@@ -61,7 +62,7 @@ struct InsightsView: View {
             startPoint: .top, endPoint: .bottom
         )
         .ignoresSafeArea()
-        .animation(.easeInOut(duration: 0.6), value: c)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: c)
     }
 
     private var washColors: [Color] {
