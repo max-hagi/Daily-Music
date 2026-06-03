@@ -14,6 +14,7 @@ struct CatalogInfo: Equatable {
     var releaseYear: String?
     var durationSeconds: Int?
     var genre: String?
+    var albumURL: URL?
 
     /// Parse the iTunes lookup JSON (`https://itunes.apple.com/lookup?id=…`).
     static func parse(_ data: Data) -> CatalogInfo? {
@@ -23,6 +24,7 @@ struct CatalogInfo: Equatable {
                 let releaseDate: String?
                 let trackTimeMillis: Int?
                 let primaryGenreName: String?
+                let collectionViewUrl: String?
             }
             let results: [Result]
         }
@@ -32,7 +34,8 @@ struct CatalogInfo: Equatable {
             album: first.collectionName,
             releaseYear: first.releaseDate.map { String($0.prefix(4)) },
             durationSeconds: first.trackTimeMillis.map { $0 / 1000 },
-            genre: first.primaryGenreName
+            genre: first.primaryGenreName,
+            albumURL: first.collectionViewUrl.flatMap(URL.init(string:))
         )
     }
 
@@ -50,8 +53,13 @@ protocol CatalogInfoService {
 struct MockCatalogInfoService: CatalogInfoService {
     func info(appleMusicID: String) async throws -> CatalogInfo {
         try? await Task.sleep(for: .milliseconds(300))
-        return CatalogInfo(album: "Automatic for the People", releaseYear: "1992",
-                           durationSeconds: 257, genre: "Alternative")
+        return CatalogInfo(
+            album: "Automatic for the People",
+            releaseYear: "1992",
+            durationSeconds: 257,
+            genre: "Alternative",
+            albumURL: URL(string: "https://music.apple.com/us/album/automatic-for-the-people/1440947547")
+        )
     }
 }
 

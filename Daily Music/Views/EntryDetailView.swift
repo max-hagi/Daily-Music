@@ -124,15 +124,17 @@ struct EntryDetailView: View {
             }
             AlbumArtView(url: entry.albumArtURL, cornerRadius: 24)
                 .padding(.horizontal, albumArtHorizontalPadding)
-            todayHeader(dateLabel: dateLabel)
-            actionCluster
+            todayHeaderWithActions(dateLabel: dateLabel)
+            primaryRatingControl
             ReactionsBar(entry: entry, accent: palette.accent, isReadOnly: reactionsAreReadOnly)
+                .padding(.top, Theme.Spacing.xs)
             OpenInSection(entry: entry, accent: palette.accent)
-            Spacer(minLength: Theme.Spacing.sm)
+                .padding(.top, Theme.Spacing.md)
+            Spacer(minLength: 0)
             Label("the story", systemImage: "chevron.down")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.secondary)
-                .padding(.bottom, Theme.Spacing.sm)
+                .padding(.bottom, Theme.Spacing.xs)
         }
     }
 
@@ -161,12 +163,32 @@ struct EntryDetailView: View {
     // MARK: - Action cluster (favorite + rating + info)
 
     private var actionCluster: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Theme.Spacing.md) {
             heartButton
+            Spacer(minLength: Theme.Spacing.sm)
             RatingBar(entry: entry, accent: palette.accent)
+            Spacer(minLength: Theme.Spacing.sm)
             infoButton
         }
         .padding(.horizontal)
+    }
+
+    private var primaryRatingControl: some View {
+        RatingBar(
+            entry: entry,
+            accent: palette.accent,
+            controlSize: 72,
+            symbolSize: 28,
+            spacing: Theme.Spacing.md
+        )
+        .padding(.top, Theme.Spacing.xs)
+    }
+
+    private var compactActions: some View {
+        HStack(spacing: 10) {
+            compactHeartButton
+            compactInfoButton
+        }
     }
 
     private var heartButton: some View {
@@ -191,6 +213,34 @@ struct EntryDetailView: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(palette.accent)
                 .frame(width: 52, height: 52)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel("Song info")
+    }
+
+    private var compactHeartButton: some View {
+        let store = env.favoritesStore
+        let isFav = store.isFavorite(entry)
+        return Button {
+            Task { await store.toggle(entry) }
+        } label: {
+            Image(systemName: isFav ? "heart.fill" : "heart")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(isFav ? .red : palette.accent)
+                .frame(width: 46, height: 46)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel(isFav ? "Remove from favorites" : "Add to favorites")
+    }
+
+    private var compactInfoButton: some View {
+        Button { showingInfo = true } label: {
+            Image(systemName: "info")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(palette.accent)
+                .frame(width: 46, height: 46)
         }
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: .circle)
@@ -261,6 +311,34 @@ struct EntryDetailView: View {
             header
         }
         .padding(.horizontal)
+    }
+
+    private func todayHeaderWithActions(dateLabel: String?) -> some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            if let dateLabel {
+                Text(dateLabel.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
+
+            HStack(alignment: .center, spacing: Theme.Spacing.md) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(entry.title)
+                        .font(.dmTitle())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                    Text(entry.artist)
+                        .font(.dmHeadline())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: Theme.Spacing.sm)
+                compactActions
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
     }
 }
 

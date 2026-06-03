@@ -25,13 +25,18 @@ struct OpenInSection: View {
             Button {
                 if let url = preferred.url(for: entry) { openURL(url) }
             } label: {
-                HStack(spacing: 8) {
-                    ServiceLogo(service: preferred)
+                ZStack {
                     Text("Open in \(preferred.displayName)")
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.forward")
+                        .lineLimit(1)
+
+                    HStack {
+                        ServiceLogo(service: preferred)
+                        Spacer(minLength: 0)
+                        Image(systemName: "arrow.up.forward")
+                    }
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.horizontal, Theme.Spacing.md)
             }
             .buttonStyle(PrimaryActionButtonStyle(tint: accent))
 

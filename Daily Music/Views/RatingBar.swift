@@ -38,6 +38,9 @@ final class RatingModel {
 struct RatingBar: View {
     let entry: DailyEntry
     var accent: Color = Theme.Brand.gradient[0]
+    var controlSize: CGFloat = 52
+    var symbolSize: CGFloat = 20
+    var spacing: CGFloat = 12
 
     @Environment(AppEnvironment.self) private var env
     @State private var model: RatingModel?
@@ -46,8 +49,8 @@ struct RatingBar: View {
         // GlassEffectContainer lets the two circles share one glass "pour" so they
         // refract together and morph fluidly when tapped (iOS 26 Liquid Glass).
         // Compact (not full-width) so it sits beside the favorite button.
-        GlassEffectContainer(spacing: 12) {
-            HStack(spacing: 12) {
+        GlassEffectContainer(spacing: spacing) {
+            HStack(spacing: spacing) {
                 circle(value: 1,  symbol: "hand.thumbsup.fill",   tint: .green, label: "Like")
                 circle(value: -1, symbol: "hand.thumbsdown.fill", tint: .red,   label: "Dislike")
             }
@@ -66,10 +69,10 @@ struct RatingBar: View {
             Task { await model?.tap(value, entryID: entry.id, allowsPersistence: !isGuestSession) }
         } label: {
             Image(systemName: symbol)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: symbolSize, weight: .bold))
                 // White on the saturated fill when chosen; the accent when idle.
                 .foregroundStyle(selected ? .white : accent)
-                .frame(width: 52, height: 52)
+                .frame(width: controlSize, height: controlSize)
         }
         .buttonStyle(.plain)
         // Transparent CLEAR Liquid Glass that lets the artwork show through; fills
