@@ -73,12 +73,6 @@ struct EntryDetailView: View {
         .sheet(isPresented: $showingInfo) {
             SongInfoSheet(entry: entry)
         }
-        .overlay(alignment: .bottom) {
-            if usesImmersiveBackdrop && !hasSeenRatingNudge && !isWaitingForArtwork {
-                ratingNudge.padding(.bottom, 74)
-            }
-        }
-        .animation(reduceMotion ? nil : .easeInOut, value: hasSeenRatingNudge)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
     }
 
@@ -135,6 +129,9 @@ struct EntryDetailView: View {
                 .padding(.horizontal, albumArtHorizontalPadding)
             todayHeaderWithActions(dateLabel: dateLabel)
             primaryRatingControl
+            if !hasSeenRatingNudge {
+                ratingNudge
+            }
             ReactionsBar(entry: entry, accent: palette.accent, isReadOnly: reactionsAreReadOnly)
                 .padding(.top, Theme.Spacing.xs)
             OpenInSection(entry: entry, accent: palette.accent)
@@ -150,29 +147,25 @@ struct EntryDetailView: View {
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
     }
 
-    /// One-time floating tip (Today) that 👍/👎 powers Insights.
+    /// One-time inline tip, sits right under the rating control: 👍/👎 powers Insights.
     private var ratingNudge: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkles")
-            Text("Rate with 👍 / 👎 — it shapes your Insights.")
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles").font(.caption2)
+            Text("👍 / 👎 shapes your Insights")
                 .font(.caption.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
             Button {
-                hasSeenRatingNudge = true
+                withAnimation(reduceMotion ? nil : .easeInOut) { hasSeenRatingNudge = true }
             } label: {
-                Image(systemName: "xmark.circle.fill").font(.callout)
+                Image(systemName: "xmark.circle.fill").font(.caption)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss tip")
         }
-        .foregroundStyle(.primary)
+        .foregroundStyle(.secondary)
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 10)
+        .padding(.vertical, 6)
         .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 1))
-        .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
-        .padding(.horizontal, Theme.Spacing.lg)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
         .accessibilityElement(children: .combine)
     }
 
