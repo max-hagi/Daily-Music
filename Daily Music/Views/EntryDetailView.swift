@@ -30,8 +30,12 @@ struct EntryDetailView: View {
     @State private var palette = ArtworkPalette()
     @State private var showingShare = false
     @State private var showingInfo = false
+    @State private var showingReactions = false
+    @State private var didDismissAnonymousRatingNudge = false
+    /// All-users favourite total for this entry (nil until loaded).
+    @State private var favouriteCount: Int?
     // One-time tip explaining that 👍/👎 shapes Insights (Today only).
-    @AppStorage("hasSeenRatingNudge") private var hasSeenRatingNudge = false
+    @AppStorage("hasSeenRatingNudgeLiquidGlass") private var hasSeenRatingNudge = false
 
     var body: some View {
         ZStack {
@@ -74,6 +78,7 @@ struct EntryDetailView: View {
             SongInfoSheet(entry: entry)
         }
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
+        .task(id: entry.id) { await loadFavouriteCount() }
     }
 
     // MARK: - Standard layout (Vault / Favorites, pushed)
@@ -91,7 +96,6 @@ struct EntryDetailView: View {
                     .padding(.horizontal, albumArtHorizontalPadding)
                 header
                 actionCluster
-                ReactionsBar(entry: entry, accent: palette.accent, isReadOnly: reactionsAreReadOnly)
                 OpenInSection(entry: entry, accent: palette.accent)
                 Divider().padding(.vertical, 4).padding(.horizontal)
                 JournalText(markdown: entry.journalMarkdown)
@@ -128,14 +132,8 @@ struct EntryDetailView: View {
             AlbumArtView(url: entry.albumArtURL, cornerRadius: 24)
                 .padding(.horizontal, albumArtHorizontalPadding)
             todayHeaderWithActions(dateLabel: dateLabel)
-            primaryRatingControl
-            if !hasSeenRatingNudge {
-                ratingNudge
-            }
-            ReactionsBar(entry: entry, accent: palette.accent, isReadOnly: reactionsAreReadOnly)
-                .padding(.top, Theme.Spacing.xs)
-            OpenInSection(entry: entry, accent: palette.accent)
-                .padding(.top, Theme.Spacing.md)
+            ratingExperience
+            openInSectionWithRatingNudge
             Spacer(minLength: 0)
             Label("the story", systemImage: "chevron.down")
                 .font(.caption.weight(.bold))
@@ -147,30 +145,106 @@ struct EntryDetailView: View {
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
     }
 
-    /// One-time inline tip, sits right under the rating control: 👍/👎 powers Insights.
+    private var ratingExperience: some View {
+        VStack(spacing: 0) {
+            primaryRatingControl
+        }
+        .frame(maxWidth: 380)
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.xs)
+    }
+
+    private var openInSectionWithRatingNudge: some View {
+        ZStack {
+            OpenInSection(entry: entry, accent: palette.accent)
+                .opacity(shouldShowRatingNudge ? 0.22 : 1)
+                .allowsHitTesting(!shouldShowRatingNudge)
+
+            if shouldShowRatingNudge {
+                ratingNudge
+                    .padding(.horizontal)
+                    .zIndex(1)
+            }
+        }
+        .padding(.top, Theme.Spacing.lg)
+        .animation(ratingNudgeAnimation, value: shouldShowRatingNudge)
+    }
+
+    private var shouldShowRatingNudge: Bool {
+        isAnonymousUser ? !didDismissAnonymousRatingNudge : !hasSeenRatingNudge
+    }
+
+    private var isAnonymousUser: Bool {
+        env.session.session?.isGuest == true
+    }
+
+    private var ratingNudgeAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.78)
+    }
+
+    private func dismissRatingNudge() {
+        withAnimation(ratingNudgeAnimation) {
+            if isAnonymousUser {
+                didDismissAnonymousRatingNudge = true
+            } else {
+                hasSeenRatingNudge = true
+            }
+        }
+    }
+
+    /// One-time tip paired with the rating control so the thumbs read as an Insights input.
     private var ratingNudge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkles").font(.caption2)
-            Text("👍 / 👎 shapes your Insights")
-                .font(.caption.weight(.semibold))
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 15, weight: .heavy))
+                .foregroundStyle(.primary)
+                .frame(width: 32, height: 32)
+                .glassEffect(.regular, in: .circle)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tune your Insights")
+                    .font(.subheadline.weight(.heavy))
+                    .foregroundStyle(.primary)
+                Text("Use 👍 or 👎 to shape your taste stats.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: Theme.Spacing.xs)
+
             Button {
-                withAnimation(reduceMotion ? nil : .easeInOut) { hasSeenRatingNudge = true }
+                dismissRatingNudge()
             } label: {
-                Image(systemName: "xmark.circle.fill").font(.caption)
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary.opacity(0.9))
+                    .frame(width: 30, height: 30)
+                    .background(.regularMaterial, in: Circle())
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss tip")
         }
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 6)
-        .background(.ultraThinMaterial, in: Capsule())
-        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        .padding(.leading, 12)
+        .padding(.trailing, 8)
+        .padding(.vertical, 11)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 18, y: 10)
+        .transition(
+            .asymmetric(
+                insertion: .opacity.combined(with: .scale(scale: 0.94)).combined(with: .move(edge: .top)),
+                removal: .opacity.combined(with: .scale(scale: 0.96)).combined(with: .move(edge: .bottom))
+            )
+        )
         .accessibilityElement(children: .combine)
     }
 
     private var journalZone: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+        let shouldReduceMotion = reduceMotion
+
+        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             Capsule()
                 .fill(.secondary.opacity(0.4))
                 .frame(width: 40, height: 5)
@@ -186,16 +260,55 @@ struct EntryDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .scrollTransition { content, phase in
             content
-                .opacity(reduceMotion || phase.isIdentity ? 1 : 0)
-                .offset(y: reduceMotion ? 0 : (phase.isIdentity ? 0 : 40))
+                .opacity(shouldReduceMotion || phase.isIdentity ? 1 : 0)
+                .offset(y: shouldReduceMotion ? 0 : (phase.isIdentity ? 0 : 40))
         }
+    }
+
+    // MARK: - Favourite count (social proof)
+
+    @ViewBuilder private var favouriteCountLabel: some View {
+        if let favouriteCount {
+            Text(Self.compactCount(favouriteCount))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .contentTransition(.numericText())   // animate the number ticking
+                .accessibilityLabel("\(favouriteCount) people favourited this song")
+        }
+    }
+
+    private func loadFavouriteCount() async {
+        favouriteCount = try? await env.favorites.count(entryID: entry.id)
+    }
+
+    /// Toggle the heart, nudging the visible count instantly, then reconciling with
+    /// the server total so it stays honest.
+    private func toggleFavourite() {
+        let willFavorite = !env.favoritesStore.isFavorite(entry)
+        if let c = favouriteCount {
+            favouriteCount = max(0, c + (willFavorite ? 1 : -1))
+        }
+        Task {
+            await env.favoritesStore.toggle(entry)
+            await loadFavouriteCount()
+        }
+    }
+
+    /// 1204 → "1.2k"; smaller numbers stay exact.
+    private static func compactCount(_ n: Int) -> String {
+        n >= 1000 ? String(format: "%.1fk", Double(n) / 1000) : "\(n)"
     }
 
     // MARK: - Action cluster (favorite + rating + info)
 
     private var actionCluster: some View {
         HStack(spacing: Theme.Spacing.md) {
-            heartButton
+            HStack(spacing: 5) {
+                heartButton
+                favouriteCountLabel
+            }
+            reactionButton(controlSize: 52, symbolSize: 20)
             Spacer(minLength: Theme.Spacing.sm)
             RatingBar(entry: entry, accent: palette.accent)
             Spacer(minLength: Theme.Spacing.sm)
@@ -212,12 +325,15 @@ struct EntryDetailView: View {
             symbolSize: 28,
             spacing: Theme.Spacing.md
         )
-        .padding(.top, Theme.Spacing.xs)
     }
 
     private var compactActions: some View {
         HStack(spacing: 10) {
-            compactHeartButton
+            HStack(spacing: 3) {
+                compactHeartButton
+                favouriteCountLabel
+            }
+            reactionButton(controlSize: 46, symbolSize: 18)
             compactInfoButton
         }
     }
@@ -226,7 +342,7 @@ struct EntryDetailView: View {
         let store = env.favoritesStore
         let isFav = store.isFavorite(entry)
         return Button {
-            Task { await store.toggle(entry) }
+            toggleFavourite()
         } label: {
             Image(systemName: isFav ? "heart.fill" : "heart")
                 .font(.system(size: 20, weight: .bold))
@@ -250,11 +366,41 @@ struct EntryDetailView: View {
         .accessibilityLabel("Song info")
     }
 
+    private func reactionButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
+        Button {
+            showingReactions = true
+        } label: {
+            Image(systemName: "face.smiling")
+                .font(.system(size: symbolSize, weight: .bold))
+                .foregroundStyle(palette.accent)
+                .frame(width: controlSize, height: controlSize)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel("React")
+        .popover(isPresented: $showingReactions, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
+            reactionsPopover
+        }
+    }
+
+    private var reactionsPopover: some View {
+        ReactionsBar(
+            entry: entry,
+            accent: palette.accent,
+            isReadOnly: reactionsAreReadOnly,
+            onSelection: { showingReactions = false }
+        )
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(.regularMaterial, in: Capsule())
+        .presentationCompactAdaptation(.popover)
+    }
+
     private var compactHeartButton: some View {
         let store = env.favoritesStore
         let isFav = store.isFavorite(entry)
         return Button {
-            Task { await store.toggle(entry) }
+            toggleFavourite()
         } label: {
             Image(systemName: isFav ? "heart.fill" : "heart")
                 .font(.system(size: 18, weight: .bold))
