@@ -90,6 +90,13 @@ struct RootView: View {
             }
             didRestore = true                    // flip the flag → triggers the animated swap above
         }
+        .onOpenURL { url in
+            // dailymusic://friend/<code> — stash the code so the Friends tab prefills it.
+            // (Requires registering the `dailymusic` URL scheme in the target's Info.)
+            guard url.scheme == "dailymusic", url.host == "friend" else { return }
+            let code = url.lastPathComponent
+            if !code.isEmpty { UserDefaults.standard.set(code, forKey: "pendingFriendCode") }
+        }
     }
 }
 

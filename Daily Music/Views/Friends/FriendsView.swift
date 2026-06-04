@@ -19,7 +19,14 @@ struct FriendsView: View {
                 friendsSection
             }
             .navigationTitle("Friends")
-            .task { await store.load() }
+            .task {
+                await store.load()
+                // Prefill a code arriving via the dailymusic://friend/<code> deep link.
+                if let pending = UserDefaults.standard.string(forKey: "pendingFriendCode") {
+                    enteredCode = pending
+                    UserDefaults.standard.removeObject(forKey: "pendingFriendCode")
+                }
+            }
             .refreshable { await store.load() }
             .sheet(isPresented: $showShare) {
                 ShareLink(item: friendLink) { Label("Share your invite", systemImage: "square.and.arrow.up") }
