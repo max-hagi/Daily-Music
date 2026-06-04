@@ -31,10 +31,12 @@ final class AppEnvironment {
     let ratings: RatingService
     let catalogInfo: CatalogInfoService
     let settings: SettingsService
+    let profiles: ProfileService
     let notifications: NotificationService
     let musicPlayer: MusicPlayer
     let session: SessionStore
     let favoritesStore: FavoritesStore
+    let profileStore: ProfileStore
 
     init(
         auth: AuthService,
@@ -46,6 +48,7 @@ final class AppEnvironment {
         ratings: RatingService,
         catalogInfo: CatalogInfoService,
         settings: SettingsService,
+        profiles: ProfileService,
         notifications: NotificationService,
         musicEngine: MusicEngine
     ) {
@@ -58,6 +61,7 @@ final class AppEnvironment {
         self.ratings = ratings
         self.catalogInfo = catalogInfo
         self.settings = settings
+        self.profiles = profiles
         self.notifications = notifications
         // These three are WRAPPERS the container builds from the injected pieces:
         // MusicPlayer wraps whichever engine (mock vs MusicKit) it's given, and the
@@ -66,6 +70,7 @@ final class AppEnvironment {
         self.musicPlayer = MusicPlayer(engine: musicEngine)
         self.session = SessionStore(auth: auth)
         self.favoritesStore = FavoritesStore(service: favorites)
+        self.profileStore = ProfileStore(service: profiles)
     }
 
     // Two factory methods that assemble a fully-wired container. Picking `mock()`
@@ -85,6 +90,7 @@ final class AppEnvironment {
             ratings: MockRatingService(),
             catalogInfo: MockCatalogInfoService(),
             settings: MockSettingsService(),
+            profiles: MockProfileService(),
             notifications: LocalNotificationService(),
             musicEngine: MockMusicEngine()
         )
@@ -103,6 +109,7 @@ final class AppEnvironment {
             ratings: SupabaseRatingService(),
             catalogInfo: LiveCatalogInfoService(),
             settings: SupabaseSettingsService(),
+            profiles: SupabaseProfileService(),
             notifications: LocalNotificationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
             // Once the MusicKit capability is enabled (paid dev account),
