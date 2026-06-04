@@ -16,8 +16,9 @@
 A brand-new user enters through **flow C ("quick hello, then in")**: a welcome screen,
 a short 3-step onboarding wizard, then the app. The wizard collects a **display name**
 and **profile photo**, sets up the **daily reminder** (doubling as the in-context
-notification-permission ask), and records a **streaming preference**. Every step is
-skippable so the front door stays low-friction.
+notification-permission ask), and records a **streaming preference**. The **display
+name is required** (and non-unique); the photo and the reminder/streaming steps are
+skippable, so the front door stays low-friction.
 
 The profile is `display_name` + `avatar_url` only — **no username**. Friends are added
 later by invite link / QR (a separate sub-project), so there is no public handle to
@@ -27,7 +28,8 @@ colorful **initials avatar** as the fallback until (or unless) a photo is set.
 ## 2. Goals
 
 - First-run wizard: name + photo → reminder (+ notification permission) → streaming
-  preference → Today. Shown once; skippable per-step.
+  preference → Today. Shown once; the **name is required**, everything else (photo +
+  both later steps) skippable.
 - A `UserProfile` (display name + avatar) persisted per user, editable later in Settings.
 - Real photo upload (library → crop → downscale → Supabase Storage) with an initials
   fallback used everywhere an avatar renders.
@@ -49,7 +51,8 @@ colorful **initials avatar** as the fallback until (or unless) a photo is set.
 |---|---|---|
 | First-launch flow | **C — quick hello, then in** | Feels personal immediately, lowest friction; defers "become a real account" to the moment it's needed (adding a friend). |
 | Friend discovery / handle | **Invite link / QR; no username** | Simplest data model, most private, fits a close-friends app. No uniqueness/availability/squatting to manage. |
-| Profile picture | **Upload a photo + initials fallback** | The real "profile picture" the user asked for; initials keep skippers looking polished. Accepts the cost of new Storage infra. |
+| Display name | **Required, non-unique** | A name makes friend bubbles/lists legible; non-unique because there's no handle or search to disambiguate — you add specific people by link/QR. |
+| Profile picture | **Upload a photo (optional) + initials fallback** | The real "profile picture" the user asked for; the photo is optional, so the initials avatar is the default and keeps photo-skippers looking polished. Accepts the cost of new Storage infra. |
 | Wizard steps | **All three** (name+photo, reminder, streaming) | A fuller welcome; reminder primes notification permission in-context; streaming sets the "Open in" default. Each step skippable to stay low-friction. |
 | Front door in production | **Promote anonymous "Get started" to a real entry** | Flow C is inherently browse-first. Revisits the earlier "email-only release" lean — accepted. Email upgrade deferred to friend-graph. |
 | Name/avatar storage shape | **First-class `profiles` columns, not the settings JSONB blob** | Name + avatar are identity other users will read (bubbles, lists); they deserve their own columns + RLS, not a private-prefs blob. |
@@ -65,16 +68,22 @@ offering two doors:
 After a session exists, if onboarding has not been completed the wizard appears.
 
 **Wizard** — `OnboardingView` owns a step index and renders progress dots. One thing per
-screen; each step has Skip; back navigation between steps.
+screen; the name is required, the photo and steps 2–3 are skippable; back navigation
+between steps.
 
-1. **Say hello** — circular avatar control (tap to upload) + name field. Writes via
-   `ProfileService`. Skip → leave name/photo unset.
+1. **Say hello** — circular avatar control (tap to upload) + name field. The **name is
+   required** — Continue stays disabled until it is non-empty. The **photo is optional**;
+   leaving it makes the initials avatar the default. Writes via `ProfileService`.
 2. **Never miss a day** — reminder time + toggle. Enabling it calls
    `NotificationService.requestAuthorization()` then `scheduleDailyReminder(at:)`, and
    persists to `UserSettings` (`reminderEnabled/Hour/Minute`). This is the in-context
    notification-permission prime. Skip ("Not now") → reminder stays off.
-3. **Where do you listen?** — Apple Music / Spotify → `UserSettings.preferredStreamingService`.
-   Skip → leave the existing default. "Finish" completes onboarding.
+3. **Where do you listen?** — renders `StreamingService.allCases` (Apple Music / Spotify /
+   **Tidal**) and writes the same `settings.preferredStreamingService` key that
+   [`OpenInSection`](../../../Daily%20Music/Views/OpenInSection.swift) reads, via
+   `SettingsService`. Driving it off `allCases` means new services appear automatically;
+   Tidal already deep-links via search (no stored per-track ID), so nothing new is
+   required. Skip → keep the existing default. "Finish" completes onboarding.
 
 On finish (or skipping through), set `hasCompletedOnboarding = true`; `RootView` swaps to
 `MainTabView` using the existing spring transition.
@@ -208,8 +217,10 @@ in Settings — never blocking wizard completion.
 
 ## 9. Edge cases
 
-- **Skip name** → `display_name` null; initials avatar shows a neutral glyph; Settings
-  nudges "Set your name". Onboarding still completes.
+- **Name required** → `display_name` is always set after onboarding. Only the avatar can
+  be absent, in which case the **initials avatar** is the standing default until a photo
+  is added (editable any time in Settings). A legacy row with no name still gets a gentle
+  "Set your name" nudge in Settings.
 - **Offline / save failure** → wizard still finishes; settings already keep a UserDefaults
   offline cache; profile writes retry on next Settings save.
 - **Avatar upload failure** → keep initials, surface a soft error, retry in Settings.
