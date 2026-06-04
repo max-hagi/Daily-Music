@@ -29,6 +29,7 @@ struct SettingsView: View {
             }
             await model?.refreshPermission()
             await model?.loadFromCloud()
+            await env.profileStore.load()
         }
     }
 }
@@ -66,11 +67,13 @@ private struct SettingsForm: View {
     @State private var showingResetConfirmation = false
     @State private var showingDeleteConfirmation = false
     @State private var selectedSection: SettingsNavSection = .account
+    @State private var showingEditProfile = false
 
     var body: some View {
         Form {
             currentSections
         }
+        .sheet(isPresented: $showingEditProfile) { ProfileEditView() }
         .safeAreaInset(edge: .bottom) {
             settingsBottomBar
         }
@@ -161,28 +164,46 @@ private struct SettingsForm: View {
         .padding(.bottom, 8)
     }
 
+    private var profileName: String {
+        let name = env.profileStore.current?.displayName ?? ""
+        return name.isEmpty ? "Set your name" : name
+    }
+
+    @ViewBuilder private var profileAvatar: some View {
+        if let s = env.profileStore.current?.avatarURL, let url = URL(string: s) {
+            AsyncImage(url: url) { image in image.resizable().scaledToFill() }
+                placeholder: { InitialsAvatar(name: env.profileStore.current?.displayName, size: 48) }
+                .frame(width: 48, height: 48)
+                .clipShape(Circle())
+        } else {
+            InitialsAvatar(name: env.profileStore.current?.displayName, size: 48)
+        }
+    }
+
     private var profileSection: some View {
         Section {
             if let session = env.session.session {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(Theme.Brand.gradient[0].gradient)
-                        Image(systemName: session.isGuest ? "person.crop.circle.badge.questionmark" : "person.crop.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.white)
+                Button {
+                    showingEditProfile = true
+                } label: {
+                    HStack(spacing: 14) {
+                        profileAvatar
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(profileName)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Text(session.isGuest ? "Guest · Edit profile" : "Edit profile")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                     }
-                    .frame(width: 48, height: 48)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(session.displayName ?? "Daily Music Listener")
-                            .font(.headline)
-                        Text(session.isGuest ? "Guest mode" : "Signed in")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+                    .padding(.vertical, 4)
                 }
-                .padding(.vertical, 4)
+                .tint(.primary)
 
                 Button("Sign out", role: .destructive) {
                     Task { await env.session.signOut() }
