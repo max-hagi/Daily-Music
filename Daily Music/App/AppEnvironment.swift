@@ -32,11 +32,13 @@ final class AppEnvironment {
     let catalogInfo: CatalogInfoService
     let settings: SettingsService
     let profiles: ProfileService
+    let friends: FriendService
     let notifications: NotificationService
     let musicPlayer: MusicPlayer
     let session: SessionStore
     let favoritesStore: FavoritesStore
     let profileStore: ProfileStore
+    let friendsStore: FriendsStore
 
     init(
         auth: AuthService,
@@ -49,6 +51,7 @@ final class AppEnvironment {
         catalogInfo: CatalogInfoService,
         settings: SettingsService,
         profiles: ProfileService,
+        friends: FriendService,
         notifications: NotificationService,
         musicEngine: MusicEngine
     ) {
@@ -62,15 +65,17 @@ final class AppEnvironment {
         self.catalogInfo = catalogInfo
         self.settings = settings
         self.profiles = profiles
+        self.friends = friends
         self.notifications = notifications
-        // These three are WRAPPERS the container builds from the injected pieces:
+        // These four are WRAPPERS the container builds from the injected pieces:
         // MusicPlayer wraps whichever engine (mock vs MusicKit) it's given, and the
-        // two stores wrap a service to add view-facing state. The container owns
+        // stores wrap a service to add view-facing state. The container owns
         // them so they live as long as the app does.
         self.musicPlayer = MusicPlayer(engine: musicEngine)
         self.session = SessionStore(auth: auth)
         self.favoritesStore = FavoritesStore(service: favorites)
         self.profileStore = ProfileStore(service: profiles)
+        self.friendsStore = FriendsStore(service: friends)
     }
 
     // Two factory methods that assemble a fully-wired container. Picking `mock()`
@@ -91,6 +96,7 @@ final class AppEnvironment {
             catalogInfo: MockCatalogInfoService(),
             settings: MockSettingsService(),
             profiles: MockProfileService(),
+            friends: MockFriendService(),
             notifications: LocalNotificationService(),
             musicEngine: MockMusicEngine()
         )
@@ -110,6 +116,7 @@ final class AppEnvironment {
             catalogInfo: LiveCatalogInfoService(),
             settings: SupabaseSettingsService(),
             profiles: SupabaseProfileService(),
+            friends: SupabaseFriendService(),
             notifications: LocalNotificationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
             // Once the MusicKit capability is enabled (paid dev account),
