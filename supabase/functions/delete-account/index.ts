@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
     await admin.from("reactions").delete().eq("user_id", uid);
     await admin.from("check_ins").delete().eq("user_id", uid);
     await admin.from("favourites").delete().eq("user_id", uid);
+    await admin.from("song_ratings").delete().eq("user_id", uid);
     await admin.from("profiles").delete().eq("id", uid); // profiles keyed by id = auth uid
 
     // 4. Delete the auth user itself.
