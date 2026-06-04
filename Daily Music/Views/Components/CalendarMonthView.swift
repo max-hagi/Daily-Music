@@ -15,19 +15,23 @@ struct CalendarMonthView: View {
     private let entriesByDay: [Date: DailyEntry]
     private let monthPages: [Date]
     private let onSelect: ((DailyEntry) -> Void)?
+    // entryID → the emoji THIS user reacted with, so a reacted day shows the emoji
+    // in place of the generic dot.
+    private let reactionsByEntry: [UUID: String]
     // Which month is on screen. @State so the chevrons can change it and redraw.
     @State private var month: Date
     private let calendar = Calendar.current
 
     // A CUSTOM init. Normally SwiftUI synthesizes one, but here we transform the
     // input and seed @State from a computed value.
-    init(entries: [DailyEntry], onSelect: ((DailyEntry) -> Void)? = nil) {
+    init(entries: [DailyEntry], reactions: [UUID: String] = [:], onSelect: ((DailyEntry) -> Void)? = nil) {
         let cal = Calendar.current
         var dict: [Date: DailyEntry] = [:]
         for entry in entries {
             dict[cal.startOfDay(for: entry.date)] = entry
         }
         self.entriesByDay = dict
+        self.reactionsByEntry = reactions
         self.onSelect = onSelect
 
         // Open on the current month so today's date is visible on first load.
@@ -130,20 +134,29 @@ struct CalendarMonthView: View {
             Button {
                 onSelect?(entry)
             } label: {
-                VStack(spacing: 3) {
+                VStack(spacing: 2) {
                     Text("\(number)")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Color.primary)
-                        .frame(width: 32, height: 28)
+                        .frame(width: 32, height: 26)
                         .overlay {
                             if isToday(day) {
                                 Circle().stroke(.secondary, lineWidth: 1)
                             }
                         }
 
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 5, height: 5)
+                    // Marker: the emoji you reacted with, else the accent dot. The
+                    // fixed height keeps every cell the same size whichever shows.
+                    Group {
+                        if let emoji = reactionsByEntry[entry.id] {
+                            Text(emoji).font(.system(size: 12))
+                        } else {
+                            Circle()
+                                .fill(Color.accentColor)
+                                .frame(width: 5, height: 5)
+                        }
+                    }
+                    .frame(height: 12)
                 }
                 .frame(width: 40, height: 40)
             }

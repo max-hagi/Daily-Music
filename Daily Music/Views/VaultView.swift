@@ -13,6 +13,8 @@ struct VaultView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var model: VaultViewModel?
     @State private var selectedVaultEntry: DailyEntry?
+    // entryID → my reaction emoji, used to stamp the calendar days.
+    @State private var reactions: [UUID: String] = [:]
 
     private let calendar = Calendar.current
 
@@ -44,6 +46,8 @@ struct VaultView: View {
         .task {
             if model == nil { model = VaultViewModel(entries: env.entries) }
             await model?.load()
+            // Stamp the calendar with this user's reactions (best-effort; empty on failure).
+            reactions = (try? await env.reactions.myReactions()) ?? [:]
         }
     }
 
@@ -177,7 +181,7 @@ struct VaultView: View {
                     .foregroundStyle(.teal)
             }
 
-            CalendarMonthView(entries: entries) { entry in
+            CalendarMonthView(entries: entries, reactions: reactions) { entry in
                 selectedVaultEntry = entry
             }
         }
