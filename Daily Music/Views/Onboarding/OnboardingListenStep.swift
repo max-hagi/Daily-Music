@@ -1,0 +1,47 @@
+//
+//  OnboardingListenStep.swift
+//  Daily Music
+//
+//  Step 3: the preferred streaming service ("Open in…" default). Rendered from
+//  StreamingService.allCases so Apple Music / Spotify / Tidal all appear, and any
+//  future service is automatic.
+//
+
+import SwiftUI
+
+struct OnboardingListenStep: View {
+    @Bindable var settings: SettingsViewModel
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Text("Where do you listen?")
+                .font(.system(size: 28, weight: .heavy, design: .rounded))
+            Text("So “Open in…” jumps to the right app.")
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 10) {
+                ForEach(StreamingService.allCases) { service in
+                    Button {
+                        settings.preferredStreamingService = service
+                    } label: {
+                        HStack(spacing: 12) {
+                            ServiceLogo(service: service)
+                            Text(service.displayName).fontWeight(.semibold)
+                            Spacer()
+                            if settings.preferredStreamingService == service {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Theme.Brand.gradient[0])
+                            }
+                        }
+                        .padding()
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 28)
+    }
+}
