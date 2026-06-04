@@ -16,6 +16,9 @@ import Foundation
 protocol FavoritesService {
     func favoriteIDs() async throws -> Set<UUID>
     func setFavorite(_ isFavorite: Bool, entryID: UUID) async throws
+    /// Total favourites for an entry across ALL users (social proof). Live, this is
+    /// backed by a SECURITY DEFINER RPC because the table is RLS owner-only.
+    func count(entryID: UUID) async throws -> Int
 }
 
 // `actor` is like a class, but Swift guarantees its mutable state is accessed by
@@ -31,5 +34,11 @@ actor MockFavoritesService: FavoritesService {
         // Set insert/remove are no-ops if the element is already present/absent,
         // so this is naturally idempotent.
         if isFavorite { ids.insert(entryID) } else { ids.remove(entryID) }
+    }
+
+    func count(entryID: UUID) async throws -> Int {
+        // A stable seed so previews/mock show a plausible number; +1 when this
+        // user has favourited the entry.
+        1203 + (ids.contains(entryID) ? 1 : 0)
     }
 }

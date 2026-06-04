@@ -62,9 +62,23 @@ final class SupabaseReactionsService: ReactionsService {
         // Dictionary how to resolve duplicate keys (shouldn't happen — keep the first).
         return Dictionary(rows.map { ($0.emoji, $0.count) }, uniquingKeysWith: { a, _ in a })
     }
+
+    func myReactions() async throws -> [UUID: String] {
+        // RLS already restricts SELECT to our own rows, so no user filter is needed
+        // for correctness — but we pass it explicitly to match the other methods.
+        let userID = try await client.auth.session.user.id
+        let rows: [MyReactionRow] = try await client
+            .from("reactions")
+            .select("entry_id, emoji")
+            .eq("user_id", value: userID)
+            .execute()
+            .value
+        return Dictionary(rows.map { ($0.entry_id, $0.emoji) }, uniquingKeysWith: { a, _ in a })
+    }
 }
 
 private struct ReactionRow: Decodable { let emoji: String }
+private struct MyReactionRow: Decodable { let entry_id: UUID; let emoji: String }
 private struct ReactionInsert: Encodable {
     let user_id: UUID
     let entry_id: UUID

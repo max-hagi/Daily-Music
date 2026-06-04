@@ -23,6 +23,9 @@ protocol ReactionsService {
     func setReaction(_ emoji: String?, entryID: UUID) async throws
     /// Aggregate counts per emoji across all users.
     func counts(entryID: UUID) async throws -> [String: Int]
+    /// Every entry THIS user has reacted to, mapped to their chosen emoji. Used to
+    /// stamp the Vault calendar with the reaction the user gave each day.
+    func myReactions() async throws -> [UUID: String]
 }
 
 actor MockReactionsService: ReactionsService {
@@ -52,4 +55,6 @@ actor MockReactionsService: ReactionsService {
         else { mine[entryID] = nil }
         tallies[entryID] = counts   // write the updated tally back
     }
+
+    func myReactions() async throws -> [UUID: String] { mine }
 }

@@ -43,6 +43,16 @@ final class SupabaseFavouritesService: FavoritesService {
                 .execute()
         }
     }
+
+    func count(entryID: UUID) async throws -> Int {
+        // `favourites` is RLS owner-only, so a plain COUNT would only ever see our
+        // own row. `favourite_count()` is SECURITY DEFINER, so it totals across
+        // every user. Returns a bare integer, decoded straight into Int.
+        try await client
+            .rpc("favourite_count", params: ["p_entry": entryID])
+            .execute()
+            .value
+    }
 }
 
 // Read shape (Decodable): we only pull entry_id back.
