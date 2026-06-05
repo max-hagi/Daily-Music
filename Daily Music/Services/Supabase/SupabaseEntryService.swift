@@ -6,9 +6,9 @@
 //  Conforms to the same EntryService protocol the mock did, so swapping it in
 //  (see AppEnvironment.live()) requires no view changes.
 //
-//  "Today's song" is the most recently published entry — robust even if a day
-//  gets skipped. RLS on the table already hides rows whose published_at is in
-//  the future, but we also filter here so the intent is explicit.
+//  "Today's song" is the entry whose date matches the user's current day. RLS on
+//  the table already hides rows whose published_at is in the future, but we also
+//  filter here so the intent is explicit.
 //
 
 import Foundation
@@ -21,16 +21,15 @@ final class SupabaseEntryService: EntryService {
         // This chain is Supabase's fluent query builder — it reads top-to-bottom
         // as one SQL query and only hits the network at `.execute()`:
         //   .from(table) → .select(all columns) → .lte(col, value): WHERE col <= value
-        //   → .order(...) → .limit(1).
+        //   → .eq(col, value) → .limit(1).
         // The `let rows: [DailyEntryRow] = … .value` line is the magic: because we
         // ANNOTATE the type, `.value` decodes the JSON response straight into our
-        // Decodable struct array (Codable doing the work). "Today" = latest
-        // published row, which survives skipped days better than matching today's date.
+        // Decodable struct array (Codable doing the work).
         let rows: [DailyEntryRow] = try await client
             .from("daily_entries")
             .select()
+            .eq("date", value: Self.dayFormatter.string(from: Date()))
             .lte("published_at", value: Self.now)
-            .order("date", ascending: false)
             .limit(1)
             .execute()
             .value

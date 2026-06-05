@@ -25,14 +25,8 @@ struct TodayView: View {
             // sheet/task modifiers once to whichever branch (model vs spinner) shows.
             Group {
                 if let model {
-                    LoadStateView(
-                        state: model.state,
-                        emptyTitle: "No song today — yet",
-                        emptyMessage: "Today's pick hasn't been published. Check back soon.",
-                        onRetry: { await model.load() }
-                    ) { entry in
-                        // The trailing closure is LoadStateView's @ViewBuilder content:
-                        // only runs for the .loaded case, with the unwrapped entry.
+                    switch model.state {
+                    case .loaded(let entry):
                         EntryDetailView(
                             entry: entry,
                             dateLabel: todayString,
@@ -42,11 +36,18 @@ struct TodayView: View {
                             usesImmersiveBackdrop: true
                         )
                         .simultaneousGesture(returnSwipeGesture)
+
+                    case .empty:
+                        NewDropIncomingView(onRefresh: { await model.load() })
+
+                    case .failed:
+                        TodayErrorView(onRetry: { await model.load() })
+
+                    case .loading:
+                        loadingState
                     }
                 } else {
-                    MusicLoadingView(title: nil, tint: Theme.Brand.gradient[0])
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(.systemBackground))
+                    loadingState
                 }
             }
             // `.toolbar` adds bar buttons. Placement chooses the side.
@@ -90,6 +91,12 @@ struct TodayView: View {
         }
     }
 
+    private var loadingState: some View {
+        MusicLoadingView(title: nil, tint: Theme.Brand.gradient[0])
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
+    }
+
     // e.g. "Monday, Jun 1" — today, formatted for the detail header.
     private var todayString: String {
         Date().formatted(.dateTime.weekday(.wide).month().day())
@@ -114,6 +121,112 @@ struct TodayView: View {
                 guard value.translation.width > 80, abs(value.translation.height) < 60 else { return }
                 onReturnToPreviousScreen?()
             }
+    }
+}
+
+private struct NewDropIncomingView: View {
+    let onRefresh: () async -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAnimating = false
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.xl) {
+            Spacer(minLength: Theme.Spacing.lg)
+
+            ZStack {
+                Circle()
+                    .fill(Theme.Brand.gradient[0].opacity(0.16))
+                    .frame(width: 180, height: 180)
+                    .scaleEffect(isAnimating ? 1.08 : 0.94)
+                    .opacity(isAnimating ? 0.55 : 1)
+                    .animation(pulseAnimation, value: isAnimating)
+
+                Circle()
+                    .fill(.regularMaterial)
+                    .frame(width: 132, height: 132)
+                    .overlay {
+                        Circle()
+                            .stroke(.white.opacity(0.5), lineWidth: 1)
+                    }
+
+                Image(systemName: "music.note")
+                    .font(.system(size: 54, weight: .bold))
+                    .foregroundStyle(Theme.Brand.gradient[0])
+                    .symbolEffect(.bounce, value: isAnimating)
+            }
+            .padding(.top, Theme.Spacing.xl)
+
+            VStack(spacing: Theme.Spacing.sm) {
+                Text("New drop incoming")
+                    .font(.system(size: 34, weight: .heavy, design: .rounded))
+                    .multilineTextAlignment(.center)
+
+                Text("Today's song has not landed yet. Check back soon.")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Theme.Spacing.xl)
+            }
+
+            Button {
+                Task {
+                    Haptics.tap()
+                    await onRefresh()
+                }
+            } label: {
+                Label("Check again", systemImage: "arrow.clockwise")
+                    .font(.headline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(Theme.Brand.gradient[0])
+            .padding(.horizontal, Theme.Spacing.xl)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(background)
+        .onAppear { isAnimating = !reduceMotion }
+    }
+
+    private var background: some View {
+        LinearGradient(
+            colors: [
+                Theme.Brand.gradient[0].opacity(0.30),
+                Color(.systemBackground).opacity(0.95),
+                Theme.Brand.gradient[1].opacity(0.18)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+
+    private var pulseAnimation: Animation? {
+        reduceMotion ? nil : .easeInOut(duration: 1.4).repeatForever(autoreverses: true)
+    }
+}
+
+private struct TodayErrorView: View {
+    let onRetry: () async -> Void
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            ContentUnavailableView(
+                "Something went wrong",
+                systemImage: "exclamationmark.triangle",
+                description: Text("We couldn't load today's drop. Please try again.")
+            )
+
+            Button("Retry") {
+                Task { await onRetry() }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
     }
 }
 
