@@ -119,6 +119,7 @@ private struct SettingsForm: View {
         case .about:
             supportSection
             appSection
+            accountManagementSection
         }
     }
 
@@ -206,16 +207,11 @@ private struct SettingsForm: View {
                 }
                 .tint(.primary)
 
-                Button("Sign out", role: .destructive) {
+                Button {
                     Task { await env.session.signOut() }
-                }
-                .disabled(env.session.isWorking)
-
-                Button(role: .destructive) {
-                    showingDeleteConfirmation = true
                 } label: {
                     HStack {
-                        Text("Delete account")
+                        Text("Sign out")
                         if env.session.isWorking {
                             Spacer()
                             ProgressView()
@@ -376,6 +372,32 @@ private struct SettingsForm: View {
             Text("App")
         } footer: {
             Text("Resetting local settings does not remove your account, favorites, check-ins, or Supabase data.")
+        }
+    }
+
+    private var accountManagementSection: some View {
+        Section {
+            if env.session.session != nil {
+                Button(role: .destructive) {
+                    showingDeleteConfirmation = true
+                } label: {
+                    HStack {
+                        Text("Delete account")
+                        if env.session.isWorking {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(env.session.isWorking)
+            } else {
+                Label("No signed-in account", systemImage: "person.crop.circle.badge.xmark")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Account Management")
+        } footer: {
+            Text("Deleting your account permanently removes your profile, favorites, reactions, check-ins, and preferences.")
         }
     }
 }

@@ -99,6 +99,18 @@ struct FavoritesView: View {
                             }
                     }
                     .buttonStyle(.plain)
+                    .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .contextMenu {
+                        Button { selectedEntry = entry } label: {
+                            Label("Open Entry", systemImage: "arrow.up.forward.app")
+                        }
+
+                        Button(role: .destructive) { removeFavorite(entry) } label: {
+                            Label("Remove Favorite", systemImage: "heart.slash.fill")
+                        }
+                    } preview: {
+                        FavoriteEntryPeek(entry: entry)
+                    }
                     .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -199,6 +211,81 @@ struct FavoritesView: View {
         Haptics.tap()
         recentlyRemoved = nil
         Task { await env.favoritesStore.toggle(entry) }   // re-favorite → list reloads it back
+    }
+}
+
+private struct FavoriteEntryPeek: View {
+    let entry: DailyEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                AlbumArtView(url: entry.albumArtURL, cornerRadius: 14)
+                    .frame(width: 96, height: 96)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(entry.date.formatted(.dateTime.weekday(.wide).month().day().year()))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(entry.title)
+                        .font(.title3.weight(.bold))
+                        .lineLimit(2)
+
+                    Text(entry.artist)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if !metadataChips.isEmpty {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], alignment: .leading, spacing: 8) {
+                    ForEach(metadataChips, id: \.self) { chip in
+                        Text(chip)
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.pink.opacity(0.12), in: Capsule())
+                            .foregroundStyle(.pink)
+                    }
+                }
+            }
+
+            Text(journalExcerpt)
+                .font(.callout)
+                .lineSpacing(3)
+                .foregroundStyle(.primary)
+                .lineLimit(4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(Theme.Spacing.md)
+        .frame(width: 340, alignment: .leading)
+        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private var metadataChips: [String] {
+        [entry.genre, entry.decade, entry.mood, entry.theme]
+            .compactMap { value in
+                guard let value, !value.isEmpty else { return nil }
+                return value
+            }
+    }
+
+    private var journalExcerpt: String {
+        let cleaned = entry.journalMarkdown
+            .replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "*", with: "")
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard cleaned.count > 180 else { return cleaned }
+        let endIndex = cleaned.index(cleaned.startIndex, offsetBy: 180)
+        return String(cleaned[..<endIndex]).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
     }
 }
 

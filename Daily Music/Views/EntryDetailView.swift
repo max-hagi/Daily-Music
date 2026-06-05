@@ -35,8 +35,6 @@ struct EntryDetailView: View {
     @State private var showingReactions = false
     @State private var selectedReactionEmoji: String?
     @State private var didDismissAnonymousRatingNudge = false
-    /// All-users favourite total for this entry (nil until loaded).
-    @State private var favouriteCount: Int?
     // One-time tip explaining that 👍/👎 shapes Insights (Today only).
     @AppStorage("hasSeenRatingNudgeLiquidGlass") private var hasSeenRatingNudge = false
 
@@ -81,7 +79,6 @@ struct EntryDetailView: View {
             SongInfoSheet(entry: entry)
         }
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
-        .task(id: entry.id) { await loadFavouriteCount() }
         .task(id: reactionStateLoadID) { await loadSelectedReaction() }
     }
 
@@ -293,24 +290,6 @@ struct EntryDetailView: View {
         }
     }
 
-    // MARK: - Favourite count (social proof)
-
-    @ViewBuilder private var favouriteCountLabel: some View {
-        if let favouriteCount {
-            Text(Self.compactCount(favouriteCount))
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .contentTransition(.numericText())   // animate the number ticking
-                .accessibilityLabel("\(favouriteCount) people favourited this song")
-        }
-    }
-
-    private func loadFavouriteCount() async {
-        guard let count = try? await env.favorites.count(entryID: entry.id) else { return }
-        favouriteCount = count
-    }
-
     private var reactionStateLoadID: String {
         "\(entry.id.uuidString)-\(env.session.session?.userID.uuidString ?? "signed-out")-\(reactionsAreReadOnly)"
     }
@@ -324,40 +303,18 @@ struct EntryDetailView: View {
         selectedReactionEmoji = try? await env.reactions.myReaction(entryID: entry.id)
     }
 
-    /// Toggle the heart, nudging the visible count instantly, then reconciling with
-    /// the server total so it stays honest.
     private func toggleFavourite() {
         Haptics.tap()
-        let previousCount = favouriteCount
-        let wasFavorite = env.favoritesStore.isFavorite(entry)
-        let willFavorite = !wasFavorite
-        if let c = favouriteCount {
-            favouriteCount = max(0, c + (willFavorite ? 1 : -1))
-        }
         Task {
             await env.favoritesStore.toggle(entry)
-            let didFavorite = env.favoritesStore.isFavorite(entry)
-            if didFavorite == wasFavorite {
-                favouriteCount = previousCount
-                return
-            }
-            await loadFavouriteCount()
         }
-    }
-
-    /// 1204 → "1.2k"; smaller numbers stay exact.
-    private static func compactCount(_ n: Int) -> String {
-        n >= 1000 ? String(format: "%.1fk", Double(n) / 1000) : "\(n)"
     }
 
     // MARK: - Action cluster (favorite + rating + info)
 
     private var actionCluster: some View {
         HStack(spacing: Theme.Spacing.md) {
-            HStack(spacing: 5) {
-                heartButton
-                favouriteCountLabel
-            }
+            heartButton
             reactionButton(controlSize: 52, symbolSize: 20)
             Spacer(minLength: Theme.Spacing.sm)
             RatingBar(entry: entry, accent: palette.accent, isReadOnly: !allowsEntryReaction)
@@ -380,10 +337,7 @@ struct EntryDetailView: View {
 
     private var compactActions: some View {
         HStack(spacing: 10) {
-            HStack(spacing: 3) {
-                compactHeartButton
-                favouriteCountLabel
-            }
+            compactHeartButton
             reactionButton(controlSize: 46, symbolSize: 18)
             compactInfoButton
         }
@@ -614,11 +568,8 @@ struct EntryDetailView: View {
                 .padding(.horizontal, 78)
 
                 HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-                    HStack(spacing: 3) {
-                        compactHeartButton
-                        favouriteCountLabel
-                    }
-                    .frame(width: 82, alignment: .leading)
+                    compactHeartButton
+                        .frame(width: 82, alignment: .leading)
 
                     Spacer(minLength: 0)
 
