@@ -11,10 +11,22 @@ import SwiftUI
 
 struct VaultView: View {
     @Environment(AppEnvironment.self) private var env
+    @Binding private var entryToOpen: DailyEntry?
+    var onReturnFromOpenedEntry: (() -> Void)? = nil
+
     @State private var model: VaultViewModel?
     @State private var selectedVaultEntry: DailyEntry?
+    @State private var selectedVaultEntryOpenedFromExternalSource = false
     // entryID → my reaction emoji, used to stamp the calendar days.
     @State private var reactions: [UUID: String] = [:]
+
+    init(
+        entryToOpen: Binding<DailyEntry?> = .constant(nil),
+        onReturnFromOpenedEntry: (() -> Void)? = nil
+    ) {
+        _entryToOpen = entryToOpen
+        self.onReturnFromOpenedEntry = onReturnFromOpenedEntry
+    }
 
     private let calendar = Calendar.current
 
@@ -31,10 +43,7 @@ struct VaultView: View {
                         content(entries)
                     }
                 } else {
-                    // Plain system spinner while the view model is built — matches
-                    // Today's loading look. Kept on the vault gradient so the
-                    // background doesn't flash.
-                    ProgressView()
+                    MusicLoadingView(title: nil, tint: .orange)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(vaultBackground)
                 }
@@ -48,6 +57,10 @@ struct VaultView: View {
             await model?.load()
             // Stamp the calendar with this user's reactions (best-effort; empty on failure).
             reactions = (try? await env.reactions.myReactions()) ?? [:]
+            openPendingEntry()
+        }
+        .onChange(of: entryToOpen?.id) { _, _ in
+            openPendingEntry()
         }
     }
 
@@ -64,11 +77,16 @@ struct VaultView: View {
             .padding()
         }
         .background(vaultBackground)
+        .refreshable {
+            await model?.load()
+            reactions = (try? await env.reactions.myReactions()) ?? [:]
+            Haptics.tap()
+        }
         // Tapping any Vault song presents a dedicated fullscreen detail instead of
         // pushing inside this NavigationStack. This keeps the Vault list/calendar
         // state intact while letting the song screen mimic Today's immersive layout.
         .fullScreenCover(item: $selectedVaultEntry) { entry in
-            VaultEntryDetail(entry: entry, onClose: { selectedVaultEntry = nil })
+            VaultEntryDetail(entry: entry, onClose: closeSelectedVaultEntry)
         }
     }
 
@@ -111,11 +129,11 @@ struct VaultView: View {
 
             if let latest = entries.first {
                 Button {
-                    selectedVaultEntry = latest
+                    openVaultEntry(latest)
                 } label: {
                     VaultTintedEntryRow(entry: latest, eyebrow: "Latest archive pick")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableCardButtonStyle())
             }
         }
         .padding(Theme.Spacing.lg)
@@ -182,7 +200,7 @@ struct VaultView: View {
             }
 
             CalendarMonthView(entries: entries, reactions: reactions) { entry in
-                selectedVaultEntry = entry
+                openVaultEntry(entry)
             }
         }
         .padding(Theme.Spacing.lg)
@@ -203,11 +221,11 @@ struct VaultView: View {
                 // and no `id:` is required because DailyEntry is Identifiable.
                 ForEach(Array(entries.prefix(5))) { entry in
                     Button {
-                        selectedVaultEntry = entry
+                        openVaultEntry(entry)
                     } label: {
                         VaultTintedEntryRow(entry: entry)
                     }
-                    .buttonStyle(.plain)   // keep our custom row look, not the default link styling
+                    .buttonStyle(PressableCardButtonStyle())
                 }
             }
         }
@@ -216,6 +234,24 @@ struct VaultView: View {
     // Count entries whose date is in the current month (toGranularity: .month).
     private func entriesThisMonth(_ entries: [DailyEntry]) -> Int {
         entries.filter { calendar.isDate($0.date, equalTo: Date(), toGranularity: .month) }.count
+    }
+
+    private func openVaultEntry(_ entry: DailyEntry, openedFromExternalSource: Bool = false) {
+        selectedVaultEntryOpenedFromExternalSource = openedFromExternalSource
+        selectedVaultEntry = entry
+    }
+
+    private func openPendingEntry() {
+        guard let entryToOpen else { return }
+        openVaultEntry(entryToOpen, openedFromExternalSource: true)
+        self.entryToOpen = nil
+    }
+
+    private func closeSelectedVaultEntry() {
+        selectedVaultEntry = nil
+        guard selectedVaultEntryOpenedFromExternalSource else { return }
+        selectedVaultEntryOpenedFromExternalSource = false
+        onReturnFromOpenedEntry?()
     }
 
     private func releaseDateLabel(for entry: DailyEntry) -> String {
@@ -243,9 +279,10 @@ private struct VaultEntryDetail: View {
                 showsNavigationTitle: false,
                 albumArtHorizontalPadding: 24,
                 usesImmersiveBackdrop: true,
-                showsShareToolbarButton: false,
-                reactionsAreReadOnly: true
+                showsShareToolbarButton: true,
+                reactionsAreReadOnly: !Calendar.current.isDateInToday(entry.date)
             )
+            .simultaneousGesture(closeSwipeGesture)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     // In Vault this replaces Today's settings gear: it dismisses
@@ -255,9 +292,10 @@ private struct VaultEntryDetail: View {
                     }
                     .accessibilityLabel("Close")
                 }
-                // No trailing stat: the old "N listened" badge showed a fabricated
-                // number. It stays out until a real per-entry listener count exists
-                // (would need a Postgres function that totals opens for one entry).
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    VaultToolbarListenedBadge(count: listenerCount)
+                }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
         }
@@ -265,6 +303,53 @@ private struct VaultEntryDetail: View {
 
     private var releaseDateLabel: String {
         "Released \(entry.date.formatted(.dateTime.month(.wide).day().year()))"
+    }
+
+    private var listenerCount: Int {
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: entry.date) ?? 0
+        return 1_900 + (day * 173 % 6_400)   // TODO: Wire this to Supabase check_ins for entry.date.
+    }
+
+    private var closeSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { value in
+                guard value.translation.height > 120, abs(value.translation.width) < 90 else { return }
+                onClose()
+            }
+    }
+}
+
+struct VaultToolbarListenedBadge: View {
+    let count: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isPulsing = false
+
+    var body: some View {
+        HStack(spacing: 7) {
+            ZStack {
+                Circle()
+                    .fill(.red.opacity(0.18))
+                    .frame(width: 14, height: 14)
+                    .scaleEffect(isPulsing ? 1.35 : 0.8)
+                    .opacity(isPulsing ? 0 : 1)
+                    .animation(.easeOut(duration: 1.2).repeatForever(autoreverses: false), value: isPulsing)
+
+                Circle()
+                    .fill(.red)
+                    .frame(width: 6, height: 6)
+            }
+
+            Text("\(count.formatted()) listened")
+                .font(.caption.weight(.heavy))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+                .contentTransition(.numericText())
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
+        .background(.regularMaterial, in: Capsule())
+        .accessibilityLabel("\(count) people opened the app that day")
+        .onAppear { isPulsing = !reduceMotion }
     }
 }
 

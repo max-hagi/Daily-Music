@@ -15,12 +15,19 @@ struct ProfileEditView: View {
     @State private var displayName = ""
     @State private var avatarURL: String?
     @State private var isSaving = false
+    @State private var saveError: String?
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
                 ProfileEditor(displayName: $displayName, avatarURL: $avatarURL)
                     .padding(.top, 24)
+                if let saveError {
+                    Text(saveError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                }
                 Spacer()
             }
             .padding()
@@ -33,16 +40,21 @@ struct ProfileEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         isSaving = true
+                        saveError = nil
                         Task {
-                            try? await env.profileStore.save(
-                                displayName: displayName.trimmingCharacters(in: .whitespaces),
-                                avatarURL: avatarURL
-                            )
+                            do {
+                                try await env.profileStore.save(
+                                    displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines),
+                                    avatarURL: avatarURL
+                                )
+                                dismiss()
+                            } catch {
+                                saveError = "Couldn't save your profile. Check your connection and try again."
+                            }
                             isSaving = false
-                            dismiss()
                         }
                     }
-                    .disabled(displayName.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
+                    .disabled(displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
                 }
             }
             .task {

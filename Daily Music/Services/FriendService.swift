@@ -28,6 +28,14 @@ actor MockFriendService: FriendService {
         let sam  = UserProfile(id: UUID(), displayName: "Sam", avatarURL: nil)
         friendList = [Friend(friendshipID: UUID(), profile: alex)]
         requests = [FriendRequest(id: UUID(), profile: sam, createdAt: Date())]
+        // Phase C: seed Alex's ratings (aligned to MockEntryService's deterministic
+        // ids) so the friend-insights screen + the you-vs-them comparison are
+        // populated in the mock/DEBUG environment. Overlaps heavily with the seeded
+        // "my" ratings, clashing on a handful → a believable ~82% match.
+        let alexRatings = [1, -1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -1, -1, 1, 1, 1, 1, 1, -1, 1, 1]
+        var seeded: [UUID: Int] = [:]
+        for (i, v) in alexRatings.enumerated() { seeded[MockEntryService.mockEntryID(i)] = v }
+        ratingsByFriend[alex.id] = seeded
     }
 
     func myCode() async throws -> String { code }

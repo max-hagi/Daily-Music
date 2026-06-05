@@ -29,7 +29,8 @@ struct WrappedView: View {
                         content(recap)
                     }
                 } else {
-                    ProgressView()
+                    MusicLoadingView(title: nil, tint: .pink)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .navigationTitle("Your Recap")
@@ -41,12 +42,21 @@ struct WrappedView: View {
                 }
             }
         }
+        .simultaneousGesture(dismissSwipeGesture)
         .task {
             if model == nil {
                 model = WrappedViewModel(entries: env.entries, checkIns: env.checkIns, ratings: env.ratings)
             }
             await model?.load(favoriteIDs: favoriteIDs)
         }
+    }
+
+    private var dismissSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { value in
+                guard value.translation.height > 120, abs(value.translation.width) < 90 else { return }
+                dismiss()
+            }
     }
 
     // Assembles the recap from the same small card helpers (hero/archetype/bigStat).

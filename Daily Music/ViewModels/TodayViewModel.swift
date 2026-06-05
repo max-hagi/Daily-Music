@@ -30,8 +30,13 @@ final class TodayViewModel {
     }
 
     func load() async {
-        state = .loading
-        listenersToday = nil
+        if case .loaded = state {
+            // Keep the current song visible while a refresh fetches fresh details.
+        } else {
+            state = .loading
+            listenersToday = nil
+        }
+
         do {
             // `if let entry = …` distinguishes "got a song" from "nil = nothing
             // published today" → drive the .empty state deliberately.

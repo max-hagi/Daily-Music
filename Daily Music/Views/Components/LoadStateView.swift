@@ -29,8 +29,9 @@ struct LoadStateView<Value, Content: View>: View {
         // Exhaustively switch the state → exactly one branch renders.
         switch state {
         case .loading:
-            ProgressView()
+            MusicLoadingView(title: nil, tint: Theme.Brand.gradient[0])
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
 
         case .loaded(let value):
             // `let value` binds the associated value out of the enum case.

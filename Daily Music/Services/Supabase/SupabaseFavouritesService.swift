@@ -32,7 +32,8 @@ final class SupabaseFavouritesService: FavoritesService {
             let userID = try await client.auth.session.user.id
             try await client
                 .from("favourites")
-                .insert(FavouriteInsert(user_id: userID, entry_id: entryID))   // Encodable → JSON body
+                .upsert(FavouriteInsert(user_id: userID, entry_id: entryID),
+                        onConflict: "user_id,entry_id")
                 .execute()
         } else {
             // RLS limits this to the current user's own row.

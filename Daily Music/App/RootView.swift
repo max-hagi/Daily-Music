@@ -67,6 +67,7 @@ struct RootView: View {
         .onChange(of: env.session.isSignedIn) { oldValue, newValue in
             guard didRestore, !oldValue, newValue else { return }
             isCompletingSignIn = true
+            Haptics.success()   // signed in
 
             Task {
                 try? await Task.sleep(for: .milliseconds(1200))
@@ -77,17 +78,13 @@ struct RootView: View {
         // automatically cancels it if the view goes away.
         .task {
             guard !didRestore else { return }    // don't re-run on later redraws
-            // Keep the branded launch animation on screen long enough to be seen,
-            // even when session restore returns instantly (cached session).
-            let start = ContinuousClock.now      // monotonic clock for measuring elapsed time
-            await env.session.restore()          // suspends here until restore finishes
-            let minimum = Duration.seconds(1.7)
-            let elapsed = start.duration(to: .now)
-            if elapsed < minimum {
-                // Pad out the splash so it's not a jarring flash. `try?` because
-                // sleep can throw on cancellation; we don't care if it does.
-                try? await Task.sleep(for: minimum - elapsed)
+            // Restore in the background so a slow keychain/Supabase session lookup
+            // can never keep the app from showing a concrete route.
+            Task {
+                await env.session.restore()
+                await resolveOnboardingStatus()
             }
+            try? await Task.sleep(for: .milliseconds(1700))
             didRestore = true                    // flip the flag → triggers the animated swap above
         }
         .onOpenURL { url in
@@ -96,6 +93,15 @@ struct RootView: View {
             guard url.scheme == "dailymusic", url.host == "friend" else { return }
             let code = url.lastPathComponent
             if !code.isEmpty { UserDefaults.standard.set(code, forKey: "pendingFriendCode") }
+        }
+    }
+
+    private func resolveOnboardingStatus() async {
+        guard env.session.isSignedIn, !hasCompletedOnboarding else { return }
+        await env.profileStore.load()
+        let displayName = env.profileStore.current?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if displayName?.isEmpty == false {
+            hasCompletedOnboarding = true
         }
     }
 }

@@ -24,6 +24,8 @@ struct EntryDetailView: View {
     var showsShareToolbarButton = true
     /// True for archival Vault details: reactions show historical counts, read-only.
     var reactionsAreReadOnly = false
+    /// Daily taste signals only mutate for today's song; past entries keep the same controls read-only.
+    var allowsDailyInteraction = true
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -31,6 +33,7 @@ struct EntryDetailView: View {
     @State private var showingShare = false
     @State private var showingInfo = false
     @State private var showingReactions = false
+    @State private var selectedReactionEmoji: String?
     @State private var didDismissAnonymousRatingNudge = false
     /// All-users favourite total for this entry (nil until loaded).
     @State private var favouriteCount: Int?
@@ -79,6 +82,7 @@ struct EntryDetailView: View {
         }
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
         .task(id: entry.id) { await loadFavouriteCount() }
+        .task(id: reactionStateLoadID) { await loadSelectedReaction() }
     }
 
     // MARK: - Standard layout (Vault / Favorites, pushed)
@@ -117,7 +121,7 @@ struct EntryDetailView: View {
             }
             .scrollTargetLayout()
         }
-        .scrollTargetBehavior(.viewAligned)
+        .scrollTargetBehavior(StorySnapScrollTargetBehavior())
     }
 
     private var songZone: some View {
@@ -128,11 +132,16 @@ struct EntryDetailView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .padding(.top, Theme.Spacing.sm)
+            } else {
+                Color.clear
+                    .frame(height: 16)
+                    .padding(.top, Theme.Spacing.sm)
             }
             AlbumArtView(url: entry.albumArtURL, cornerRadius: 24)
                 .padding(.horizontal, albumArtHorizontalPadding)
-            todayHeaderWithActions(dateLabel: dateLabel)
+            entryIdentityWithInlineControls(dateLabel: dateLabel)
             ratingExperience
+            inlineReactionsBar
             openInSectionWithRatingNudge
             Spacer(minLength: 0)
             Label("the story", systemImage: "chevron.down")
@@ -149,9 +158,28 @@ struct EntryDetailView: View {
         VStack(spacing: 0) {
             primaryRatingControl
         }
-        .frame(maxWidth: 380)
+        .frame(maxWidth: 420)
         .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.vertical, Theme.Spacing.xs)
+        .padding(.top, Theme.Spacing.sm)
+        .padding(.bottom, 2)
+    }
+
+    private var inlineReactionsBar: some View {
+        ReactionsBar(
+            entry: entry,
+            accent: palette.accent,
+            isReadOnly: !allowsEntryReaction,
+            spacing: 6,
+            emojiFont: .body,
+            countFont: .caption2.weight(.semibold),
+            horizontalPadding: 8,
+            verticalPadding: 5
+        )
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .background(.regularMaterial, in: Capsule())
+        .opacity(0.86)
+        .padding(.top, 0)
     }
 
     private var openInSectionWithRatingNudge: some View {
@@ -279,18 +307,40 @@ struct EntryDetailView: View {
     }
 
     private func loadFavouriteCount() async {
-        favouriteCount = try? await env.favorites.count(entryID: entry.id)
+        guard let count = try? await env.favorites.count(entryID: entry.id) else { return }
+        favouriteCount = count
+    }
+
+    private var reactionStateLoadID: String {
+        "\(entry.id.uuidString)-\(env.session.session?.userID.uuidString ?? "signed-out")-\(reactionsAreReadOnly)"
+    }
+
+    private func loadSelectedReaction() async {
+        guard allowsEntryReaction, env.session.session?.isGuest != true else {
+            selectedReactionEmoji = nil
+            return
+        }
+
+        selectedReactionEmoji = try? await env.reactions.myReaction(entryID: entry.id)
     }
 
     /// Toggle the heart, nudging the visible count instantly, then reconciling with
     /// the server total so it stays honest.
     private func toggleFavourite() {
-        let willFavorite = !env.favoritesStore.isFavorite(entry)
+        Haptics.tap()
+        let previousCount = favouriteCount
+        let wasFavorite = env.favoritesStore.isFavorite(entry)
+        let willFavorite = !wasFavorite
         if let c = favouriteCount {
             favouriteCount = max(0, c + (willFavorite ? 1 : -1))
         }
         Task {
             await env.favoritesStore.toggle(entry)
+            let didFavorite = env.favoritesStore.isFavorite(entry)
+            if didFavorite == wasFavorite {
+                favouriteCount = previousCount
+                return
+            }
             await loadFavouriteCount()
         }
     }
@@ -310,7 +360,7 @@ struct EntryDetailView: View {
             }
             reactionButton(controlSize: 52, symbolSize: 20)
             Spacer(minLength: Theme.Spacing.sm)
-            RatingBar(entry: entry, accent: palette.accent)
+            RatingBar(entry: entry, accent: palette.accent, isReadOnly: !allowsEntryReaction)
             Spacer(minLength: Theme.Spacing.sm)
             infoButton
         }
@@ -321,9 +371,10 @@ struct EntryDetailView: View {
         RatingBar(
             entry: entry,
             accent: palette.accent,
-            controlSize: 72,
-            symbolSize: 28,
-            spacing: Theme.Spacing.md
+            controlSize: 84,
+            symbolSize: 32,
+            spacing: 18,
+            isReadOnly: !allowsEntryReaction
         )
     }
 
@@ -348,6 +399,7 @@ struct EntryDetailView: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(isFav ? .red : palette.accent)
                 .frame(width: 52, height: 52)
+                .symbolEffect(.bounce, value: isFav)   // little "pop" on favorite/unfavorite
         }
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: .circle)
@@ -366,13 +418,25 @@ struct EntryDetailView: View {
         .accessibilityLabel("Song info")
     }
 
+    @ViewBuilder
+    private func reactionButtonSymbol(symbolSize: CGFloat) -> some View {
+        if let selectedReactionEmoji {
+            Text(selectedReactionEmoji)
+                .font(.system(size: symbolSize + 6))
+                .lineLimit(1)
+                .fixedSize()
+        } else {
+            Image(systemName: "face.smiling")
+                .font(.system(size: symbolSize, weight: .bold))
+                .foregroundStyle(palette.accent)
+        }
+    }
+
     private func reactionButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
         Button {
             showingReactions = true
         } label: {
-            Image(systemName: "face.smiling")
-                .font(.system(size: symbolSize, weight: .bold))
-                .foregroundStyle(palette.accent)
+            reactionButtonSymbol(symbolSize: symbolSize)
                 .frame(width: controlSize, height: controlSize)
         }
         .buttonStyle(.plain)
@@ -387,8 +451,11 @@ struct EntryDetailView: View {
         ReactionsBar(
             entry: entry,
             accent: palette.accent,
-            isReadOnly: reactionsAreReadOnly,
-            onSelection: { showingReactions = false }
+            isReadOnly: !allowsEntryReaction,
+            onSelection: { emoji in
+                selectedReactionEmoji = emoji
+                showingReactions = false
+            }
         )
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm)
@@ -453,6 +520,10 @@ struct EntryDetailView: View {
         usesImmersiveBackdrop && !palette.didFinishLoading
     }
 
+    private var allowsEntryReaction: Bool {
+        allowsDailyInteraction && Calendar.current.isDateInToday(entry.date) && !reactionsAreReadOnly
+    }
+
     private var standardBackdropColors: [Color] {
         [palette.accent.opacity(0.45), palette.accent.opacity(0)]
     }
@@ -490,6 +561,76 @@ struct EntryDetailView: View {
         .padding(.horizontal)
     }
 
+    private func centeredEntryIdentity(dateLabel: String?) -> some View {
+        VStack(spacing: 5) {
+            if let dateLabel {
+                Text(dateLabel.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
+
+            Text(entry.title)
+                .font(.dmTitle())
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+
+            Text(entry.artist)
+                .font(.dmHeadline())
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.86)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Theme.Spacing.lg)
+    }
+
+    private func entryIdentityWithInlineControls(dateLabel: String?) -> some View {
+        VStack(spacing: 5) {
+            if let dateLabel {
+                Text(dateLabel.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
+
+            ZStack(alignment: .top) {
+                VStack(spacing: 4) {
+                    Text(entry.title)
+                        .font(.dmTitle())
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+
+                    Text(entry.artist)
+                        .font(.dmHeadline())
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.86)
+                }
+                .padding(.horizontal, 78)
+
+                HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                    HStack(spacing: 3) {
+                        compactHeartButton
+                        favouriteCountLabel
+                    }
+                    .frame(width: 82, alignment: .leading)
+
+                    Spacer(minLength: 0)
+
+                    compactInfoButton
+                        .frame(width: 82, alignment: .trailing)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Theme.Spacing.md)
+    }
+
     private func todayHeaderWithActions(dateLabel: String?) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
             if let dateLabel {
@@ -516,6 +657,36 @@ struct EntryDetailView: View {
             }
         }
         .padding(.horizontal, Theme.Spacing.lg)
+    }
+}
+
+private struct StorySnapScrollTargetBehavior: ScrollTargetBehavior {
+    private let commitRatio: CGFloat = 0.62
+    private let flickVelocity: CGFloat = 1_100
+
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        guard context.axes.contains(.vertical) else { return }
+
+        let maxOffset = max(0, context.contentSize.height - context.containerSize.height)
+        guard maxOffset > 0 else { return }
+
+        let originalY = context.originalTarget.rect.minY.clamped(to: 0...maxOffset)
+        let proposedY = target.rect.minY.clamped(to: 0...maxOffset)
+        let delta = proposedY - originalY
+        guard delta != 0 else { return }
+
+        let destinationY = delta > 0 ? maxOffset : 0
+        let travelDistance = abs(destinationY - originalY)
+        let clearsResistance = abs(delta) >= travelDistance * commitRatio
+        let isIntentionalFlick = abs(context.velocity.dy) >= flickVelocity
+
+        target.rect.origin.y = clearsResistance || isIntentionalFlick ? destinationY : originalY
+    }
+}
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
     }
 }
 

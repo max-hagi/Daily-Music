@@ -134,29 +134,33 @@ struct CalendarMonthView: View {
             Button {
                 onSelect?(entry)
             } label: {
-                VStack(spacing: 2) {
+                VStack(spacing: 0) {
                     Text("\(number)")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Color.primary)
-                        .frame(width: 32, height: 26)
+                        .frame(width: 32, height: 22)
                         .overlay {
                             if isToday(day) {
                                 Circle().stroke(.secondary, lineWidth: 1)
                             }
                         }
 
-                    // Marker: the emoji you reacted with, else the accent dot. The
-                    // fixed height keeps every cell the same size whichever shows.
+                    // Marker: the emoji you reacted with, else the accent dot. Emoji
+                    // glyphs can render taller than their font size, so reserve a
+                    // little more vertical room while keeping every cell 40pt tall.
                     Group {
                         if let emoji = reactionsByEntry[entry.id] {
-                            Text(emoji).font(.system(size: 12))
+                            Text(emoji)
+                                .font(.system(size: 12))
+                                .lineLimit(1)
+                                .fixedSize()
                         } else {
                             Circle()
                                 .fill(Color.accentColor)
                                 .frame(width: 5, height: 5)
                         }
                     }
-                    .frame(height: 12)
+                    .frame(height: 18)
                 }
                 .frame(width: 40, height: 40)
             }

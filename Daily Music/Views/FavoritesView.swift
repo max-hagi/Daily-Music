@@ -12,6 +12,8 @@ import SwiftUI
 struct FavoritesView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var model: FavoritesViewModel?
+    @State private var selectedEntry: DailyEntry?
+    @State private var recentlyRemoved: DailyEntry?
 
     var body: some View {
         NavigationStack {
@@ -32,8 +34,19 @@ struct FavoritesView: View {
             }
             .navigationTitle("Favorites")
             .toolbarBackground(.hidden, for: .navigationBar)
-            .navigationDestination(for: DailyEntry.self) { entry in
-                EntryDetailView(entry: entry)
+            .overlay(alignment: .bottom) {
+                if recentlyRemoved != nil {
+                    UndoBanner(message: "Removed from favorites") { undoRemove() }
+                        .padding(.bottom, 8)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: recentlyRemoved)
+            // Auto-dismiss the undo banner ~4s after the most recent removal.
+            .task(id: recentlyRemoved) {
+                guard recentlyRemoved != nil else { return }
+                try? await Task.sleep(for: .seconds(4))
+                recentlyRemoved = nil
             }
         }
         // KEY: `.task(id: env.favoritesStore.ids)` re-runs whenever the favorites
@@ -43,6 +56,11 @@ struct FavoritesView: View {
         .task(id: env.favoritesStore.ids) {
             if model == nil { model = FavoritesViewModel(entries: env.entries) }
             await model?.load(favoriteIDs: env.favoritesStore.ids)
+        }
+        .fullScreenCover(item: $selectedEntry) { entry in
+            FavoriteEntryDetail(entry: entry) {
+                selectedEntry = nil
+            }
         }
     }
 
@@ -56,36 +74,49 @@ struct FavoritesView: View {
     }
 
     private var loadingState: some View {
-        // Plain system spinner — matches Today's loading look. Kept on the
-        // favorites gradient so the background doesn't flash.
-        ProgressView()
+        MusicLoadingView(title: nil, tint: .pink)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(background)
     }
 
     private func loaded(_ entries: [DailyEntry]) -> some View {
-        ScrollView {
-            VStack(spacing: Theme.Spacing.lg) {
+        List {
+            Section {
                 hero(count: entries.count)
-
-                VStack(spacing: 10) {
-                    ForEach(entries) { entry in
-                        NavigationLink(value: entry) {
-                            EntryRow(entry: entry)
-                                .padding(Theme.Spacing.md)
-                                .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .stroke(Theme.Surface.cardStroke, lineWidth: 1)
-                                }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            Section {
+                ForEach(entries) { entry in
+                    Button { selectedEntry = entry } label: {
+                        EntryRow(entry: entry)
+                            .padding(Theme.Spacing.md)
+                            .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) { removeFavorite(entry) } label: {
+                            Label("Remove", systemImage: "heart.slash.fill")
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
-            .padding()
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(background)
+        .refreshable {
+            await env.favoritesStore.load()
+            Haptics.tap()
+        }
     }
 
     private func hero(count: Int) -> some View {
@@ -152,5 +183,70 @@ struct FavoritesView: View {
             .buttonStyle(.borderedProminent)
         }
         .background(background)
+    }
+
+    // MARK: - Remove + undo
+
+    private func removeFavorite(_ entry: DailyEntry) {
+        Haptics.thud()
+        model?.remove(id: entry.id)                       // animate the row out now
+        recentlyRemoved = entry                           // show the Undo banner
+        Task { await env.favoritesStore.toggle(entry) }   // persist the un-favorite
+    }
+
+    private func undoRemove() {
+        guard let entry = recentlyRemoved else { return }
+        Haptics.tap()
+        recentlyRemoved = nil
+        Task { await env.favoritesStore.toggle(entry) }   // re-favorite → list reloads it back
+    }
+}
+
+private struct FavoriteEntryDetail: View {
+    let entry: DailyEntry
+    let onClose: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            EntryDetailView(
+                entry: entry,
+                dateLabel: releaseDateLabel,
+                showsNavigationTitle: false,
+                albumArtHorizontalPadding: 24,
+                usesImmersiveBackdrop: true,
+                reactionsAreReadOnly: !Calendar.current.isDateInToday(entry.date)
+            )
+            .simultaneousGesture(closeSwipeGesture)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    VaultToolbarListenedBadge(count: listenerCount)
+                }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
+        }
+    }
+
+    private var releaseDateLabel: String {
+        entry.date.formatted(.dateTime.weekday(.wide).month().day())
+    }
+
+    private var listenerCount: Int {
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: entry.date) ?? 0
+        return 1_900 + (day * 173 % 6_400)
+    }
+
+    private var closeSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { value in
+                guard value.translation.height > 120, abs(value.translation.width) < 90 else { return }
+                onClose()
+            }
     }
 }

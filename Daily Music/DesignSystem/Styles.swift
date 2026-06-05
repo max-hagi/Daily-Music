@@ -64,3 +64,17 @@ struct PrimaryActionButtonStyle: ButtonStyle {
             .animation(.spring(duration: 0.25), value: configuration.isPressed)
     }
 }
+
+// MARK: - Pressable card / row
+
+// A subtle press response for tappable CARDS and ROWS that don't already use
+// Liquid Glass `.interactive()` (which brings its own touch feedback) or a List's
+// native row highlight. Scales + dims slightly while the finger is down.
+struct PressableCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.72), value: configuration.isPressed)
+    }
+}

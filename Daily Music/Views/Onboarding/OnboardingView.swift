@@ -191,6 +191,7 @@ struct OnboardingView: View {
                     avatarURL: avatarURL
                 )
                 hasCompletedOnboarding = true
+                Haptics.success()   // welcome in
             } catch {
                 saveError = "Couldn't save your profile. Check your connection and try again."
                 #if DEBUG

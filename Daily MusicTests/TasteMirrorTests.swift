@@ -115,3 +115,45 @@ struct TasteMirrorTests {
         #expect(m.archetype?.id == "MELANCHOLY_DEFAULT")
     }
 }
+
+struct TasteComparisonTests {
+    func e(_ i: Int) -> DailyEntry { TasteMirrorTests.entry(id: i) }
+    func id(_ i: Int) -> UUID { e(i).id }
+
+    @Test func matchPercentCountsAgreementOnCoRated() {
+        // Shared = {0,1,2,3}; agree on 0,1,2; clash on 3 → 3/4 = 75%.
+        let mine:   [UUID: Int] = [id(0): 1, id(1): -1, id(2): 1, id(3): 1, id(4): 1]
+        let theirs: [UUID: Int] = [id(0): 1, id(1): -1, id(2): 1, id(3): -1, id(9): 1]
+        let history = (0...9).map { e($0) }
+        let c = TasteComparison.build(mine: mine, theirs: theirs, history: history)
+        #expect(c.coRatedCount == 4)
+        #expect(c.agreedCount == 3)
+        #expect(c.matchPercent == 75)
+    }
+
+    @Test func bothLovedAndClashedPartition() {
+        let mine:   [UUID: Int] = [id(0): 1, id(1): 1, id(2): -1, id(3): 1]
+        let theirs: [UUID: Int] = [id(0): 1, id(1): -1, id(2): -1, id(3): 1]
+        let history = (0...3).map { e($0) }
+        let c = TasteComparison.build(mine: mine, theirs: theirs, history: history)
+        #expect(c.bothLoved.map({ $0.id }) == [id(0), id(3)])   // both 👍
+        #expect(c.clashed.map({ $0.id }) == [id(1)])            // 👍 vs 👎 (id2 = both 👎 → neither list)
+    }
+
+    @Test func matchPercentNilBelowMinShared() {
+        let mine:   [UUID: Int] = [id(0): 1, id(1): 1]
+        let theirs: [UUID: Int] = [id(0): 1, id(1): 1]     // only 2 shared (< minShared)
+        let c = TasteComparison.build(mine: mine, theirs: theirs, history: [e(0), e(1)])
+        #expect(c.coRatedCount == 2)
+        #expect(c.matchPercent == nil)
+    }
+
+    @Test func emptyInputsYieldZeros() {
+        let c = TasteComparison.build(mine: [:], theirs: [:], history: [])
+        #expect(c.coRatedCount == 0)
+        #expect(c.agreedCount == 0)
+        #expect(c.matchPercent == nil)
+        #expect(c.bothLoved.isEmpty)
+        #expect(c.clashed.isEmpty)
+    }
+}

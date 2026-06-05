@@ -23,7 +23,8 @@ final class InsightsViewModel {
     }
 
     func load() async {
-        state = .loading
+        if case .loaded = state {} else { state = .loading }
+
         let history = (try? await entries.publishedHistory()) ?? []
         let myRatings = (try? await ratings.myRatings()) ?? [:]
         let rated = history.compactMap { entry in
