@@ -29,10 +29,30 @@ final class SupabaseProfileService: ProfileService {
 
     func save(displayName: String?, avatarURL: String?) async throws {
         let userID = try await client.auth.session.user.id
+
+        // Old auth users may not have a profiles row. Insert a complete row first
+        // so NOT NULL columns such as settings/display_name are satisfied, but do
+        // not overwrite existing rows.
         try await client
             .from("profiles")
-            .upsert(ProfileIdentityUpsert(id: userID, displayName: displayName, avatarURL: avatarURL),
-                    onConflict: "id")
+            .upsert(
+                ProfileInsert(
+                    id: userID,
+                    displayName: displayName,
+                    avatarURL: avatarURL,
+                    settings: UserSettings()
+                ),
+                onConflict: "id",
+                ignoreDuplicates: true
+            )
+            .execute()
+
+        // Patch identity fields only. This preserves any settings blob that already
+        // exists or was flushed by onboarding.
+        try await client
+            .from("profiles")
+            .update(ProfileIdentityUpdate(displayName: displayName, avatarURL: avatarURL))
+            .eq("id", value: userID)
             .execute()
     }
 
@@ -57,13 +77,24 @@ private struct ProfileIdentityRow: Decodable {
     }
 }
 
-private struct ProfileIdentityUpsert: Encodable {
+private struct ProfileIdentityUpdate: Encodable {
+    let displayName: String?
+    let avatarURL: String?
+    enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
+        case avatarURL = "avatar_url"
+    }
+}
+
+private struct ProfileInsert: Encodable {
     let id: UUID
     let displayName: String?
     let avatarURL: String?
+    let settings: UserSettings
     enum CodingKeys: String, CodingKey {
         case id
         case displayName = "display_name"
         case avatarURL = "avatar_url"
+        case settings
     }
 }

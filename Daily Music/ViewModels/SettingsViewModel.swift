@@ -87,6 +87,7 @@ final class SettingsViewModel {
 
     private let notifications: NotificationService
     private let settingsService: SettingsService
+    private let syncAutomatically: Bool
     private let defaults = UserDefaults.standard
     /// Debounce handle for the cloud save, and a guard so applying a remote load
     /// doesn't immediately echo back as a save.
@@ -107,9 +108,10 @@ final class SettingsViewModel {
         static let preferredStreamingService = "settings.preferredStreamingService"
     }
 
-    init(notifications: NotificationService, settings: SettingsService) {
+    init(notifications: NotificationService, settings: SettingsService, syncAutomatically: Bool = true) {
         self.notifications = notifications
         self.settingsService = settings
+        self.syncAutomatically = syncAutomatically
         self.reminderEnabled = defaults.bool(forKey: Keys.reminderEnabled)
         self.reminderTime = defaults.object(forKey: Keys.reminderTime) as? Date
             ?? Self.defaultReminderTime
@@ -183,7 +185,7 @@ final class SettingsViewModel {
     /// Debounced cloud save — coalesces rapid changes (e.g. dragging the time
     /// picker) into one write ~0.6s after the last change.
     private func scheduleSync() {
-        guard !isApplyingRemote else { return }
+        guard !isApplyingRemote, syncAutomatically else { return }
         let snapshot = currentSettings
         syncTask?.cancel()
         syncTask = Task { [settingsService] in
@@ -191,6 +193,14 @@ final class SettingsViewModel {
             guard !Task.isCancelled else { return }
             try? await settingsService.save(snapshot)
         }
+    }
+
+    /// Cancel any pending debounced sync and persist the current settings now.
+    /// Used when leaving a screen (e.g. onboarding Finish) so a just-made choice
+    /// isn't lost if this view model is torn down before the debounce fires.
+    func flush() async {
+        syncTask?.cancel()
+        try? await settingsService.save(currentSettings)
     }
 
     /// Called when the toggle flips. Requests permission on first enable, then

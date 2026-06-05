@@ -18,7 +18,7 @@ struct OnboardingHelloStep: View {
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
             Text("What should friends call you?")
                 .foregroundStyle(.secondary)
-            ProfileEditor(displayName: $displayName, avatarURL: $avatarURL)
+            ProfileEditor(displayName: $displayName, avatarURL: $avatarURL, nameRequired: true)
                 .padding(.top, 8)
         }
         .multilineTextAlignment(.center)
