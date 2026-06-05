@@ -35,7 +35,8 @@ final class WrappedViewModel {
     }
 
     func load(favoriteIDs: Set<UUID>) async {
-        state = .loading
+        if case .loaded = state {} else { state = .loading }
+
         do {
             let history = try await entries.publishedHistory()
             // check_ins is optional context; don't let a missing table fail the recap.

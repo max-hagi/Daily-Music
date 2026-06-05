@@ -10,6 +10,8 @@ import SwiftUI
 
 struct TodayView: View {
     @Environment(AppEnvironment.self) private var env
+    var onReturnToPreviousScreen: (() -> Void)? = nil
+
     // The VM is OPTIONAL and built lazily in `.task` below. Why not just create it
     // here? Because it needs the services from `env`, which isn't available at
     // property-initialization time — only once the view is in the hierarchy.
@@ -39,20 +41,30 @@ struct TodayView: View {
                             albumArtHorizontalPadding: 28,
                             usesImmersiveBackdrop: true
                         )
+                        .simultaneousGesture(returnSwipeGesture)
                     }
                 } else {
-                    ProgressView()   // while the VM is being constructed
+                    MusicLoadingView(title: nil, tint: Theme.Brand.gradient[0])
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(.systemBackground))
                 }
             }
             // `.toolbar` adds bar buttons. Placement chooses the side.
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showingSettings = true   // flip the @State → presents the sheet
-                    } label: {
-                        Image(systemName: "gearshape")
+                    if let onReturnToPreviousScreen {
+                        Button(action: onReturnToPreviousScreen) {
+                            Image(systemName: "chevron.left")
+                        }
+                        .accessibilityLabel("Back")
+                    } else {
+                        Button {
+                            showingSettings = true   // flip the @State → presents the sheet
+                        } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        .accessibilityLabel("Settings")   // VoiceOver reads this (icon has no text)
                     }
-                    .accessibilityLabel("Settings")   // VoiceOver reads this (icon has no text)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -94,6 +106,14 @@ struct TodayView: View {
 
         let name = displayName.split(separator: "@").first.map(String.init) ?? displayName
         return name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var returnSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { value in
+                guard value.translation.width > 80, abs(value.translation.height) < 60 else { return }
+                onReturnToPreviousScreen?()
+            }
     }
 }
 

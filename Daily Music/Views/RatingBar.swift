@@ -25,9 +25,12 @@ final class RatingModel {
     }
 
     func tap(_ value: Int, entryID: UUID, allowsPersistence: Bool = true) async {
-        guard allowsPersistence, !isSaving else { return }
+        guard !isSaving else { return }
         let next = (mine == value) ? nil : value
         mine = next                       // optimistic
+
+        if !allowsPersistence { return }
+
         isSaving = true
         do { try await service.setRating(next, entryID: entryID) }
         catch { await load(entryID: entryID) }   // re-sync on failure
@@ -41,6 +44,7 @@ struct RatingBar: View {
     var controlSize: CGFloat = 52
     var symbolSize: CGFloat = 20
     var spacing: CGFloat = 12
+    var isReadOnly = false
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -56,23 +60,23 @@ struct RatingBar: View {
                 circle(value: -1, symbol: "hand.thumbsdown.fill", tint: .red,   label: "Dislike")
             }
         }
-        // Light haptic whenever the selection changes (incl. clearing).
-        .sensoryFeedback(.impact(weight: .light), trigger: model?.mine ?? 0)
         .task(id: loadID) {
             if model == nil { model = RatingModel(service: env.ratings) }
-            await model?.load(entryID: entry.id, includesMine: !isGuestSession)
+            await model?.load(entryID: entry.id, includesMine: !isGuestSession && !isReadOnly)
         }
     }
 
     private func circle(value: Int, symbol: String, tint: Color, label: String) -> some View {
         let selected = model?.mine == value
         return Button {
+            guard !isReadOnly else { return }
+            Haptics.tap()
             Task { await model?.tap(value, entryID: entry.id, allowsPersistence: !isGuestSession) }
         } label: {
             Image(systemName: symbol)
                 .font(.system(size: symbolSize, weight: .bold))
                 // White on the saturated fill when chosen; the accent when idle.
-                .foregroundStyle(selected ? .white : accent)
+                .foregroundStyle(selected ? .white : readOnlyTint)
                 .frame(width: controlSize, height: controlSize)
         }
         .buttonStyle(.plain)
@@ -83,14 +87,18 @@ struct RatingBar: View {
                      in: .circle)
         .scaleEffect(selected && !reduceMotion ? 1.06 : 1.0)
         .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.6), value: selected)
-        .disabled(model?.isSaving == true || isGuestSession)
-        .opacity(isGuestSession ? 0.5 : 1)
+        .disabled(model?.isSaving == true || isReadOnly)
+        .opacity(isReadOnly ? 0.58 : 1)
         .accessibilityLabel(label)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 
+    private var readOnlyTint: Color {
+        isReadOnly ? .secondary : accent
+    }
+
     private var isGuestSession: Bool { env.session.session?.isGuest == true }
     private var loadID: String {
-        "\(entry.id.uuidString)-\(env.session.session?.userID.uuidString ?? "signed-out")"
+        "\(entry.id.uuidString)-\(env.session.session?.userID.uuidString ?? "signed-out")-\(isReadOnly)"
     }
 }

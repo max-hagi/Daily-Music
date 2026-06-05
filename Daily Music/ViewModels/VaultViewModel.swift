@@ -19,7 +19,8 @@ final class VaultViewModel {
     }
 
     func load() async {
-        state = .loading
+        if case .loaded = state {} else { state = .loading }
+
         do {
             let history = try await entries.publishedHistory()
             // Ternary: empty array → .empty state, otherwise wrap it in .loaded.

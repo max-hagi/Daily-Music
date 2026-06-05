@@ -30,12 +30,15 @@ final class ReactionsModel {
     }
 
     func toggle(_ emoji: String, entryID: UUID, allowsPersistence: Bool = true) async {
-        guard allowsPersistence, !isSaving else { return }
+        guard !isSaving else { return }
 
         let previous = mine
         let next = previous == emoji ? nil : emoji
 
         applyOptimisticChange(from: previous, to: next)
+
+        if !allowsPersistence { return }
+
         isSaving = true
 
         do {
@@ -69,12 +72,18 @@ struct ReactionsBar: View {
     // Today passes false: reactions are interactive. Vault passes true: show the
     // historical reaction state, but do not allow old entries to be changed.
     var isReadOnly = false
+    var spacing: CGFloat = 10
+    var emojiFont: Font = .title3
+    var countFont: Font = .footnote.weight(.semibold)
+    var horizontalPadding: CGFloat = 12
+    var verticalPadding: CGFloat = 8
+    var onSelection: ((String?) -> Void)? = nil
 
     @Environment(AppEnvironment.self) private var env
     @State private var model: ReactionsModel?
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: spacing) {
             // One pill per emoji in the fixed palette. We always show the WHOLE
             // palette — in read-only Vault mode the unclicked ones stay visible
             // (dimmed, no number) so the row reads as a complete reaction summary.
@@ -88,18 +97,20 @@ struct ReactionsBar: View {
                     reactionPill(emoji: emoji, count: count, selected: selected)
                 } else {
                     Button {
+                        Haptics.tap()
                         Task {
                             await model?.toggle(
                                 emoji,
                                 entryID: entry.id,
                                 allowsPersistence: !isGuestSession
                             )
+                            onSelection?(model?.mine)
                         }
                     } label: {
                         reactionPill(emoji: emoji, count: count, selected: selected)
                     }
                     .buttonStyle(.plain)   // no default blue tint; we style it ourselves
-                    .disabled(model?.isSaving == true || isGuestSession)
+                    .disabled(model?.isSaving == true)
                     .animation(.spring(duration: 0.3), value: selected)
                 }
             }
@@ -122,16 +133,20 @@ struct ReactionsBar: View {
 
     private func reactionPill(emoji: String, count: Int, selected: Bool) -> some View {
         HStack(spacing: 6) {
-            Text(emoji).font(.title3)
+            Text(emoji)
+                .font(emojiFont)
+                .lineLimit(1)
+                .fixedSize()
+                .frame(minWidth: 24, minHeight: 24)
             if count > 0 {
                 Text("\(count)")
-                    .font(.footnote.weight(.semibold))
+                    .font(countFont)
                     .foregroundStyle(selected ? .white : .secondary)
                     .contentTransition(.numericText())   // animate the number ticking
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, verticalPadding)
         // AnyShapeStyle TYPE-ERASES the two different fills (a Color vs the
         // `.quaternary` material) so both branches of the ternary have the
         // same type — the conditional wouldn't compile otherwise.

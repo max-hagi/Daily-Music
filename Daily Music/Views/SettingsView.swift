@@ -18,7 +18,8 @@ struct SettingsView: View {
                 if let model {
                     SettingsForm(model: model)
                 } else {
-                    ProgressView()
+                    MusicLoadingView(title: nil, tint: Theme.Brand.gradient[0])
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .navigationTitle("Settings")

@@ -3,9 +3,12 @@ import SwiftUI
 
 struct FriendsView: View {
     @Environment(AppEnvironment.self) private var env
+    var onOpenEntry: (DailyEntry) -> Void = { _ in }
+
     @State private var enteredCode = ""
     @State private var showShare = false
     @State private var sendError: String?
+    @FocusState private var isFriendCodeFocused: Bool
 
     private var store: FriendsStore { env.friendsStore }
 
@@ -19,11 +22,18 @@ struct FriendsView: View {
                 friendsSection
             }
             .navigationTitle("Friends")
+            .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { isFriendCodeFocused = false }
+                }
+            }
             .task {
                 await store.load()
                 // Prefill a code arriving via the dailymusic://friend/<code> deep link.
                 if let pending = UserDefaults.standard.string(forKey: "pendingFriendCode") {
-                    enteredCode = pending
+                    enteredCode = FriendCode.normalize(pending)
                     UserDefaults.standard.removeObject(forKey: "pendingFriendCode")
                 }
             }
@@ -52,12 +62,20 @@ struct FriendsView: View {
             .padding(.vertical, 8)
 
             HStack {
-                TextField("Enter a friend's code", text: $enteredCode)
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
+                TextField("Enter a 6-digit code", text: $enteredCode)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
+                    .focused($isFriendCodeFocused)
+                    .onChange(of: enteredCode) { _, newValue in
+                        let digits = String(newValue.filter { FriendCode.alphabet.contains($0) }.prefix(6))
+                        if digits != newValue { enteredCode = digits }
+                    }
                 Button("Send") {
                     Task {
-                        if await store.send(code: enteredCode) { enteredCode = "" }
+                        if await store.send(code: enteredCode) {
+                            enteredCode = ""
+                            isFriendCodeFocused = false
+                        }
                         sendError = store.errorMessage
                     }
                 }
@@ -95,11 +113,14 @@ struct FriendsView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(store.friends) { friend in
-                    HStack(spacing: 12) {
-                        avatar(friend.profile)
-                        Text(friend.profile.displayName ?? "Friend").font(.headline)
-                        Spacer()
-                        // Phase C will push the friend's insights here.
+                    NavigationLink {
+                        FriendInsightsView(friend: friend, onOpenEntry: onOpenEntry)
+                    } label: {
+                        HStack(spacing: 12) {
+                            avatar(friend.profile)
+                            Text(friend.profile.displayName ?? "Friend").font(.headline)
+                            Spacer()
+                        }
                     }
                     .swipeActions {
                         Button("Remove", role: .destructive) { Task { await store.remove(friend) } }
