@@ -77,8 +77,29 @@ struct FriendInsightsView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
+            headerNudgeButton
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var headerNudgeButton: some View {
+        let nudgeStore = env.friendNudgeStore
+
+        return Button {
+            Task { await nudgeStore.send(to: friend) }
+        } label: {
+            Label(
+                nudgeStore.buttonTitle(for: friend),
+                systemImage: nudgeStore.iconName(for: friend)
+            )
+            .font(.caption.weight(.semibold))
+            .labelStyle(.titleAndIcon)
+            .lineLimit(1)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .disabled(nudgeStore.isDisabled(for: friend))
+        .accessibilityHint("Send a push notification encouraging them to check Daily Music")
     }
 
     @ViewBuilder private var avatar: some View {
