@@ -35,6 +35,7 @@ final class AppEnvironment {
     let friends: FriendService
     let friendNudges: FriendNudgeService
     let notifications: NotificationService
+    let pushRegistration: PushRegistrationService
     let musicPlayer: MusicPlayer
     let session: SessionStore
     let favoritesStore: FavoritesStore
@@ -56,6 +57,7 @@ final class AppEnvironment {
         friends: FriendService,
         friendNudges: FriendNudgeService,
         notifications: NotificationService,
+        pushRegistration: PushRegistrationService,
         musicEngine: MusicEngine
     ) {
         self.auth = auth
@@ -71,6 +73,7 @@ final class AppEnvironment {
         self.friends = friends
         self.friendNudges = friendNudges
         self.notifications = notifications
+        self.pushRegistration = pushRegistration
         // These four are WRAPPERS the container builds from the injected pieces:
         // MusicPlayer wraps whichever engine (mock vs MusicKit) it's given, and the
         // stores wrap a service to add view-facing state. The container owns
@@ -104,6 +107,7 @@ final class AppEnvironment {
             friends: MockFriendService(),
             friendNudges: MockFriendNudgeService(),
             notifications: LocalNotificationService(),
+            pushRegistration: MockPushRegistrationService(),
             musicEngine: MockMusicEngine()
         )
     }
@@ -125,6 +129,7 @@ final class AppEnvironment {
             friends: SupabaseFriendService(),
             friendNudges: MockFriendNudgeService(),
             notifications: LocalNotificationService(),
+            pushRegistration: SupabasePushRegistrationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
             // Once the MusicKit capability is enabled (paid dev account),
             // swap the line below to: MusicKitMusicEngine()

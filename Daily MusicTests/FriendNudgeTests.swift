@@ -4,6 +4,11 @@ import Foundation
 
 @MainActor
 struct FriendNudgeTests {
+    @Test func deviceTokenFormatsAsLowercaseHex() {
+        let token = Data([0x00, 0x0f, 0xa1, 0xff])
+        #expect(token.apnsHexString == "000fa1ff")
+    }
+
     @Test func mockRateLimitsDeliveredNudgeForSameFriend() async throws {
         let friendID = UUID(uuidString: "00000000-0000-0000-0000-00000000A101")!
         let service = MockFriendNudgeService(now: Date(timeIntervalSince1970: 1_000))
