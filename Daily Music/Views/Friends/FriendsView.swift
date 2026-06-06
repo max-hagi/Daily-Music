@@ -6,7 +6,6 @@ struct FriendsView: View {
     var onOpenEntry: (DailyEntry) -> Void = { _ in }
 
     @State private var enteredCode = ""
-    @State private var showShare = false
     @State private var sendError: String?
     @FocusState private var isFriendCodeFocused: Bool
 
@@ -17,9 +16,9 @@ struct FriendsView: View {
     var body: some View {
         NavigationStack {
             List {
-                addFriendSection
-                if !store.requests.isEmpty { requestsSection }
                 friendsSection
+                if !store.requests.isEmpty { requestsSection }
+                addFriendSection
             }
             .navigationTitle("Friends")
             .scrollDismissesKeyboard(.interactively)
@@ -38,28 +37,28 @@ struct FriendsView: View {
                 }
             }
             .refreshable { await store.load() }
-            .sheet(isPresented: $showShare) {
-                ShareLink(item: friendLink) { Label("Share your invite", systemImage: "square.and.arrow.up") }
-                    .padding()
-                    .presentationDetents([.height(120)])
-            }
         }
     }
 
     private var addFriendSection: some View {
         Section("Add a friend") {
-            VStack(spacing: 14) {
-                QRCodeView(string: friendLink, size: 170)
-                Text(store.myCode)
-                    .font(.system(.title2, design: .monospaced).weight(.bold))
-                    .tracking(4)
-                Button { showShare = true } label: {
-                    Label("Share invite", systemImage: "square.and.arrow.up")
+            HStack(spacing: 12) {
+                QRCodeView(string: friendLink, size: 52)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Your invite")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(store.myCode)
+                        .font(.system(.headline, design: .monospaced).weight(.bold))
+                        .tracking(3)
+                }
+                Spacer()
+                ShareLink(item: friendLink) {
+                    Label("Share", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(.bordered)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
 
             HStack {
                 TextField("Enter a 6-digit code", text: $enteredCode)
@@ -109,18 +108,38 @@ struct FriendsView: View {
     private var friendsSection: some View {
         Section("Your friends") {
             if store.friends.isEmpty {
-                Text("No friends yet — share your code to get started.")
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("No friends yet")
+                        .font(.headline)
+                    Text("Share your invite to start comparing taste mirrors.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    ShareLink(item: friendLink) {
+                        Label("Share invite", systemImage: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding(.vertical, 6)
             } else {
                 ForEach(store.friends) { friend in
                     NavigationLink {
                         FriendInsightsView(friend: friend, onOpenEntry: onOpenEntry)
                     } label: {
                         HStack(spacing: 12) {
-                            avatar(friend.profile)
-                            Text(friend.profile.displayName ?? "Friend").font(.headline)
+                            avatar(friend.profile, size: 48)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(friend.profile.displayName ?? "Friend")
+                                    .font(.headline)
+                                Text("Open their taste mirror")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
                             Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
                         }
+                        .padding(.vertical, 6)
                     }
                     .swipeActions {
                         Button("Remove", role: .destructive) { Task { await store.remove(friend) } }
@@ -130,13 +149,14 @@ struct FriendsView: View {
         }
     }
 
-    @ViewBuilder private func avatar(_ profile: UserProfile) -> some View {
+    @ViewBuilder private func avatar(_ profile: UserProfile, size: CGFloat = 40) -> some View {
         if let s = profile.avatarURL, let url = URL(string: s) {
             AsyncImage(url: url) { img in img.resizable().scaledToFill() }
-                placeholder: { InitialsAvatar(name: profile.displayName, size: 40) }
-                .frame(width: 40, height: 40).clipShape(Circle())
+                placeholder: { InitialsAvatar(name: profile.displayName, size: size) }
+                .frame(width: size, height: size)
+                .clipShape(Circle())
         } else {
-            InitialsAvatar(name: profile.displayName, size: 40)
+            InitialsAvatar(name: profile.displayName, size: size)
         }
     }
 }
