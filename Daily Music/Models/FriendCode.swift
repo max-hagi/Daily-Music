@@ -2,7 +2,7 @@
 import Foundation
 
 enum FriendCode {
-    static let alphabet = Array("0123456789")
+    static let alphabet = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
 
     static func generate(length: Int = 6) -> String {
         String((0..<length).map { _ in alphabet.randomElement()! })
