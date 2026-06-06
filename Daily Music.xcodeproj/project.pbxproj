@@ -12,6 +12,7 @@
 		94B1387E2FCB7CB200752257 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 94B1387D2FCB7CB200752257 /* Supabase */; };
 		A1B2C3D4E5F6A1B2C3D4E5F6 /* StreamingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */; };
 		A7B8C9D0E1F2A7B8C9D0E1F2 /* FriendsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B8C9D0E1F2A7B8C9D0E1F3 /* FriendsStoreTests.swift */; };
+		C7F0B6A12E7D4C11A9E0A001 /* SessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F0B6A12E7D4C11A9E0A002 /* SessionStoreTests.swift */; };
 		B2C3D4E5F6A1B2C3D4E5F6A1 /* CatalogInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */; };
 		C3D4E5F6A1B2C3D4E5F6A1B2 /* AvatarStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A1B2C3D4E5F6A1B3 /* AvatarStyleTests.swift */; };
 		D4E5F6A1B2C3D4E5F6A1B2C3 /* AvatarImageProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A1B2C3D4E5F6A1B2C4 /* AvatarImageProcessorTests.swift */; };
@@ -36,6 +37,7 @@
 		A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreamingServiceTests.swift; sourceTree = "<group>"; };
 		A7B8C9D0E1F2A7B8C9D0E1F3 /* FriendsStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsStoreTests.swift; sourceTree = "<group>"; };
 		B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogInfoTests.swift; sourceTree = "<group>"; };
+		C7F0B6A12E7D4C11A9E0A002 /* SessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionStoreTests.swift; sourceTree = "<group>"; };
 		C3D4E5F6A1B2C3D4E5F6A1B3 /* AvatarStyleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AvatarStyleTests.swift; sourceTree = "<group>"; };
 		D1C88CA3CCE154F540A6D0EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		D4E5F6A1B2C3D4E5F6A1B2C4 /* AvatarImageProcessorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AvatarImageProcessorTests.swift; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 				E5F6A1B2C3D4E5F6A1B2C3D5 /* ProfileStoreTests.swift */,
 				F6A1B2C3D4E5F6A1B2C3D4E6 /* FriendCodeTests.swift */,
 				A7B8C9D0E1F2A7B8C9D0E1F3 /* FriendsStoreTests.swift */,
+				C7F0B6A12E7D4C11A9E0A002 /* SessionStoreTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -233,6 +236,7 @@
 				E5F6A1B2C3D4E5F6A1B2C3D4 /* ProfileStoreTests.swift in Sources */,
 				F6A1B2C3D4E5F6A1B2C3D4E5 /* FriendCodeTests.swift in Sources */,
 				A7B8C9D0E1F2A7B8C9D0E1F2 /* FriendsStoreTests.swift in Sources */,
+				C7F0B6A12E7D4C11A9E0A001 /* SessionStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
