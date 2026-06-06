@@ -55,6 +55,7 @@ struct FriendsView: View {
                 Spacer()
                 ShareLink(item: friendLink) {
                     Label("Share", systemImage: "square.and.arrow.up")
+                        .frame(minWidth: 86, alignment: .leading)
                 }
                 .buttonStyle(.bordered)
             }
@@ -116,6 +117,7 @@ struct FriendsView: View {
                         .foregroundStyle(.secondary)
                     ShareLink(item: friendLink) {
                         Label("Share invite", systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.borderedProminent)
                 }
