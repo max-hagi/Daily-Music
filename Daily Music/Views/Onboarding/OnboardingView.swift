@@ -114,7 +114,7 @@ struct OnboardingView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .disabled(isSaving)
+            .disabled(isSaving || isApplyingReminder)
             .accessibilityLabel("Back")
         } else {
             Color.clear.frame(width: 44, height: 44)
