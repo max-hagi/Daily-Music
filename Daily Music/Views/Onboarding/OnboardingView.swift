@@ -19,6 +19,7 @@ struct OnboardingView: View {
     @State private var avatarURL: String?
     @State private var settings: SettingsViewModel?
     @State private var isSaving = false
+    @State private var isApplyingReminder = false
     @State private var saveError: String?
     /// Drives the slide direction of the step transition (forward vs. back).
     @State private var goingForward = true
@@ -133,12 +134,12 @@ struct OnboardingView: View {
 
     private var buttons: some View {
         VStack(spacing: 6) {
-            Button { advance() } label: {
+            Button { primaryAction() } label: {
                 Text(step == totalSteps - 1 ? "Finish" : "Continue")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryActionButtonStyle(tint: Theme.Brand.gradient[0]))
-            .disabled((step == 0 && !nameFilled) || isSaving)
+            .disabled((step == 0 && !nameFilled) || isSaving || isApplyingReminder)
 
             if let saveError {
                 Text(saveError)
@@ -149,11 +150,53 @@ struct OnboardingView: View {
 
             // Skip is offered only on the optional steps (2 & 3), never on step 1.
             if step > 0 {
-                Button(step == totalSteps - 1 ? "Skip" : "Skip for now") { advance() }
+                Button(step == totalSteps - 1 ? "Skip" : "Skip for now") { skipAction() }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .disabled(isSaving)
+                    .disabled(isSaving || isApplyingReminder)
             }
+        }
+    }
+
+    private func primaryAction() {
+        guard step == 1 else {
+            advance()
+            return
+        }
+        enableReminderAndAdvance()
+    }
+
+    private func skipAction() {
+        guard step == 1 else {
+            advance()
+            return
+        }
+        disableReminderAndAdvance()
+    }
+
+    private func enableReminderAndAdvance() {
+        guard let settings else { return }
+        saveError = nil
+        isApplyingReminder = true
+        Task {
+            settings.reminderEnabled = true
+            await settings.applyReminderSetting(enabled: true)
+            isApplyingReminder = false
+            if !settings.permissionDenied {
+                advance()
+            }
+        }
+    }
+
+    private func disableReminderAndAdvance() {
+        guard let settings else { return }
+        saveError = nil
+        isApplyingReminder = true
+        Task {
+            settings.reminderEnabled = false
+            await settings.applyReminderSetting(enabled: false)
+            isApplyingReminder = false
+            advance()
         }
     }
 
