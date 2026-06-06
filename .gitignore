@@ -15,6 +15,7 @@ xcuserdata/
 
 # Claude Code local settings
 .claude/
+.worktrees/
 
 # Local secrets (Supabase keys, etc.) — never commit these
 Secrets.xcconfig
