@@ -33,25 +33,26 @@ actor MockPushRegistrationService: PushRegistrationService {
 }
 
 actor SupabasePushRegistrationService: PushRegistrationService {
-    private let client = Supa.client
     private var currentToken: String?
 
     func registerDeviceToken(_ token: Data) async throws {
         let value = token.apnsHexString
         currentToken = value
+        let client = await MainActor.run { Supa.client }
         try await client.rpc(
             "register_push_token",
-            params: RegisterPushTokenParams(
-                p_token: value,
-                p_platform: "ios",
-                p_environment: Self.apnsEnvironment
-            )
+            params: [
+                "p_token": value,
+                "p_platform": "ios",
+                "p_environment": Self.apnsEnvironment
+            ]
         )
         .execute()
     }
 
     func unregisterCurrentDevice() async throws {
         guard let currentToken else { return }
+        let client = await MainActor.run { Supa.client }
         try await client.rpc("unregister_push_token", params: ["p_token": currentToken]).execute()
         self.currentToken = nil
     }
@@ -63,10 +64,4 @@ actor SupabasePushRegistrationService: PushRegistrationService {
         "production"
         #endif
     }
-}
-
-private struct RegisterPushTokenParams: Encodable, Sendable {
-    let p_token: String
-    let p_platform: String
-    let p_environment: String
 }

@@ -29,7 +29,7 @@ protocol FriendNudgeService: Sendable {
 }
 
 actor MockFriendNudgeService: FriendNudgeService {
-    static let cooldown: TimeInterval = 86_400
+    private let cooldown: TimeInterval = 86_400
 
     private var now: Date
     private var sentAt: [UUID: Date] = [:]
@@ -57,8 +57,8 @@ actor MockFriendNudgeService: FriendNudgeService {
 
     func sendNudge(to friendID: UUID) async throws -> FriendNudgeResult {
         if let lastSent = sentAt[friendID],
-           now.timeIntervalSince(lastSent) < Self.cooldown {
-            return .rateLimited(nextAllowedAt: lastSent.addingTimeInterval(Self.cooldown))
+           now.timeIntervalSince(lastSent) < cooldown {
+            return .rateLimited(nextAllowedAt: lastSent.addingTimeInterval(cooldown))
         }
 
         if recipientsWithoutTokens.contains(friendID) {

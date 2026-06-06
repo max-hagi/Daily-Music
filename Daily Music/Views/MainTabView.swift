@@ -13,6 +13,7 @@ struct MainTabView: View {
     @State private var selectedTab: MainTab = .today
     @State private var entryToOpenInVault: DailyEntry?
     @State private var tabToReturnToAfterOpeningEntry: MainTab?
+    @AppStorage("pendingTodayRoute") private var pendingTodayRoute = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -31,6 +32,8 @@ struct MainTabView: View {
         }
         .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .task { await env.friendsStore.load() }   // so the badge is populated app-wide
+        .onAppear { consumePendingTodayRouteIfNeeded() }
+        .onChange(of: pendingTodayRoute) { _, _ in consumePendingTodayRouteIfNeeded() }
     }
 
     private func openMatchedEntry(_ entry: DailyEntry) {
@@ -49,6 +52,12 @@ struct MainTabView: View {
         selectedTab = tabToReturnToAfterOpeningEntry
         self.tabToReturnToAfterOpeningEntry = nil
         Haptics.tap()
+    }
+
+    private func consumePendingTodayRouteIfNeeded() {
+        guard pendingTodayRoute else { return }
+        selectedTab = .today
+        pendingTodayRoute = false
     }
 
     private enum MainTab: Hashable {

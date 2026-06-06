@@ -113,8 +113,8 @@ struct FriendNudgeTests {
     @Test func storeTreatsExpiredRateLimitAsIdle() async {
         let friend = makeFriend(id: UUID(uuidString: "00000000-0000-0000-0000-00000000A109")!)
         let service = MockFriendNudgeService(now: Date(timeIntervalSince1970: 5_000))
-        var now = Date(timeIntervalSince1970: 5_000)
-        let store = FriendNudgeStore(service: service, now: { now })
+        let clock = ClockBox(now: Date(timeIntervalSince1970: 5_000))
+        let store = FriendNudgeStore(service: service, now: { clock.now })
 
         await store.send(to: friend)
         await store.resetTransientState(for: friend)
@@ -126,7 +126,7 @@ struct FriendNudgeTests {
         #expect(store.buttonTitle(for: friend) == "Nudged today")
         #expect(store.message(for: friend) == "You already nudged them today.")
 
-        now = nextAllowedAt
+        clock.now = nextAllowedAt
 
         #expect(store.state(for: friend) == .idle)
         #expect(!store.isDisabled(for: friend))
@@ -163,5 +163,13 @@ struct FriendNudgeTests {
 private struct ThrowingNudgeService: FriendNudgeService {
     func sendNudge(to friendID: UUID) async throws -> FriendNudgeResult {
         throw FriendNudgeError.message("Network went sideways")
+    }
+}
+
+private final class ClockBox: @unchecked Sendable {
+    var now: Date
+
+    init(now: Date) {
+        self.now = now
     }
 }
