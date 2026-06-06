@@ -20,14 +20,19 @@ enum FriendNudgeState: Equatable, Sendable {
 @Observable
 final class FriendNudgeStore {
     private let service: FriendNudgeService
+    private let now: @Sendable () -> Date
     private(set) var states: [UUID: FriendNudgeState] = [:]
 
-    init(service: FriendNudgeService) {
+    init(
+        service: FriendNudgeService,
+        now: @escaping @Sendable () -> Date = Date.init
+    ) {
         self.service = service
+        self.now = now
     }
 
     func state(for friend: Friend) -> FriendNudgeState {
-        states[friend.profile.id] ?? .idle
+        effectiveState(for: friend.profile.id)
     }
 
     func send(to friend: Friend) async {
@@ -106,5 +111,15 @@ final class FriendNudgeStore {
         case .idle, .noRecipientToken, .failed:
             false
         }
+    }
+
+    private func effectiveState(for friendID: UUID) -> FriendNudgeState {
+        let state = states[friendID] ?? .idle
+        if case .rateLimited(let nextAllowedAt) = state,
+           let nextAllowedAt,
+           now() >= nextAllowedAt {
+            return .idle
+        }
+        return state
     }
 }

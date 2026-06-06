@@ -55,7 +55,10 @@ struct FriendNudgeTests {
     @Test func storeMapsSuccessAndRateLimitStates() async {
         let friend = makeFriend(id: UUID(uuidString: "00000000-0000-0000-0000-00000000A104")!)
         let service = MockFriendNudgeService(now: Date(timeIntervalSince1970: 2_000))
-        let store = FriendNudgeStore(service: service)
+        let store = FriendNudgeStore(
+            service: service,
+            now: { Date(timeIntervalSince1970: 2_000) }
+        )
 
         await store.send(to: friend)
         #expect(store.state(for: friend) == .sent)
@@ -90,6 +93,42 @@ struct FriendNudgeTests {
         #expect(!store.isDisabled(for: friend))
     }
 
+    @Test func storeMapsThrownErrorToFailedState() async {
+        let friend = makeFriend(id: UUID(uuidString: "00000000-0000-0000-0000-00000000A108")!)
+        let store = FriendNudgeStore(service: ThrowingNudgeService())
+
+        await store.send(to: friend)
+
+        #expect(store.state(for: friend) == .failed("Network went sideways"))
+        #expect(store.buttonTitle(for: friend) == "Nudge")
+        #expect(store.message(for: friend) == "Network went sideways")
+        #expect(!store.isDisabled(for: friend))
+    }
+
+    @Test func storeTreatsExpiredRateLimitAsIdle() async {
+        let friend = makeFriend(id: UUID(uuidString: "00000000-0000-0000-0000-00000000A109")!)
+        let service = MockFriendNudgeService(now: Date(timeIntervalSince1970: 5_000))
+        var now = Date(timeIntervalSince1970: 5_000)
+        let store = FriendNudgeStore(service: service, now: { now })
+
+        await store.send(to: friend)
+        await store.resetTransientState(for: friend)
+        await store.send(to: friend)
+
+        let nextAllowedAt = Date(timeIntervalSince1970: 5_000 + 86_400)
+        #expect(store.state(for: friend) == .rateLimited(nextAllowedAt: nextAllowedAt))
+        #expect(store.isDisabled(for: friend))
+        #expect(store.buttonTitle(for: friend) == "Nudged today")
+        #expect(store.message(for: friend) == "You already nudged them today.")
+
+        now = nextAllowedAt
+
+        #expect(store.state(for: friend) == .idle)
+        #expect(!store.isDisabled(for: friend))
+        #expect(store.buttonTitle(for: friend) == "Nudge")
+        #expect(store.message(for: friend) == nil)
+    }
+
     @Test func storeKeepsDifferentFriendsIndependent() async {
         let alex = makeFriend(id: UUID(uuidString: "00000000-0000-0000-0000-00000000A106")!, name: "Alex")
         let sam = makeFriend(id: UUID(uuidString: "00000000-0000-0000-0000-00000000A107")!, name: "Sam")
@@ -113,5 +152,11 @@ struct FriendNudgeTests {
             friendshipID: UUID(),
             profile: UserProfile(id: id, displayName: name, avatarURL: nil)
         )
+    }
+}
+
+private struct ThrowingNudgeService: FriendNudgeService {
+    func sendNudge(to friendID: UUID) async throws -> FriendNudgeResult {
+        throw FriendNudgeError.message("Network went sideways")
     }
 }
