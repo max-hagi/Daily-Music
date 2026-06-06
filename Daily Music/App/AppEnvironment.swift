@@ -33,12 +33,14 @@ final class AppEnvironment {
     let settings: SettingsService
     let profiles: ProfileService
     let friends: FriendService
+    let friendNudges: FriendNudgeService
     let notifications: NotificationService
     let musicPlayer: MusicPlayer
     let session: SessionStore
     let favoritesStore: FavoritesStore
     let profileStore: ProfileStore
     let friendsStore: FriendsStore
+    let friendNudgeStore: FriendNudgeStore
 
     init(
         auth: AuthService,
@@ -52,6 +54,7 @@ final class AppEnvironment {
         settings: SettingsService,
         profiles: ProfileService,
         friends: FriendService,
+        friendNudges: FriendNudgeService,
         notifications: NotificationService,
         musicEngine: MusicEngine
     ) {
@@ -66,6 +69,7 @@ final class AppEnvironment {
         self.settings = settings
         self.profiles = profiles
         self.friends = friends
+        self.friendNudges = friendNudges
         self.notifications = notifications
         // These four are WRAPPERS the container builds from the injected pieces:
         // MusicPlayer wraps whichever engine (mock vs MusicKit) it's given, and the
@@ -76,6 +80,7 @@ final class AppEnvironment {
         self.favoritesStore = FavoritesStore(service: favorites)
         self.profileStore = ProfileStore(service: profiles)
         self.friendsStore = FriendsStore(service: friends)
+        self.friendNudgeStore = FriendNudgeStore(service: friendNudges)
     }
 
     // Two factory methods that assemble a fully-wired container. Picking `mock()`
@@ -97,6 +102,7 @@ final class AppEnvironment {
             settings: MockSettingsService(),
             profiles: MockProfileService(),
             friends: MockFriendService(),
+            friendNudges: MockFriendNudgeService(),
             notifications: LocalNotificationService(),
             musicEngine: MockMusicEngine()
         )
@@ -117,6 +123,7 @@ final class AppEnvironment {
             settings: SupabaseSettingsService(),
             profiles: SupabaseProfileService(),
             friends: SupabaseFriendService(),
+            friendNudges: MockFriendNudgeService(),
             notifications: LocalNotificationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
             // Once the MusicKit capability is enabled (paid dev account),
