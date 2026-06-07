@@ -13,12 +13,21 @@ import Supabase
 actor SupabaseFriendNudgeService: FriendNudgeService {
     func sendNudge(to friendID: UUID) async throws -> FriendNudgeResult {
         let client = await MainActor.run { Supa.client }
-        let response: FriendNudgeResponse = try await client.functions.invoke(
-            "send-friend-nudge",
-            options: FunctionInvokeOptions(body: FriendNudgeRequest(recipient_id: friendID))
-        )
+        let response: FriendNudgeResponse
+        do {
+            response = try await client.functions.invoke(
+                "send-friend-nudge",
+                options: FunctionInvokeOptions(body: FriendNudgeRequest(recipient_id: friendID))
+            )
+        } catch let error as FunctionsError {
+            throw Self.nudgeError(from: error)
+        }
 
-        switch response.status {
+        guard let status = response.status else {
+            throw FriendNudgeError.message(response.error ?? "The nudge response was not recognized.")
+        }
+
+        switch status {
         case "sent":
             return .sent
         case "no_tokens":
@@ -32,10 +41,23 @@ actor SupabaseFriendNudgeService: FriendNudgeService {
         }
     }
 
+    nonisolated private static func nudgeError(from error: FunctionsError) -> FriendNudgeError {
+        switch error {
+        case .httpError(_, let data):
+            if let response = try? JSONDecoder().decode(FriendNudgeResponse.self, from: data),
+               let message = response.error {
+                return .message(message)
+            }
+            return .message(error.localizedDescription)
+        case .relayError:
+            return .message(error.localizedDescription)
+        }
+    }
+
     // The Edge Function returns next_allowed_at as an ISO8601 string with
     // fractional seconds (JS toISOString()). We decode it as a String and parse
     // it here so we never depend on the Functions client's JSON date strategy.
-    private static func parseTimestamp(_ value: String?) -> Date? {
+    nonisolated private static func parseTimestamp(_ value: String?) -> Date? {
         guard let value else { return nil }
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -43,12 +65,12 @@ actor SupabaseFriendNudgeService: FriendNudgeService {
     }
 }
 
-private struct FriendNudgeRequest: Encodable {
+nonisolated private struct FriendNudgeRequest: Encodable {
     let recipient_id: UUID
 }
 
-private struct FriendNudgeResponse: Decodable {
-    let status: String
+nonisolated private struct FriendNudgeResponse: Decodable {
+    let status: String?
     let next_allowed_at: String?
     let error: String?
 }

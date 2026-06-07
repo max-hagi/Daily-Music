@@ -79,6 +79,7 @@ struct RootView: View {
             Haptics.success()   // signed in
 
             Task {
+                await reconcileOnboardingState(env)
                 try? await Task.sleep(for: .milliseconds(1200))
                 isCompletingSignIn = false
             }
@@ -123,6 +124,11 @@ struct RootView: View {
 @MainActor
 private func resolveLaunchState(_ env: AppEnvironment) async {
     await env.session.restore()
+    await reconcileOnboardingState(env)
+}
+
+@MainActor
+private func reconcileOnboardingState(_ env: AppEnvironment) async {
     guard env.session.isSignedIn,
           !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") else { return }
     await env.profileStore.load()
