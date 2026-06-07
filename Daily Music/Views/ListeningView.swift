@@ -3,8 +3,8 @@
 //  Daily Music
 //
 //  The immersive "now playing" screen: the album art floating in a bloom of its own
-//  colors (ArtworkPalette), with a Liquid-Glass control deck — a scrubbable progress
-//  bar, time labels, and a glass play/pause. Drives playback through the shared
+//  colors (ArtworkPalette), with native iOS-style playback controls: a scrubbable
+//  progress slider, time labels, and play/pause. Drives playback through the shared
 //  MusicPlayer; calls onAdvance() when the clip ends (Today) or the listener taps
 //  the bottom button (Vault/Favorites just dismiss).
 //
@@ -39,11 +39,11 @@ struct ListeningView: View {
     var body: some View {
         ZStack {
             bloom
-            VStack(spacing: 0) {
+            VStack(spacing: 34) {
                 Spacer(minLength: 0)
                 artwork
-                Spacer(minLength: 0)
                 controlDeck
+                Spacer(minLength: 0)
             }
             .padding(.horizontal, 24)
             .padding(.top, 44)
@@ -73,7 +73,7 @@ struct ListeningView: View {
     private var bloom: some View {
         ZStack {
             LinearGradient(
-                colors: [accent.opacity(0.65), .black.opacity(0.92), accent.opacity(0.30)],
+                colors: [accent.opacity(0.78), .black.opacity(0.68), accent.opacity(0.46)],
                 startPoint: animate ? .topLeading : .bottomTrailing,
                 endPoint: animate ? .bottomTrailing : .topLeading
             )
@@ -82,10 +82,14 @@ struct ListeningView: View {
                     .resizable()
                     .scaledToFill()
                     .blur(radius: 90)
-                    .saturation(1.35)
-                    .opacity(0.5)
+                    .saturation(1.28)
+                    .opacity(0.62)
             }
-            Color.black.opacity(0.22)
+            LinearGradient(
+                colors: [.white.opacity(0.14), .clear, .black.opacity(0.08)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.7), value: accent)
@@ -93,86 +97,101 @@ struct ListeningView: View {
 
     // MARK: hero art
     private var artwork: some View {
-        AlbumArtView(url: entry.albumArtURL, cornerRadius: 30)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 6)
+        AlbumArtView(url: entry.albumArtURL, cornerRadius: 22)
+            .frame(maxWidth: 312)
+            .padding(.horizontal, 18)
             .scaleEffect(player.state == .playing ? (animate ? 1.0 : 0.965) : 0.95)
-            .shadow(color: .black.opacity(0.55), radius: 38, y: 24)
-            .shadow(color: accent.opacity(0.45), radius: 55)
+            .shadow(color: .black.opacity(0.48), radius: 26, y: 18)
+            .shadow(color: accent.opacity(0.32), radius: 36)
             .animation(.spring(response: 0.6, dampingFraction: 0.8), value: player.state)
     }
 
-    // MARK: glass control deck
+    // MARK: playback controls
     private var controlDeck: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            VStack(spacing: 3) {
-                Text(entry.title)
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                Text(entry.artist)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
+        GlassEffectContainer(spacing: 22) {
+            VStack(spacing: 22) {
+                VStack(spacing: 5) {
+                    Text(entry.title)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                    Text(entry.artist)
+                        .font(.headline.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity)
 
-            scrubBar
-            playPauseButton
-            advanceButton
+                scrubBar
+
+                playPauseButton
+                advanceButton
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: 312)   // align the control column with the album art
+            .padding(.horizontal, 2)
         }
-        .foregroundStyle(.white)
-        .padding(Theme.Spacing.lg)
-        .glassEffect(.regular, in: .rect(cornerRadius: 32))
-        .overlay(
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .stroke(.white.opacity(0.12), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.3), radius: 24, y: 12)
     }
 
     // MARK: scrubbable progress
     private var scrubBar: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 6) {
             GeometryReader { geo in
-                let w = geo.size.width
-                let trackHeight: CGFloat = scrubbing ? 9 : 5
-                let knob: CGFloat = scrubbing ? 20 : 13
+                let width = geo.size.width
+                let trackHeight: CGFloat = scrubbing ? 10 : 7
+                let knobSize: CGFloat = scrubbing ? 22 : 16
+
                 ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.2)).frame(height: trackHeight)
-                    Capsule().fill(accent).frame(width: max(0, w * displayProgress), height: trackHeight)
-                    Circle()
-                        .fill(.white)
-                        .frame(width: knob, height: knob)
-                        .shadow(color: .black.opacity(0.35), radius: 4, y: 2)
-                        .offset(x: max(0, min(w - knob, w * displayProgress - knob / 2)))
-                }
-                .frame(height: 24)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { v in scrub = min(1, max(0, v.location.x / w)) }
-                        .onEnded { v in
-                            let f = min(1, max(0, v.location.x / w))
-                            scrub = f
-                            Task {
-                                await player.seek(to: f * player.duration)
-                                scrub = nil
-                            }
+                    Capsule()
+                        .fill(.white.opacity(0.14))
+                        .frame(height: trackHeight)
+                        .glassEffect(.regular.tint(.white.opacity(0.16)), in: .capsule)
+                        .overlay {
+                            Capsule()
+                                .stroke(.white.opacity(0.24), lineWidth: 1)
                         }
-                )
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: scrubbing)
+
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [.white.opacity(0.92), accent.opacity(0.86)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(knobSize / 2, width * displayProgress), height: trackHeight)
+
+                    Circle()
+                        .fill(.white.opacity(0.92))
+                        .frame(width: knobSize, height: knobSize)
+                        .glassEffect(.regular.tint(.white.opacity(0.28)).interactive(), in: .circle)
+                        .overlay {
+                            Circle()
+                                .stroke(.white.opacity(0.46), lineWidth: 1)
+                        }
+                        .shadow(color: .black.opacity(0.26), radius: 7, y: 3)
+                        .offset(x: max(0, min(width - knobSize, width * displayProgress - knobSize / 2)))
+                }
+                .frame(height: 30)
+                .contentShape(Rectangle())
+                .gesture(scrubGesture(width: width))
+                .animation(.spring(response: 0.28, dampingFraction: 0.74), value: scrubbing)
             }
-            .frame(height: 24)
+            .frame(height: 30)
+            .accessibilityElement()
+            .accessibilityLabel("Playback position")
+            .accessibilityValue(timeString(displayProgress * player.duration))
 
             HStack {
                 Text(timeString(displayProgress * player.duration))
                 Spacer()
-                Text(timeString(player.duration))
+                Text("-\(timeString(max(player.duration - displayProgress * player.duration, 0)))")
             }
             .font(.caption2.weight(.semibold))
             .monospacedDigit()
-            .foregroundStyle(.white.opacity(0.6))
+            .foregroundStyle(.white.opacity(0.58))
         }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 4)
     }
 
     private var playPauseButton: some View {
@@ -180,27 +199,58 @@ struct ListeningView: View {
             Task { await player.toggle(entry) }
         } label: {
             Image(systemName: playPauseIcon)
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: 42, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 74, height: 74)
+                .frame(width: 88, height: 76)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .contentTransition(.symbolEffect(.replace))
+        .glassEffect(.regular.tint(.white.opacity(0.14)).interactive(), in: .circle)
+        .overlay {
+            Circle()
+                .stroke(.white.opacity(0.2), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.24), radius: 8, y: 4)
         .accessibilityLabel(player.state == .playing ? "Pause" : "Play")
     }
 
     private var advanceButton: some View {
         Button(action: onAdvance) {
             Label(advanceLabel, systemImage: advanceSystemImage)
-                .font(.subheadline.weight(.bold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+                .font(.headline.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .frame(minWidth: 136)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 22)
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
-        .background(.white.opacity(0.14), in: Capsule())
-        .padding(.top, 2)
+        .glassEffect(.regular.tint(.white.opacity(0.24)).interactive(), in: .rect(cornerRadius: 20))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(.white.opacity(0.32), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.22), radius: 18, y: 8)
+        .padding(.top, 4)
+    }
+
+    private func scrubGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard width > 0, player.duration > 0 else { return }
+                scrub = min(1, max(0, value.location.x / width))
+            }
+            .onEnded { value in
+                guard width > 0, player.duration > 0 else { return }
+                let target = min(1, max(0, value.location.x / width))
+                scrub = target
+                Task {
+                    await player.seek(to: target * player.duration)
+                    scrub = nil
+                }
+            }
     }
 
     private var playPauseIcon: String {
