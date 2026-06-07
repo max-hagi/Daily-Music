@@ -127,7 +127,7 @@ final class AppEnvironment {
             settings: SupabaseSettingsService(),
             profiles: SupabaseProfileService(),
             friends: SupabaseFriendService(),
-            friendNudges: MockFriendNudgeService(),
+            friendNudges: SupabaseFriendNudgeService(),
             notifications: LocalNotificationService(),
             pushRegistration: SupabasePushRegistrationService(),
             // Apple Music infrastructure is ready in MusicKitMusicEngine.
