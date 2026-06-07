@@ -12,6 +12,15 @@ import SwiftUI
 
 struct ListeningView: View {
     let entry: DailyEntry
+    /// Bottom-button label. Today flows into the journal ("Read today's story");
+    /// Vault/Favorites just dismiss ("Done").
+    var advanceLabel: String = "Read today's story"
+    var advanceSystemImage: String = "arrow.down"
+    /// Today auto-advances to the journal when the clip ends. Archive contexts
+    /// stay put so the listener can replay or close on their own terms.
+    var autoAdvanceOnFinish: Bool = true
+    /// Fired when the bottom button is tapped (and, on Today, when the clip ends).
+    /// Last so trailing-closure call sites bind to it.
     var onAdvance: () -> Void
 
     @Environment(AppEnvironment.self) private var env
@@ -43,7 +52,7 @@ struct ListeningView: View {
             pulse = !reduceMotion
         }
         .onChange(of: player.state) { _, newValue in
-            guard newValue == .finished else { return }
+            guard autoAdvanceOnFinish, newValue == .finished else { return }
             Task {
                 try? await Task.sleep(for: .seconds(0.8))  // a beat, then the story
                 onAdvance()
@@ -117,7 +126,7 @@ struct ListeningView: View {
 
     private var readStoryButton: some View {
         Button(action: onAdvance) {
-            Label("Read today's story", systemImage: "arrow.down")
+            Label(advanceLabel, systemImage: advanceSystemImage)
                 .font(.headline.weight(.bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)

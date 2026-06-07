@@ -293,6 +293,9 @@ private struct FavoriteEntryDetail: View {
     let entry: DailyEntry
     let onClose: () -> Void
 
+    @Environment(AppEnvironment.self) private var env
+    @State private var showingListen = false
+
     var body: some View {
         NavigationStack {
             EntryDetailView(
@@ -306,10 +309,17 @@ private struct FavoriteEntryDetail: View {
             .simultaneousGesture(closeSwipeGesture)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(action: onClose) {
+                    Button(action: dismiss) {
                         Image(systemName: "xmark")
                     }
                     .accessibilityLabel("Close")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingListen = true } label: {
+                        Image(systemName: "headphones")
+                    }
+                    .accessibilityLabel("Listen")
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -317,7 +327,24 @@ private struct FavoriteEntryDetail: View {
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
+            // Manual listen for a favorited song — the immersive player, opened on tap.
+            .fullScreenCover(isPresented: $showingListen) {
+                ListeningView(
+                    entry: entry,
+                    advanceLabel: "Done",
+                    advanceSystemImage: "checkmark",
+                    autoAdvanceOnFinish: false
+                ) {
+                    Task { await env.musicPlayer.stop() }
+                    showingListen = false
+                }
+            }
         }
+    }
+
+    private func dismiss() {
+        Task { await env.musicPlayer.stop() }
+        onClose()
     }
 
     private var releaseDateLabel: String {
@@ -333,7 +360,7 @@ private struct FavoriteEntryDetail: View {
         DragGesture(minimumDistance: 30)
             .onEnded { value in
                 guard value.translation.height > 120, abs(value.translation.width) < 90 else { return }
-                onClose()
+                dismiss()
             }
     }
 }

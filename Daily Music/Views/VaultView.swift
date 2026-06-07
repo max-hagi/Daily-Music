@@ -269,6 +269,9 @@ private struct VaultEntryDetail: View {
     let entry: DailyEntry
     let onClose: () -> Void
 
+    @Environment(AppEnvironment.self) private var env
+    @State private var showingListen = false
+
     var body: some View {
         NavigationStack {
             // Reuse the Today-style immersive detail surface, but turn off the
@@ -287,10 +290,17 @@ private struct VaultEntryDetail: View {
                 ToolbarItem(placement: .topBarLeading) {
                     // In Vault this replaces Today's settings gear: it dismisses
                     // the fullscreen cover and returns to the archive.
-                    Button(action: onClose) {
+                    Button(action: dismiss) {
                         Image(systemName: "xmark")
                     }
                     .accessibilityLabel("Close")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingListen = true } label: {
+                        Image(systemName: "headphones")
+                    }
+                    .accessibilityLabel("Listen")
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -298,7 +308,25 @@ private struct VaultEntryDetail: View {
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
+            // Manual listen for archived songs — the immersive player, opened on
+            // tap (never auto, unlike Today's first-open ceremony).
+            .fullScreenCover(isPresented: $showingListen) {
+                ListeningView(
+                    entry: entry,
+                    advanceLabel: "Done",
+                    advanceSystemImage: "checkmark",
+                    autoAdvanceOnFinish: false
+                ) {
+                    Task { await env.musicPlayer.stop() }
+                    showingListen = false
+                }
+            }
         }
+    }
+
+    private func dismiss() {
+        Task { await env.musicPlayer.stop() }
+        onClose()
     }
 
     private var releaseDateLabel: String {
@@ -314,7 +342,7 @@ private struct VaultEntryDetail: View {
         DragGesture(minimumDistance: 30)
             .onEnded { value in
                 guard value.translation.height > 120, abs(value.translation.width) < 90 else { return }
-                onClose()
+                dismiss()
             }
     }
 }
