@@ -29,6 +29,9 @@ import MusicKit        // Apple Music catalog + library APIs
 import AVFoundation    // AVPlayer, used to play the preview audio file
 
 final class MusicKitMusicEngine: MusicEngine {
+    var onProgress: ((TimeInterval, TimeInterval) -> Void)?
+    var onFinish: (() -> Void)?
+
     private static let playlistName = "Daily Music"
     // Held as a property so the player isn't deallocated mid-playback (a local
     // var would be freed the instant play() returns, cutting off the audio).
