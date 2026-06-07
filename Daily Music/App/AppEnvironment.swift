@@ -115,7 +115,8 @@ final class AppEnvironment {
     /// Production wiring: Supabase-backed auth/content/user state, local
     /// notifications, and a mock music engine until MusicKit is enabled.
     static func live() -> AppEnvironment {
-        AppEnvironment(
+        let catalog = LiveCatalogInfoService()
+        return AppEnvironment(
             auth: SupabaseAuthService(),
             entries: SupabaseEntryService(),
             favorites: SupabaseFavouritesService(),
@@ -123,17 +124,16 @@ final class AppEnvironment {
             sharedStats: SupabaseSharedStatsService(),
             reactions: SupabaseReactionsService(),
             ratings: SupabaseRatingService(),
-            catalogInfo: LiveCatalogInfoService(),
+            catalogInfo: catalog,
             settings: SupabaseSettingsService(),
             profiles: SupabaseProfileService(),
             friends: SupabaseFriendService(),
             friendNudges: SupabaseFriendNudgeService(),
             notifications: LocalNotificationService(),
             pushRegistration: SupabasePushRegistrationService(),
-            // Apple Music infrastructure is ready in MusicKitMusicEngine.
-            // Once the MusicKit capability is enabled (paid dev account),
-            // swap the line below to: MusicKitMusicEngine()
-            musicEngine: MockMusicEngine()
+            // Free 30-sec previews via the iTunes lookup — no paid account.
+            // At launch, swap to MusicKitMusicEngine() once MusicKit is enabled.
+            musicEngine: PreviewMusicEngine(catalog: catalog)
         )
     }
 }
