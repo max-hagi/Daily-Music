@@ -37,6 +37,9 @@ protocol MusicEngine: AnyObject {
     var onProgress: ((TimeInterval, TimeInterval) -> Void)? { get set }
     /// Reported once when the current preview plays to its end.
     var onFinish: (() -> Void)? { get set }
+
+    /// Seek the current preview to `seconds` from the start.
+    func seek(to seconds: TimeInterval) async
 }
 
 // The view-facing layer. Views observe THIS (its `state` / `nowPlayingEntryID`)
@@ -119,6 +122,15 @@ final class MusicPlayer {
         duration = 0
     }
 
+    /// Scrub the current preview. Updates `elapsed` optimistically so the bar tracks
+    /// the finger; the engine's time observer reconciles a moment later.
+    func seek(to seconds: TimeInterval) async {
+        guard duration > 0 else { return }
+        let clamped = min(max(0, seconds), duration)
+        elapsed = clamped
+        await engine.seek(to: clamped)
+    }
+
     // `throws` is re-thrown to the caller (the view) so it can surface a failure
     // to add to the playlist (e.g. not authorized).
     func addToDailyPlaylist(_ entry: DailyEntry) async throws {
@@ -136,25 +148,30 @@ final class MockMusicEngine: MusicEngine {
     // A brisk simulated clip so dev/sim testing of the ceremony is quick.
     private let simulatedDuration: TimeInterval = 6
     private var ticker: Task<Void, Never>?
+    private var elapsed: TimeInterval = 0   // held so seek() can reposition it
 
     func play(appleMusicID: String) async throws {
         try? await Task.sleep(for: .milliseconds(500)) // mimic buffering
+        elapsed = 0
         ticker?.cancel()
         ticker = Task { [weak self] in
             guard let self else { return }
             let step = 0.2
-            var t = 0.0
-            while t < self.simulatedDuration {
+            while self.elapsed < self.simulatedDuration {
                 if Task.isCancelled { return }
                 try? await Task.sleep(for: .seconds(step))
-                t += step
-                await MainActor.run { self.onProgress?(t, self.simulatedDuration) }
+                self.elapsed += step
+                await MainActor.run { self.onProgress?(self.elapsed, self.simulatedDuration) }
             }
             await MainActor.run { self.onFinish?() }
         }
     }
     func pause() async { ticker?.cancel() }
-    func stop() async { ticker?.cancel() }
+    func stop() async { ticker?.cancel(); elapsed = 0 }
+    func seek(to seconds: TimeInterval) async {
+        elapsed = min(max(0, seconds), simulatedDuration)
+        onProgress?(elapsed, simulatedDuration)
+    }
     func addToDailyPlaylist(appleMusicID: String) async throws {
         try? await Task.sleep(for: .milliseconds(400))
     }

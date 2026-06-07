@@ -79,6 +79,12 @@ final class PreviewMusicEngine: MusicEngine {
         await MainActor.run { teardown() }
     }
 
+    func seek(to seconds: TimeInterval) async {
+        await MainActor.run {
+            player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
+        }
+    }
+
     func addToDailyPlaylist(appleMusicID: String) async throws {
         // Library writes require MusicKit (paid account). Surface clearly.
         throw MusicEngineError.addToPlaylistUnavailable

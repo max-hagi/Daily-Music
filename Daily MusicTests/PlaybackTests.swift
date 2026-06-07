@@ -11,6 +11,7 @@ struct PlaybackTests {
         func play(appleMusicID: String) async throws {}
         func pause() async {}
         func stop() async {}
+        func seek(to seconds: TimeInterval) async {}
         func addToDailyPlaylist(appleMusicID: String) async throws {}
     }
 

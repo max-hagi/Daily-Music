@@ -63,6 +63,12 @@ final class MusicKitMusicEngine: MusicEngine {
         previewPlayer = nil   // release the player so it can be torn down
     }
 
+    func seek(to seconds: TimeInterval) async {
+        await MainActor.run {
+            previewPlayer?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
+        }
+    }
+
     func addToDailyPlaylist(appleMusicID: String) async throws {
         try await ensureAuthorized()
         let song = try await fetchSong(id: appleMusicID)
