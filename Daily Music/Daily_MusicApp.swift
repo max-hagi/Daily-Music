@@ -49,6 +49,17 @@ final class AppPushDelegate: NSObject, UIApplicationDelegate, UNUserNotification
             UIApplication.shared.open(url)
         }
     }
+
+    /// Ask APNs for a device token on demand — e.g. right after the user grants
+    /// notification permission — so the first nudge a friend sends can arrive
+    /// this session instead of waiting for the next cold launch. Relies on
+    /// `registration` already being set (installPushRegistration runs on launch);
+    /// a no-op without the push entitlement, where any failure surfaces through
+    /// didFailToRegisterForRemoteNotificationsWithError.
+    @MainActor
+    static func requestRemoteRegistration() {
+        UIApplication.shared.registerForRemoteNotifications()
+    }
 }
 
 // @main marks the app's entry point — exactly one type per app has it. Conforming

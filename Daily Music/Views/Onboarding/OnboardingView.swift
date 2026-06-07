@@ -183,6 +183,11 @@ struct OnboardingView: View {
             await settings.applyReminderSetting(enabled: true)
             isApplyingReminder = false
             if !settings.permissionDenied {
+                // Permission was just granted — register for remote notifications
+                // now so a device token is fetched this session, instead of
+                // waiting for the next cold launch (otherwise the first nudge a
+                // friend sends would come back as "no recipient token").
+                AppPushDelegate.requestRemoteRegistration()
                 advance()
             }
         }
