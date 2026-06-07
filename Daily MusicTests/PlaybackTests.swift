@@ -53,4 +53,18 @@ struct PlaybackTests {
         #expect(player.state == .playing)
         #expect(player.elapsed == 0)
     }
+
+    @Test func autoOpensWhenTodayNotYetHeard() {
+        let id = UUID()
+        #expect(ListeningCeremony.shouldAutoOpen(todayEntryID: id, heardEntryID: nil))
+    }
+
+    @Test func doesNotAutoOpenWhenTodayAlreadyHeard() {
+        let id = UUID()
+        #expect(!ListeningCeremony.shouldAutoOpen(todayEntryID: id, heardEntryID: id.uuidString))
+    }
+
+    @Test func autoOpensWhenHeardWasADifferentDay() {
+        #expect(ListeningCeremony.shouldAutoOpen(todayEntryID: UUID(), heardEntryID: UUID().uuidString))
+    }
 }
