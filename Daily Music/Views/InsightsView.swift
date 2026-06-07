@@ -15,6 +15,8 @@ struct InsightsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: InsightsViewModel?
     @State private var showingWrapped = false
+    @AppStorage("startingMood") private var startingMood = ""
+    @AppStorage("startingGenre") private var startingGenre = ""
 
     var body: some View {
         NavigationStack {
@@ -74,6 +76,7 @@ struct InsightsView: View {
         let accent = (mirror.archetype ?? .balancedDefault).colors[0]
         return ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
+                startedHereCard
                 TasteMirrorBoard(mirror: mirror)
                 wrappedButton(accent)
             }
@@ -92,5 +95,26 @@ struct InsightsView: View {
         }
         .buttonStyle(PrimaryActionButtonStyle(tint: accent))
         .padding(.top, Theme.Spacing.xs)
+    }
+
+    @ViewBuilder private var startedHereCard: some View {
+        let parts = [startingMood, startingGenre].filter { !$0.isEmpty }
+        if !parts.isEmpty {
+            HStack(spacing: 12) {
+                Image(systemName: "flag.checkered")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("YOU STARTED HERE")
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(.secondary)
+                    Text(parts.joined(separator: " · "))
+                        .font(.subheadline.weight(.bold))
+                }
+                Spacer()
+            }
+            .padding(Theme.Spacing.md)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
     }
 }
