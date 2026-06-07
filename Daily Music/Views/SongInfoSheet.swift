@@ -128,7 +128,7 @@ struct SongInfoSheet: View {
 
     private var curatedTags: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Curated feel", symbol: "tag", accent: palette.accent)
+            SectionHeader(title: "Feel", symbol: "tag", accent: palette.accent)
 
             LazyVGrid(columns: tagColumns, alignment: .leading, spacing: Theme.Spacing.sm) {
                 ForEach(tags) { tag in
