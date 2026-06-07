@@ -18,6 +18,9 @@ final class SessionStore {
     private(set) var isWorking = false         // true while a sign-in call is in flight (drives spinners)
     /// Surfaced to the sign-in screen so failures are never silent.
     private(set) var errorMessage: String?
+    /// Email waiting for a one-time code during this app run. This intentionally
+    /// lives only in memory so relaunching the app starts the email flow fresh.
+    private(set) var pendingEmailCodeEmail: String?
 
     private let auth: AuthService
 
@@ -27,6 +30,7 @@ final class SessionStore {
 
     // Derived convenience: a computed Bool views can read directly.
     var isSignedIn: Bool { session != nil }
+    var hasPendingEmailCode: Bool { pendingEmailCodeEmail != nil }
 
     /// Called once on launch to pick up an existing session.
     func restore() async {
@@ -46,11 +50,13 @@ final class SessionStore {
     /// Step 1 of email sign-in. Returns true if the code was sent, so the UI can
     /// advance to the code-entry step.
     func sendEmailCode(to email: String) async -> Bool {
+        let normalizedEmail = Self.normalizedEmail(email)
         isWorking = true
         errorMessage = nil
         defer { isWorking = false }
         do {
-            try await auth.sendEmailCode(to: email)
+            try await auth.sendEmailCode(to: normalizedEmail)
+            pendingEmailCodeEmail = normalizedEmail
             return true
         } catch {
             errorMessage = "Couldn't send the code: \(error.localizedDescription)"
@@ -60,7 +66,23 @@ final class SessionStore {
 
     /// Step 2 of email sign-in — verifying signs the user in (sets `session`).
     func verifyEmailCode(_ code: String, email: String) async {
-        await attempt { try await self.auth.verifyEmailCode(code, email: email) }
+        isWorking = true
+        errorMessage = nil
+        defer { isWorking = false }
+        do {
+            session = try await auth.verifyEmailCode(
+                code,
+                email: Self.normalizedEmail(email)
+            )
+            pendingEmailCodeEmail = nil
+        } catch {
+            errorMessage = Self.describe(error)
+        }
+    }
+
+    func clearPendingEmailCode() {
+        pendingEmailCodeEmail = nil
+        errorMessage = nil
     }
 
     // `work` is the operation to run. `@escaping` means the closure may outlive
@@ -86,9 +108,14 @@ final class SessionStore {
         return "Sign-in failed: \(raw)"
     }
 
+    private static func normalizedEmail(_ email: String) -> String {
+        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
     func signOut() async {
         await auth.signOut()
         session = nil
+        pendingEmailCodeEmail = nil
     }
 
     /// Permanently deletes the account, then clears the session so RootView swaps
@@ -101,6 +128,7 @@ final class SessionStore {
         do {
             try await auth.deleteAccount()
             session = nil
+            pendingEmailCodeEmail = nil
             return true
         } catch {
             errorMessage = "Couldn't delete your account: \(error.localizedDescription)"

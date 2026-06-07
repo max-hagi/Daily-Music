@@ -14,12 +14,15 @@ struct EmailSignInSheet: View {
 
     @State private var email = ""
     @State private var code = ""
-    @State private var codeSent = false
+
+    private var pendingEmail: String? {
+        env.session.pendingEmailCodeEmail
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                if !codeSent {
+                if pendingEmail == nil {
                     Section {
                         TextField(text: $email, prompt: Text("you@example.com").foregroundStyle(.secondary)) {
                             Text("Email address")
@@ -40,7 +43,7 @@ struct EmailSignInSheet: View {
                         }
                         .disabled(trimmedEmail.isEmpty || env.session.isWorking)
                     }
-                } else {
+                } else if let pendingEmail {
                     Section {
                         TextField("6-digit code", text: $code)
                             .keyboardType(.numberPad)
@@ -48,20 +51,27 @@ struct EmailSignInSheet: View {
                     } header: {
                         Text("Enter code")
                     } footer: {
-                        Text("Sent to \(trimmedEmail). Check your inbox (and spam).")
+                        Text("Sent to \(pendingEmail). Check your inbox (and spam).")
                     }
 
                     Section {
                         Button(action: verify) {
                             centeredLabel("Verify & sign in")
                         }
-                        .disabled(code.isEmpty || env.session.isWorking)
+                        .disabled(code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || env.session.isWorking)
+
+                        Button(action: resendCode) {
+                            centeredLabel("Resend code")
+                        }
+                        .disabled(env.session.isWorking)
 
                         Button("Use a different email") {
-                            codeSent = false
+                            env.session.clearPendingEmailCode()
+                            email = ""
                             code = ""
                         }
                         .foregroundStyle(.secondary)
+                        .disabled(env.session.isWorking)
                     }
                 }
 
@@ -77,10 +87,11 @@ struct EmailSignInSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Close") { dismiss() }
                 }
             }
         }
+        .onAppear(perform: seedEmailFromPendingCode)
         // Verifying sets the session; close the sheet the moment we're signed in.
         .onChange(of: env.session.isSignedIn) { _, signedIn in
             if signedIn { dismiss() }
@@ -104,19 +115,31 @@ struct EmailSignInSheet: View {
         }
     }
 
+    private func seedEmailFromPendingCode() {
+        if let pendingEmail, email.isEmpty {
+            email = pendingEmail
+        }
+    }
+
     private func sendCode() {
         Task {
-            if await env.session.sendEmailCode(to: trimmedEmail) {
-                codeSent = true
-            }
+            _ = await env.session.sendEmailCode(to: trimmedEmail)
+        }
+    }
+
+    private func resendCode() {
+        guard let pendingEmail else { return }
+        Task {
+            _ = await env.session.sendEmailCode(to: pendingEmail)
         }
     }
 
     private func verify() {
+        guard let pendingEmail else { return }
         Task {
             await env.session.verifyEmailCode(
                 code.trimmingCharacters(in: .whitespacesAndNewlines),
-                email: trimmedEmail
+                email: pendingEmail
             )
         }
     }
