@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		08F041F74042C7B42FE29DCB /* PlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD93DFCBD69276F616E276C /* PlaybackTests.swift */; };
 		1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */; };
+		78F3EE0454C3E5EB3825C97D /* TasteSeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9081430FDF0723184251C1F3 /* TasteSeedTests.swift */; };
 		89D4107636FC55A192B171A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1C88CA3CCE154F540A6D0EE /* Foundation.framework */; };
 		94B1387E2FCB7CB200752257 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 94B1387D2FCB7CB200752257 /* Supabase */; };
 		A1B2C3D4E5F6A1B2C3D4E5F6 /* StreamingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */; };
@@ -35,7 +36,8 @@
 /* Begin PBXFileReference section */
 		0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Daily MusicTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteMirrorTests.swift; sourceTree = "<group>"; };
-		5BD93DFCBD69276F616E276C /* PlaybackTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaybackTests.swift; path = "PlaybackTests.swift"; sourceTree = "<group>"; };
+		5BD93DFCBD69276F616E276C /* PlaybackTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackTests.swift; sourceTree = "<group>"; };
+		9081430FDF0723184251C1F3 /* TasteSeedTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteSeedTests.swift; sourceTree = "<group>"; };
 		94B1382F2FCB6F1100752257 /* Daily Music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Daily Music.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreamingServiceTests.swift; sourceTree = "<group>"; };
 		A7B8C9D0E1F2A7B8C9D0E1F3 /* FriendsStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsStoreTests.swift; sourceTree = "<group>"; };
@@ -93,6 +95,7 @@
 				ABCD0011223344556677889A /* FriendNudgeTests.swift */,
 				C7F0B6A12E7D4C11A9E0A002 /* SessionStoreTests.swift */,
 				5BD93DFCBD69276F616E276C /* PlaybackTests.swift */,
+				9081430FDF0723184251C1F3 /* TasteSeedTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -247,6 +250,7 @@
 				ABCD00112233445566778899 /* FriendNudgeTests.swift in Sources */,
 				C7F0B6A12E7D4C11A9E0A001 /* SessionStoreTests.swift in Sources */,
 				08F041F74042C7B42FE29DCB /* PlaybackTests.swift in Sources */,
+				78F3EE0454C3E5EB3825C97D /* TasteSeedTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
