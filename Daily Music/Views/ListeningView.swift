@@ -35,6 +35,7 @@ struct ListeningView: View {
     private var accent: Color { palette.accent }
     private var scrubbing: Bool { scrub != nil }
     private var displayProgress: Double { scrub ?? player.progress }
+    private let contentMaxWidth: CGFloat = 348
 
     var body: some View {
         ZStack {
@@ -45,9 +46,9 @@ struct ListeningView: View {
                 controlDeck
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 44)
-            .padding(.bottom, 28)
+            .padding(.horizontal, 18)
+            .padding(.top, 34)
+            .padding(.bottom, 22)
         }
         .preferredColorScheme(.dark)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
@@ -98,8 +99,8 @@ struct ListeningView: View {
     // MARK: hero art
     private var artwork: some View {
         AlbumArtView(url: entry.albumArtURL, cornerRadius: 22)
-            .frame(maxWidth: 312)
-            .padding(.horizontal, 18)
+            .frame(maxWidth: contentMaxWidth)
+            .padding(.horizontal, 4)
             .scaleEffect(player.state == .playing ? (animate ? 1.0 : 0.965) : 0.95)
             .shadow(color: .black.opacity(0.48), radius: 26, y: 18)
             .shadow(color: accent.opacity(0.32), radius: 36)
@@ -127,7 +128,7 @@ struct ListeningView: View {
                 advanceButton
             }
             .foregroundStyle(.white)
-            .frame(maxWidth: 312)   // align the control column with the album art
+            .frame(maxWidth: contentMaxWidth)   // align the control column with the album art
             .padding(.horizontal, 2)
         }
     }
@@ -161,7 +162,7 @@ struct ListeningView: View {
                         .frame(width: max(knobSize / 2, width * displayProgress), height: trackHeight)
 
                     Circle()
-                        .fill(.white.opacity(0.92))
+                        .fill(.white.opacity(0.50))
                         .frame(width: knobSize, height: knobSize)
                         .glassEffect(.regular.tint(.white.opacity(0.28)).interactive(), in: .circle)
                         .overlay {
@@ -180,6 +181,18 @@ struct ListeningView: View {
             .accessibilityElement()
             .accessibilityLabel("Playback position")
             .accessibilityValue(timeString(displayProgress * player.duration))
+            .accessibilityAdjustableAction { direction in
+                guard player.duration > 0 else { return }
+                let step = max(1, player.duration / 10)   // ~10% per VoiceOver nudge
+                let current = displayProgress * player.duration
+                let target: Double
+                switch direction {
+                case .increment: target = min(player.duration, current + step)
+                case .decrement: target = max(0, current - step)
+                @unknown default: return
+                }
+                Task { await player.seek(to: target) }
+            }
 
             HStack {
                 Text(timeString(displayProgress * player.duration))
@@ -224,13 +237,14 @@ struct ListeningView: View {
                 .frame(minWidth: 136)
                 .padding(.vertical, 14)
                 .padding(.horizontal, 22)
+                .contentShape(.rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
-        .glassEffect(.regular.tint(.white.opacity(0.24)).interactive(), in: .rect(cornerRadius: 20))
+        .glassEffect(.regular.tint(.white.opacity(0.20)).interactive(), in: .rect(cornerRadius: 20))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(.white.opacity(0.32), lineWidth: 1)
+                .stroke(.white.opacity(0.30), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.22), radius: 18, y: 8)
         .padding(.top, 4)
