@@ -317,7 +317,7 @@ struct EntryDetailView: View {
             heartButton
             reactionButton(controlSize: 52, symbolSize: 20)
             Spacer(minLength: Theme.Spacing.sm)
-            RatingBar(entry: entry, accent: palette.accent, isReadOnly: !allowsEntryReaction)
+            RatingBar(entry: entry, accent: palette.accent, isReadOnly: !allowsRating)
             Spacer(minLength: Theme.Spacing.sm)
             infoButton
         }
@@ -331,7 +331,7 @@ struct EntryDetailView: View {
             controlSize: 84,
             symbolSize: 32,
             spacing: 18,
-            isReadOnly: !allowsEntryReaction
+            isReadOnly: !allowsRating
         )
     }
 
@@ -477,6 +477,11 @@ struct EntryDetailView: View {
     private var allowsEntryReaction: Bool {
         allowsDailyInteraction && Calendar.current.isDateInToday(entry.date) && !reactionsAreReadOnly
     }
+
+    /// Ratings (👍/👎) are interactive on ANY entry — including past Vault/Favorites
+    /// songs — so people build their taste from the back-catalog (those ratings feed
+    /// the taste mirror). Reactions stay release-day-only via `allowsEntryReaction`.
+    private var allowsRating: Bool { allowsDailyInteraction }
 
     private var standardBackdropColors: [Color] {
         [palette.accent.opacity(0.45), palette.accent.opacity(0)]
