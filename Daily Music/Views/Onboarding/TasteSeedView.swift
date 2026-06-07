@@ -3,10 +3,10 @@
 //  Daily Music
 //
 //  The onboarding "find your frequency" flow, shown as a full-screen cover right
-//  after the name step: a warm intro → 7 "this or that" rounds (tap a cover to
-//  preview, tap Choose to pick) → an instant first-read reveal. Picks build a
-//  StartingRead via the real TasteMirror. Onboarding-only: nothing is written to
-//  song_ratings.
+//  after the name step: a warm intro → the StarterPack rated one song at a time (tap
+//  the art to preview, 👍/👎) → an instant first-read reveal. The 👍/👎 are saved via
+//  SeedRatings to seed the user's REAL taste mirror, so a profile is established at
+//  onboarding and then evolves from daily ratings. Same gesture as the daily ritual.
 //
 
 import SwiftUI
@@ -19,18 +19,19 @@ struct TasteSeedView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private enum Phase: Equatable { case intro, rounds, reveal }
+    private enum Phase: Equatable { case intro, rating, reveal }
     @State private var phase: Phase = .intro
-    @State private var roundIndex = 0
+    @State private var index = 0
     @State private var picks: [RatedSong] = []
     @State private var read = StartingRead()
 
-    private let rounds = StarterPack.rounds()
+    private let songs = StarterPack.songs
     private var player: MusicPlayer { env.musicPlayer }
     private var firstName: String {
         let n = displayName.split(separator: " ").first.map(String.init) ?? displayName
         return n.isEmpty ? "there" : n
     }
+    private var current: DailyEntry { songs[min(index, songs.count - 1)] }
 
     var body: some View {
         ZStack {
@@ -38,7 +39,7 @@ struct TasteSeedView: View {
             Color(.systemGroupedBackground).opacity(0.6).ignoresSafeArea()
             switch phase {
             case .intro:  intro
-            case .rounds: roundsView
+            case .rating: ratingView
             case .reveal: reveal
             }
         }
@@ -51,7 +52,7 @@ struct TasteSeedView: View {
             }
         }
         .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.85), value: phase)
-        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: roundIndex)
+        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: index)
     }
 
     // MARK: intro
@@ -64,13 +65,13 @@ struct TasteSeedView: View {
             Text("Alright, \(firstName) —\nlet's find your frequency")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .multilineTextAlignment(.center)
-            Text("A few quick taps. For each pair, pick the one that pulls you — tap a cover to hear a taste first.")
+            Text("Tap a song to hear a taste, then react 👍 or 👎. This seeds your taste profile — it grows from your daily songs after.")
                 .font(.callout.weight(.medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.Spacing.xl)
             Spacer()
-            Button { phase = .rounds } label: {
+            Button { phase = .rating } label: {
                 Text("Begin").frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryActionButtonStyle(tint: Theme.Brand.gradient[0]))
@@ -79,53 +80,65 @@ struct TasteSeedView: View {
         }
     }
 
-    // MARK: rounds
-    private var roundsView: some View {
-        let pair = rounds[roundIndex]
+    // MARK: rating — one song at a time
+    private var ratingView: some View {
+        let song = current
+        let isPreviewing = player.isPlaying(song)
         return VStack(spacing: Theme.Spacing.lg) {
-            Text("\(roundIndex + 1) of \(rounds.count)")
+            Spacer(minLength: Theme.Spacing.xl)
+            Text("\(index + 1) of \(songs.count)")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.secondary)
-                .padding(.top, Theme.Spacing.xl)
-            Text("Which pulls you?")
-                .font(.system(size: 24, weight: .heavy, design: .rounded))
-            HStack(spacing: Theme.Spacing.md) {
-                choiceCard(pair.0)
-                choiceCard(pair.1)
-            }
-            .padding(.horizontal, Theme.Spacing.md)
-            Spacer()
-        }
-    }
 
-    private func choiceCard(_ song: DailyEntry) -> some View {
-        let isPreviewing = player.isPlaying(song)
-        return VStack(spacing: Theme.Spacing.sm) {
             Button { togglePreview(song) } label: {
                 ZStack(alignment: .bottomTrailing) {
-                    AlbumArtView(url: song.albumArtURL, cornerRadius: 16)
+                    AlbumArtView(url: song.albumArtURL, cornerRadius: 24)
+                        .frame(maxWidth: 300)
                     Image(systemName: isPreviewing ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 28))
+                        .font(.system(size: 40))
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.white)
-                        .padding(8)
+                        .padding(12)
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isPreviewing ? "Pause preview of \(song.title)" : "Preview \(song.title)")
+            .accessibilityLabel(isPreviewing ? "Pause preview" : "Preview \(song.title)")
 
-            VStack(spacing: 2) {
-                Text(song.title).font(.subheadline.weight(.bold)).lineLimit(1).minimumScaleFactor(0.8)
-                Text(song.artist).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            VStack(spacing: 4) {
+                Text(song.title)
+                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.8)
+                Text(song.artist)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.secondary).lineLimit(1)
             }
+            .padding(.horizontal, Theme.Spacing.lg)
 
-            Button { choose(song) } label: {
-                Text("Choose").frame(maxWidth: .infinity)
+            Text("Tap the art to hear a taste")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+
+            Spacer()
+
+            HStack(spacing: Theme.Spacing.xl) {
+                judgmentButton(value: -1, symbol: "hand.thumbsdown.fill", tint: .secondary)
+                judgmentButton(value: 1, symbol: "hand.thumbsup.fill", tint: Theme.Brand.gradient[0])
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.Brand.gradient[0])
+            .padding(.bottom, 40)
         }
-        .frame(maxWidth: .infinity)
+    }
+
+    private func judgmentButton(value: Int, symbol: String, tint: Color) -> some View {
+        Button { judge(value) } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 92, height: 92)
+                .background(tint, in: Circle())
+                .shadow(color: tint.opacity(0.35), radius: 12, y: 6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(value > 0 ? "Like" : "Dislike")
     }
 
     // MARK: reveal
@@ -143,7 +156,7 @@ struct TasteSeedView: View {
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.Spacing.xl)
-            Text("A starting point — your real taste mirror grows as you rate your daily songs.")
+            Text("Your taste mirror starts here and sharpens every day you rate a song.")
                 .font(.callout.weight(.medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -168,17 +181,15 @@ struct TasteSeedView: View {
         Task { await player.toggle(song) }
     }
 
-    private func choose(_ song: DailyEntry) {
+    private func judge(_ value: Int) {
         Haptics.tap()
-        let pair = rounds[roundIndex]
-        let other = song.id == pair.0.id ? pair.1 : pair.0
-        picks.append(RatedSong(entry: song, value: 1))
-        picks.append(RatedSong(entry: other, value: -1))
+        picks.append(RatedSong(entry: current, value: value))
         Task { await player.stop() }
-        if roundIndex + 1 < rounds.count {
-            roundIndex += 1
+        if index + 1 < songs.count {
+            index += 1
         } else {
             read = StartingRead.from(picks: picks)
+            SeedRatings.save(picks)   // seed the real taste mirror
             phase = .reveal
         }
     }

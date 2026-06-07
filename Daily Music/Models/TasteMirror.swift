@@ -11,7 +11,7 @@
 import Foundation
 
 /// One rated song: a tagged entry plus the user's judgment (+1 👍 / -1 👎).
-struct RatedSong: Equatable {
+struct RatedSong: Equatable, Codable {
     let entry: DailyEntry
     let value: Int
 }
@@ -61,7 +61,7 @@ struct TasteMirror: Equatable {
         static let minPerCategory = 3
         static let overIndexMargin = 0.10
         static let minRatedDimension = 10
-        static let minRatedArchetype = 20
+        static let minRatedArchetype = 10   // a profile is established by the ~10-song onboarding taste-seed, then evolves
     }
 
     static func build(from rated: [RatedSong]) -> TasteMirror {

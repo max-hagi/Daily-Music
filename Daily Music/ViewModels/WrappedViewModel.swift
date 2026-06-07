@@ -66,7 +66,7 @@ final class WrappedViewModel {
             let rated = history.compactMap { entry in
                 myRatings[entry.id].map { RatedSong(entry: entry, value: $0) }
             }
-            let mirror = TasteMirror.build(from: rated)
+            let mirror = TasteMirror.build(from: rated + SeedRatings.load())
 
             state = .loaded(Recap(
                 // `.formatted(.dateTime.month(.wide))` → full month name, e.g. "June".

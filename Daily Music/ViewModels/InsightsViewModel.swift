@@ -30,6 +30,8 @@ final class InsightsViewModel {
         let rated = history.compactMap { entry in
             myRatings[entry.id].map { RatedSong(entry: entry, value: $0) }
         }
-        state = .loaded(TasteMirror.build(from: rated))
+        // Merge the onboarding taste-seed so the profile is established at onboarding
+        // and evolves as real daily ratings accumulate.
+        state = .loaded(TasteMirror.build(from: rated + SeedRatings.load()))
     }
 }

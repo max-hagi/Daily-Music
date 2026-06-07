@@ -3,14 +3,9 @@ import Foundation
 @testable import Daily_Music
 
 struct TasteSeedTests {
-    // Every starter song appears exactly once across the 7 rounds.
-    @Test func roundsCoverAllSongsOnce() {
-        let rounds = StarterPack.rounds()
-        #expect(rounds.count == 7)
-        let used = rounds.flatMap { [$0.0.id, $0.1.id] }
-        #expect(used.count == 14)
-        #expect(Set(used).count == 14)   // no duplicates
-        #expect(Set(used) == Set(StarterPack.songs.map(\.id)))
+    @Test func starterPackHasTenUniqueSongs() {
+        #expect(StarterPack.songs.count == 10)
+        #expect(Set(StarterPack.songs.map(\.id)).count == 10)
     }
 
     private func entry(mood: String, genre: String, year: Int) -> DailyEntry {
@@ -40,5 +35,19 @@ struct TasteSeedTests {
     @Test func emptyPicksGiveEmptyRead() {
         let read = StartingRead.from(picks: [])
         #expect(read.isEmpty)
+    }
+
+    @Test func seedRatingsRoundTrip() {
+        SeedRatings.clear()
+        let picks = [
+            RatedSong(entry: entry(mood: "Dreamy", genre: "Alternative", year: 2015), value: 1),
+            RatedSong(entry: entry(mood: "Defiant", genre: "Rock", year: 1991), value: -1),
+        ]
+        SeedRatings.save(picks)
+        let loaded = SeedRatings.load()
+        #expect(loaded.count == 2)
+        #expect(loaded.first?.value == 1)
+        SeedRatings.clear()
+        #expect(SeedRatings.load().isEmpty)
     }
 }

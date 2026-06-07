@@ -97,14 +97,14 @@ struct TasteMirrorTests {
         #expect(m.decade.topStandout?.name == "1980s")       // dominant fallback
     }
 
-    @Test func archetypeLockedUntilTwentyRatings() {
-        let m = TasteMirror.build(from: Self.workedExample())   // 30 ratings, melancholy+1980s
+    @Test func archetypeUnlocksWithEnoughRatings() {
+        let m = TasteMirror.build(from: Self.workedExample())   // 30 ratings ≥ 10 → unlocked
         #expect(m.isArchetypeUnlocked == true)
         #expect(m.archetype?.id == "MELANCHOLY_1980S")
     }
 
     @Test func archetypeNilBelowThreshold() {
-        let m = TasteMirror.build(from: Self.mood("Melancholy", likes: 8, dislikes: 2, year: 1985))
+        let m = TasteMirror.build(from: Self.mood("Melancholy", likes: 6, dislikes: 2, year: 1985))  // 8 < 10
         #expect(m.isArchetypeUnlocked == false)
         #expect(m.archetype == nil)
     }
