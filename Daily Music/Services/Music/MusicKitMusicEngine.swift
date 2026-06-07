@@ -104,6 +104,7 @@ enum MusicEngineError: LocalizedError {
     case notAuthorized
     case songNotFound
     case noPreviewAvailable
+    case addToPlaylistUnavailable
 
     // Note the bodies have no `return` — single-expression switch cases in Swift
     // return implicitly.
@@ -112,6 +113,7 @@ enum MusicEngineError: LocalizedError {
         case .notAuthorized:    "Apple Music access wasn't granted."
         case .songNotFound:     "Couldn't find this song in the Apple Music catalog."
         case .noPreviewAvailable: "No preview is available for this song."
+        case .addToPlaylistUnavailable: "Saving to your library needs Apple Music. Use \"Open in…\" for now."
         }
     }
 }
