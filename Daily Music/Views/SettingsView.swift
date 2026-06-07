@@ -69,6 +69,10 @@ private struct SettingsForm: View {
     @State private var showingDeleteConfirmation = false
     @State private var selectedSection: SettingsNavSection = .account
     @State private var showingEditProfile = false
+    #if DEBUG
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("completedOnboardingVersion") private var completedOnboardingVersion = 0
+    #endif
 
     var body: some View {
         Form {
@@ -120,6 +124,9 @@ private struct SettingsForm: View {
             supportSection
             appSection
             accountManagementSection
+            #if DEBUG
+            developerSection
+            #endif
         }
     }
 
@@ -400,4 +407,31 @@ private struct SettingsForm: View {
             Text("Deleting your account permanently removes your profile, favorites, reactions, check-ins, and preferences.")
         }
     }
+
+    #if DEBUG
+    private var developerSection: some View {
+        Section {
+            Button("Reset onboarding", role: .destructive) {
+                resetOnboarding()
+            }
+        } header: {
+            Text("Developer")
+        } footer: {
+            Text("DEBUG only. Clears the local onboarding flags (completion, version, taste-seed, memento, first-listen) and drops you back into the wizard. Doesn't touch the server onboarded_at — the version gate re-triggers locally.")
+        }
+    }
+
+    /// Wipes the on-device onboarding state so the wizard re-appears. `completedOnboardingVersion = 0`
+    /// is the dependable trigger (it survives the launch reconcile, unlike hasCompletedOnboarding).
+    private func resetOnboarding() {
+        SeedRatings.clear()
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: "startingMood")
+        defaults.removeObject(forKey: "startingGenre")
+        defaults.removeObject(forKey: "startingDecade")
+        defaults.removeObject(forKey: "heardEntryID")
+        completedOnboardingVersion = 0
+        hasCompletedOnboarding = false   // flips RootView's gate → onboarding shows
+    }
+    #endif
 }
