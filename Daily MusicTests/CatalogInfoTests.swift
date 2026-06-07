@@ -19,4 +19,12 @@ struct CatalogInfoTests {
         let json = #"{"resultCount":0,"results":[]}"#.data(using: .utf8)!
         #expect(CatalogInfo.parse(json) == nil)
     }
+
+    @Test func parseExtractsPreviewURL() {
+        let json = """
+        {"results":[{"collectionName":"Be the Cowboy","releaseDate":"2018-08-17T12:00:00Z","trackTimeMillis":150000,"primaryGenreName":"Indie Rock","collectionViewUrl":"https://music.apple.com/album/x","previewUrl":"https://audio-ssl.itunes.apple.com/clip.m4a"}]}
+        """.data(using: .utf8)!
+        let info = CatalogInfo.parse(json)
+        #expect(info?.previewURL == URL(string: "https://audio-ssl.itunes.apple.com/clip.m4a"))
+    }
 }
