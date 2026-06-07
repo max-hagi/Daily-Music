@@ -276,3 +276,8 @@ struct OnboardingView: View {
         }
     }
 }
+
+#Preview {
+    OnboardingView()
+        .environment(AppEnvironment.mock())
+}

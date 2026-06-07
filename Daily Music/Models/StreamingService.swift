@@ -3,7 +3,7 @@
 //  Daily Music
 //
 //  The streaming services we can hand a song off to. Apple Music + Spotify use
-//  the IDs we store (exact track links); Tidal has no stored ID so it opens a
+//  the IDs we store (exact track links); services without stored IDs open a
 //  search. Also the single source of truth for each service's display name + logo.
 //
 
@@ -11,8 +11,9 @@ import SwiftUI
 
 enum StreamingService: String, CaseIterable, Identifiable {
     case appleMusic = "Apple Music"
-    case spotify    = "Spotify"
-    case tidal      = "Tidal"
+    case spotify = "Spotify"
+    case tidal = "Tidal"
+    case ytMusic = "YouTube Music"
 
     var id: String { rawValue }
     var displayName: String { rawValue }
@@ -28,13 +29,17 @@ enum StreamingService: String, CaseIterable, Identifiable {
             let q = "\(entry.artist) \(entry.title)"
                 .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             return URL(string: "https://tidal.com/search?q=\(q)")
+        case .ytMusic:
+            let q = "\(entry.artist) \(entry.title)"
+                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            return URL(string: "https://music.youtube.com/search?q=\(q)")
         }
     }
 }
 
 /// Renders a service's logo at a consistent size. Apple has an SF Symbol; Spotify
 /// uses a hand-built glyph (we can't ship the trademarked asset); Tidal is a
-/// simple wordmark.
+/// simple wordmark; YouTube Music uses an SF Symbol approximation.
 struct ServiceLogo: View {
     let service: StreamingService
     var size: CGFloat = 16
@@ -48,6 +53,10 @@ struct ServiceLogo: View {
                 SpotifyGlyph().frame(width: size + 2, height: size + 2)
             case .tidal:
                 Text("TIDAL").font(.system(size: size * 0.8, weight: .black)).tracking(0.5)
+            case .ytMusic:
+                Image(systemName: "play.rectangle.fill")
+                    .font(.system(size: size))
+                    .foregroundStyle(.red)
             }
         }
     }

@@ -21,70 +21,39 @@ struct EmailSignInSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                if pendingEmail == nil {
-                    Section {
-                        TextField(text: $email, prompt: Text("you@example.com").foregroundStyle(.secondary)) {
-                            Text("Email address")
-                        }
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    } header: {
-                        Text("Email")
-                    } footer: {
-                        Text("We'll email you a 6-digit sign-in code.")
-                    }
+            ZStack {
+                LinearGradient(
+                    colors: Theme.Brand.gradient.map { $0.opacity(0.28) },
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                    Section {
-                        Button(action: sendCode) {
-                            centeredLabel("Email me a code")
-                        }
-                        .disabled(trimmedEmail.isEmpty || env.session.isWorking)
-                    }
-                } else if let pendingEmail {
-                    Section {
-                        TextField("6-digit code", text: $code)
-                            .keyboardType(.numberPad)
-                            .textContentType(.oneTimeCode)
-                    } header: {
-                        Text("Enter code")
-                    } footer: {
-                        Text("Sent to \(pendingEmail). Check your inbox (and spam).")
-                    }
+                ScrollView {
+                    VStack(spacing: Theme.Spacing.lg) {
+                        header
 
-                    Section {
-                        Button(action: verify) {
-                            centeredLabel("Verify & sign in")
-                        }
-                        .disabled(code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || env.session.isWorking)
+                        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                            if pendingEmail == nil {
+                                emailStep
+                            } else if let pendingEmail {
+                                codeStep(for: pendingEmail)
+                            }
 
-                        Button(action: resendCode) {
-                            centeredLabel("Resend code")
+                            if let error = env.session.errorMessage {
+                                errorMessage(error)
+                            }
                         }
-                        .disabled(env.session.isWorking)
-
-                        Button("Use a different email") {
-                            env.session.clearPendingEmailCode()
-                            email = ""
-                            code = ""
-                        }
-                        .foregroundStyle(.secondary)
-                        .disabled(env.session.isWorking)
+                        .cardStyle()
                     }
+                    .padding(Theme.Spacing.lg)
+                    .frame(maxWidth: 520)
+                    .frame(maxWidth: .infinity)
                 }
-
-                if let error = env.session.errorMessage {
-                    Section {
-                        Text(error)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .navigationTitle("Sign in with email")
-            .navigationBarTitleDisplayMode(.inline)
+//            .navigationTitle("Sign in with email")
+//            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
@@ -102,17 +71,135 @@ struct EmailSignInSheet: View {
         email.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    @ViewBuilder
-    private func centeredLabel(_ title: String) -> some View {
-        HStack {
-            Spacer()
+    private var trimmedCode: String {
+        code.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var header: some View {
+        VStack(spacing: Theme.Spacing.md) {
+//            Image(systemName: pendingEmail == nil ? "envelope.fill" : "number.circle.fill")
+//                .font(.system(size: 42, weight: .bold, design: .rounded))
+//                .foregroundStyle(Theme.Brand.gradient[0])
+//                .frame(width: 76, height: 76)
+//                .background(.regularMaterial, in: Circle())
+
+            VStack(spacing: Theme.Spacing.sm) {
+                Text(pendingEmail == nil ? "Sign in with email" : "Check your inbox")
+                    .font(.dmTitle())
+                    .multilineTextAlignment(.center)
+
+                Text(pendingEmail == nil ? "We'll send you a 6-digit code to get you back to your music." : "Enter the code we sent to continue.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(.top, Theme.Spacing.lg)
+    }
+
+    private var emailStep: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            fieldLabel("Email")
+
+            TextField(text: $email, prompt: Text(verbatim: "you@example.com").foregroundStyle(.secondary)) {
+                Text("Email address")
+            }
+            .textContentType(.emailAddress)
+            .keyboardType(.emailAddress)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .textFieldStyle(.plain)
+            .font(.dmHeadline())
+            .padding(Theme.Spacing.md)
+            .background(fieldBackground)
+
+            Text("We'll email you a 6-digit sign-in code.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            primaryButton("Email me a code", isDisabled: trimmedEmail.isEmpty || env.session.isWorking, action: sendCode)
+        }
+    }
+
+    private func codeStep(for pendingEmail: String) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            fieldLabel("Enter code")
+
+            TextField("6-digit code", text: $code)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .textFieldStyle(.plain)
+                .font(.dmNumber())
+                .multilineTextAlignment(.center)
+                .padding(Theme.Spacing.md)
+                .background(fieldBackground)
+
+            Text("Sent to \(pendingEmail). Check your inbox and spam folder.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            primaryButton("Verify & sign in", isDisabled: trimmedCode.isEmpty || env.session.isWorking, action: verify)
+
+            Button(action: resendCode) {
+                secondaryLabel("Resend code")
+            }
+            .disabled(env.session.isWorking)
+
+            Button {
+                env.session.clearPendingEmailCode()
+                email = ""
+                code = ""
+            } label: {
+                secondaryLabel("Use a different email")
+            }
+            .disabled(env.session.isWorking)
+        }
+    }
+
+    private func fieldLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.dmHeadline())
+            .foregroundStyle(.primary)
+    }
+
+    private var fieldBackground: some View {
+        RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+            .fill(.regularMaterial)
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                    .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+            }
+    }
+
+    private func primaryButton(_ title: String, isDisabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             if env.session.isWorking {
                 ProgressView()
+                    .tint(.white)
             } else {
-                Text(title).fontWeight(.semibold)
+                Text(title)
             }
-            Spacer()
         }
+        .buttonStyle(PrimaryActionButtonStyle(tint: Theme.Brand.gradient[0]))
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.55 : 1)
+    }
+
+    private func secondaryLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.dmHeadline())
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Theme.Spacing.sm)
+    }
+
+    private func errorMessage(_ error: String) -> some View {
+        Label(error, systemImage: "exclamationmark.triangle.fill")
+            .font(.footnote)
+            .foregroundStyle(.red)
+            .padding(Theme.Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.red.opacity(0.12), in: RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous))
     }
 
     private func seedEmailFromPendingCode() {
@@ -143,4 +230,9 @@ struct EmailSignInSheet: View {
             )
         }
     }
+}
+
+#Preview {
+    EmailSignInSheet()
+        .environment(AppEnvironment.mock())
 }

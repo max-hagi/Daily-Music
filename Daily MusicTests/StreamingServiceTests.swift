@@ -26,7 +26,13 @@ struct StreamingServiceTests {
         #expect(url.contains("Nightswimming"))
     }
 
-    @Test func allCasesCoverThree() {
-        #expect(StreamingService.allCases.count == 3)
+    @Test func ytMusicIsSearchFallback() {
+        let url = StreamingService.ytMusic.url(for: Self.entry(artist: "R.E.M.", title: "Nightswimming"))?.absoluteString ?? ""
+        #expect(url.hasPrefix("https://music.youtube.com/search?q="))
+        #expect(url.contains("Nightswimming"))
+    }
+
+    @Test func allCasesCoverFour() {
+        #expect(StreamingService.allCases.count == 4)
     }
 }

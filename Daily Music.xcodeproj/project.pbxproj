@@ -54,8 +54,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		94B138312FCB6F1100752257 /* Daily Music */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "Daily Music";
 			sourceTree = "<group>";
 		};

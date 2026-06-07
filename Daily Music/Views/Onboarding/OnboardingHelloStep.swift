@@ -16,7 +16,7 @@ struct OnboardingHelloStep: View {
         VStack(spacing: Theme.Spacing.md) {
             Text("Say hello 👋")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
-            Text("What should friends call you?")
+            Text("What should we call you?")
                 .foregroundStyle(.secondary)
             ProfileEditor(displayName: $displayName, avatarURL: $avatarURL, nameRequired: true)
                 .padding(.top, 8)

@@ -16,7 +16,7 @@ struct OnboardingListenStep: View {
         VStack(spacing: Theme.Spacing.md) {
             Text("Where do you listen?")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
-            Text("So “Open in…” jumps to the right app.")
+            Text("It's ok we don't judge.")
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 10) {
@@ -44,4 +44,17 @@ struct OnboardingListenStep: View {
         .multilineTextAlignment(.center)
         .padding(.horizontal, 28)
     }
+}
+
+#Preview {
+    let env = AppEnvironment.mock()
+
+    OnboardingListenStep(
+        settings: SettingsViewModel(
+            notifications: env.notifications,
+            settings: env.settings,
+            syncAutomatically: false
+        )
+    )
+    .environment(env)
 }

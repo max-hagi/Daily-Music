@@ -229,6 +229,8 @@ struct SongInfoSheet: View {
             return searchPathURL(base: "https://open.spotify.com/search", query: "\(entry.artist) \(albumName)")
         case .tidal:
             return searchURL(base: "https://tidal.com/search", queryName: "q", query: "\(entry.artist) \(albumName)")
+        case .ytMusic:
+            return searchURL(base: "https://music.youtube.com/search", queryName: "q", query: "\(entry.artist) \(albumName)")
         }
     }
 
