@@ -16,6 +16,15 @@ struct RootView: View {
     @State private var didRestore = false
     @State private var isCompletingSignIn = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("completedOnboardingVersion") private var completedOnboardingVersion = 0
+
+    /// Show onboarding if it has never been completed, OR if this device last
+    /// completed an older onboarding version (so a meaningful change re-prompts
+    /// once — see OnboardingConfig). Incomplete onboarding re-prompts naturally
+    /// because completion is only stamped in OnboardingView.finish().
+    private var needsOnboarding: Bool {
+        !hasCompletedOnboarding || completedOnboardingVersion < OnboardingConfig.currentVersion
+    }
 
     var body: some View {
         // ZStack layers views back-to-front. Here only one branch is shown at a
@@ -32,8 +41,8 @@ struct RootView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(AppLoadingBackdrop())
                     .transition(.opacity)
-            } else if env.session.isSignedIn && !hasCompletedOnboarding {
-                // Phase 2a: signed in but no profile yet → first-run wizard.
+            } else if env.session.isSignedIn && needsOnboarding {
+                // Phase 2a: signed in but onboarding not done (or an older version) → wizard.
                 OnboardingView()
                     .transition(.opacity)
             } else if env.session.isSignedIn {
@@ -63,7 +72,7 @@ struct RootView: View {
         // `isSignedIn` changes, animate the resulting view swap with this spring.
         .animation(.spring(response: 0.65, dampingFraction: 0.86), value: didRestore)
         .animation(.spring(response: 0.75, dampingFraction: 0.84), value: env.session.isSignedIn)
-        .animation(.spring(response: 0.7, dampingFraction: 0.85), value: hasCompletedOnboarding)
+        .animation(.spring(response: 0.7, dampingFraction: 0.85), value: needsOnboarding)
         .onChange(of: env.session.isSignedIn) { oldValue, newValue in
             guard didRestore, !oldValue, newValue else { return }
             isCompletingSignIn = true

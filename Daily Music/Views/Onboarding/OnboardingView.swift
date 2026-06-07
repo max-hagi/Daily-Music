@@ -28,6 +28,7 @@ struct OnboardingView: View {
     @AppStorage("startingMood") private var startingMood = ""
     @AppStorage("startingGenre") private var startingGenre = ""
     @AppStorage("startingDecade") private var startingDecade = ""
+    @AppStorage("completedOnboardingVersion") private var completedOnboardingVersion = 0
 
     private let totalSteps = 3
 
@@ -263,6 +264,7 @@ struct OnboardingView: View {
                 )
                 try await env.profileStore.markOnboarded()   // server source of truth
                 hasCompletedOnboarding = true                // local cache of the above
+                completedOnboardingVersion = OnboardingConfig.currentVersion   // this device saw the current wizard
                 Haptics.success()   // welcome in
             } catch {
                 saveError = "Couldn't save your profile. Check your connection and try again."
