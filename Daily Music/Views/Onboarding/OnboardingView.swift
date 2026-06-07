@@ -23,6 +23,11 @@ struct OnboardingView: View {
     @State private var saveError: String?
     /// Drives the slide direction of the step transition (forward vs. back).
     @State private var goingForward = true
+    @State private var showingTasteSeed = false
+    @State private var tasteSeedDone = false
+    @AppStorage("startingMood") private var startingMood = ""
+    @AppStorage("startingGenre") private var startingGenre = ""
+    @AppStorage("startingDecade") private var startingDecade = ""
 
     private let totalSteps = 3
 
@@ -53,6 +58,20 @@ struct OnboardingView: View {
             if let c = env.profileStore.current {
                 displayName = c.displayName ?? ""
                 avatarURL = c.avatarURL
+            }
+        }
+        .fullScreenCover(isPresented: $showingTasteSeed) {
+            TasteSeedView(displayName: displayName) { read in
+                startingMood = read.mood ?? ""
+                startingGenre = read.genre ?? ""
+                startingDecade = read.decade ?? ""
+                tasteSeedDone = true
+                showingTasteSeed = false
+                advance()
+            } onSkip: {
+                tasteSeedDone = true
+                showingTasteSeed = false
+                advance()
             }
         }
     }
@@ -159,6 +178,10 @@ struct OnboardingView: View {
     }
 
     private func primaryAction() {
+        if step == 0 && !tasteSeedDone {
+            showingTasteSeed = true   // run the taste-seed; it calls advance() on finish/skip
+            return
+        }
         guard step == 1 else {
             advance()
             return
