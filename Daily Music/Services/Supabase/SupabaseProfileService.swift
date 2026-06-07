@@ -17,13 +17,13 @@ final class SupabaseProfileService: ProfileService {
         let userID = try await client.auth.session.user.id
         let rows: [ProfileIdentityRow] = try await client
             .from("profiles")
-            .select("id, display_name, avatar_url")
+            .select("id, display_name, avatar_url, onboarded_at")
             .eq("id", value: userID)
             .limit(1)
             .execute()
             .value
         return rows.first.map {
-            UserProfile(id: $0.id, displayName: $0.displayName, avatarURL: $0.avatarURL)
+            UserProfile(id: $0.id, displayName: $0.displayName, avatarURL: $0.avatarURL, onboardedAt: $0.onboardedAt)
         }
     }
 
@@ -56,6 +56,21 @@ final class SupabaseProfileService: ProfileService {
             .execute()
     }
 
+    func markOnboarded() async throws {
+        let userID = try await client.auth.session.user.id
+        // Send an explicit ISO8601 string; Postgres casts it to timestamptz. This
+        // avoids depending on the client encoder's date strategy.
+        let nowISO = ISO8601DateFormatter().string(from: Date())
+        // Set-once: the `is(onboarded_at, null)` filter means a retry (or any later
+        // call) never moves the original timestamp.
+        try await client
+            .from("profiles")
+            .update(OnboardedStampUpdate(onboardedAt: nowISO))
+            .eq("id", value: userID)
+            .is("onboarded_at", value: nil)
+            .execute()
+    }
+
     func uploadAvatar(_ jpegData: Data) async throws -> String {
         let userID = try await client.auth.session.user.id
         let path = "\(userID.uuidString.lowercased())/avatar_\(Int(Date().timeIntervalSince1970)).jpg"
@@ -70,10 +85,19 @@ private struct ProfileIdentityRow: Decodable {
     let id: UUID
     let displayName: String?
     let avatarURL: String?
+    let onboardedAt: Date?
     enum CodingKeys: String, CodingKey {
         case id
         case displayName = "display_name"
         case avatarURL = "avatar_url"
+        case onboardedAt = "onboarded_at"
+    }
+}
+
+private struct OnboardedStampUpdate: Encodable {
+    let onboardedAt: String
+    enum CodingKeys: String, CodingKey {
+        case onboardedAt = "onboarded_at"
     }
 }
 

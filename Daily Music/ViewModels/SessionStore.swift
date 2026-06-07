@@ -116,6 +116,10 @@ final class SessionStore {
         await auth.signOut()
         session = nil
         pendingEmailCodeEmail = nil
+        // Drop the device's onboarding cache so the NEXT account re-resolves from its
+        // own server state instead of inheriting this one's. Without this, a new user
+        // on a device that already onboarded would skip the wizard.
+        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
     }
 
     /// Permanently deletes the account, then clears the session so RootView swaps
@@ -129,6 +133,7 @@ final class SessionStore {
             try await auth.deleteAccount()
             session = nil
             pendingEmailCodeEmail = nil
+            UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
             return true
         } catch {
             errorMessage = "Couldn't delete your account: \(error.localizedDescription)"

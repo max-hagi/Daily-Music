@@ -14,6 +14,10 @@ protocol ProfileService: Sendable {
     func save(displayName: String?, avatarURL: String?) async throws
     /// Uploads JPEG bytes and returns the public URL string to store in `avatar_url`.
     func uploadAvatar(_ jpegData: Data) async throws -> String
+    /// Stamps `onboarded_at` on the user's row the first time they finish the wizard.
+    /// Set-once: a no-op if the row is already stamped, so later profile edits never
+    /// move the timestamp.
+    func markOnboarded() async throws
 }
 
 actor MockProfileService: ProfileService {
@@ -32,5 +36,10 @@ actor MockProfileService: ProfileService {
 
     func uploadAvatar(_ jpegData: Data) async throws -> String {
         "mock://avatar/\(UUID().uuidString).jpg"
+    }
+
+    func markOnboarded() async throws {
+        // Set-once, mirroring the server: keep the original stamp if already set.
+        if profile.onboardedAt == nil { profile.onboardedAt = Date() }
     }
 }

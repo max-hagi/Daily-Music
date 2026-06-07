@@ -238,7 +238,8 @@ struct OnboardingView: View {
                     displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines),
                     avatarURL: avatarURL
                 )
-                hasCompletedOnboarding = true
+                try await env.profileStore.markOnboarded()   // server source of truth
+                hasCompletedOnboarding = true                // local cache of the above
                 Haptics.success()   // welcome in
             } catch {
                 saveError = "Couldn't save your profile. Check your connection and try again."

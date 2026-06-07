@@ -78,13 +78,20 @@ struct RootView: View {
         // automatically cancels it if the view goes away.
         .task {
             guard !didRestore else { return }    // don't re-run on later redraws
-            // Restore in the background so a slow keychain/Supabase session lookup
-            // can never keep the app from showing a concrete route.
-            Task {
-                await env.session.restore()
-                await resolveOnboardingStatus()
+            let start = Date()
+            // Resolve the session + onboarding status BEFORE routing, so a returning
+            // user is never briefly shown the wizard while the profile check is still
+            // in flight. Capped at 4s so a slow/offline network can't pin the splash —
+            // on timeout we route with the cached value and reconcile next launch.
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { [env] in await resolveLaunchState(env) }
+                group.addTask { try? await Task.sleep(for: .seconds(4)) }
+                await group.next()               // continue when resolution OR the cap finishes
+                group.cancelAll()                // cancel the loser; in-flight network is cancellable
             }
-            try? await Task.sleep(for: .milliseconds(1700))
+            // Hold the branded splash for a minimum beat even if resolution was instant.
+            let elapsed = Date().timeIntervalSince(start)
+            if elapsed < 1.2 { try? await Task.sleep(for: .seconds(1.2 - elapsed)) }
             didRestore = true                    // flip the flag → triggers the animated swap above
         }
         .onOpenURL { url in
@@ -98,13 +105,22 @@ struct RootView: View {
         }
     }
 
-    private func resolveOnboardingStatus() async {
-        guard env.session.isSignedIn, !hasCompletedOnboarding else { return }
-        await env.profileStore.load()
-        let displayName = env.profileStore.current?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if displayName?.isEmpty == false {
-            hasCompletedOnboarding = true
-        }
+}
+
+/// Restores the session, then reconciles the local onboarding cache against the
+/// server source of truth (`profiles.onboarded_at`). A free function (no `self`) so
+/// it can run inside the launch task group; it writes the cache via `UserDefaults`,
+/// which the `@AppStorage("hasCompletedOnboarding")` bindings observe.
+@MainActor
+private func resolveLaunchState(_ env: AppEnvironment) async {
+    await env.session.restore()
+    guard env.session.isSignedIn,
+          !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") else { return }
+    await env.profileStore.load()
+    // If the load failed (offline) `current` is nil — leave the cache untouched so a
+    // returning user isn't bounced back into onboarding.
+    if let profile = env.profileStore.current {
+        UserDefaults.standard.set(profile.isOnboarded, forKey: "hasCompletedOnboarding")
     }
 }
 
