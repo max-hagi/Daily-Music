@@ -17,6 +17,8 @@ struct TodayView: View {
     // property-initialization time — only once the view is in the hierarchy.
     @State private var model: TodayViewModel?
     @State private var showingSettings = false   // drives the Settings sheet
+    @State private var showingListening = false  // drives the immersive listen cover
+    @AppStorage("heardEntryID") private var heardEntryID = ""  // last entry the user listened to
 
     var body: some View {
         // NavigationStack provides the nav bar + push/pop. Each tab has its own.
@@ -71,11 +73,36 @@ struct TodayView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     TodayToolbarLiveBadge(count: model?.listenersToday)
                 }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingListening = true
+                    } label: {
+                        Image(systemName: "headphones")
+                    }
+                    .accessibilityLabel("Listen")
+                    .disabled(loadedEntry == nil)
+                }
             }
             // `.sheet(isPresented:)` shows a modal when the bound Bool is true.
             // `$showingSettings` passes a two-way BINDING so dismissing flips it back.
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
+            }
+            .fullScreenCover(isPresented: $showingListening) {
+                if let entry = loadedEntry {
+                    ListeningView(entry: entry) {
+                        heardEntryID = entry.id.uuidString
+                        showingListening = false
+                    }
+                }
+            }
+            .onChange(of: loadedEntry?.id) { _, _ in
+                guard let entry = loadedEntry else { return }
+                let heard = heardEntryID.isEmpty ? nil : heardEntryID
+                if ListeningCeremony.shouldAutoOpen(todayEntryID: entry.id, heardEntryID: heard) {
+                    showingListening = true
+                }
             }
         }
         .task {
@@ -98,6 +125,11 @@ struct TodayView: View {
     }
 
     // e.g. "Monday, Jun 1" — today, formatted for the detail header.
+    private var loadedEntry: DailyEntry? {
+        if case .loaded(let entry) = model?.state { return entry }
+        return nil
+    }
+
     private var todayString: String {
         Date().formatted(.dateTime.weekday(.wide).month().day())
     }
