@@ -97,17 +97,19 @@ struct TasteMirrorBoard: View {
         }
 
         let pct    = Int(wm.likeRate * 100)
-        let margin = Int(wm.margin * 100)
+        // WinningModifier requires likeRate >= overall + Thresholds.overIndexMargin (10pp),
+        // so margin is always ≥ 10. Clamp to 1 as a defensive floor.
+        let margin = max(1, Int(wm.margin * 100))
         switch wm.dimensionID {
         case "decade":
             return "Because \(keep) \(pct)% of \(wm.categoryName) songs — \(margin)pts above \(your) \(overall)% average."
         case "theme":
-            return "Because \(keep) \(pct)% of songs about \(wm.categoryName.lowercased()) — \(margin)pts above average."
+            return "Because \(keep) \(pct)% of songs about \(wm.categoryName.lowercased()) — \(margin)pts above \(your) \(overall)% average."
         case "genre":
             return "Because \(keep) \(pct)% of \(wm.categoryName) tracks — \(margin)pts above \(your) \(overall)% overall."
         default:
-            let pct2 = Int((moodStat?.likeRate ?? 0) * 100)
-            return "Because \(keep) \(moodName) songs more than anything else (\(pct2)% yes vs \(overall)% overall)."
+            let fallbackPct = Int((moodStat?.likeRate ?? 0) * 100)
+            return "Because \(keep) \(moodName) songs more than anything else (\(fallbackPct)% yes vs \(overall)% overall)."
         }
     }
 
