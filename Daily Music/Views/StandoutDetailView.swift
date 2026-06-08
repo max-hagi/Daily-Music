@@ -44,6 +44,7 @@ struct CategoryDrill: Identifiable {
 
 struct StandoutDetailView: View {
     let detail: StandoutDetail
+    var onRatingChanged: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var drill: CategoryDrill?
 
@@ -84,7 +85,7 @@ struct StandoutDetailView: View {
         .presentationCornerRadius(34)
         .presentationDragIndicator(.visible)
         .sheet(item: $drill) { d in
-            CategorySongsSheet(title: d.name, songs: d.songs)
+            CategorySongsSheet(title: d.name, songs: d.songs, onRatingChanged: onRatingChanged)
         }
     }
 
