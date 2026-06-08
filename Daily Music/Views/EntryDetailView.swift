@@ -174,7 +174,7 @@ struct EntryDetailView: View {
         )
         .padding(.horizontal, 9)
         .padding(.vertical, 7)
-        .background(.regularMaterial, in: Capsule())
+        .glassPillStyle(tint: palette.accent.opacity(0.12))
         .opacity(0.86)
         .padding(.top, 0)
     }
@@ -245,9 +245,7 @@ struct EntryDetailView: View {
                 Image(systemName: "xmark")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary.opacity(0.9))
-                    .frame(width: 30, height: 30)
-                    .background(.regularMaterial, in: Circle())
-                    .contentShape(Circle())
+                    .glassIconButtonStyle(tint: .secondary.opacity(0.9), size: 30)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss tip")

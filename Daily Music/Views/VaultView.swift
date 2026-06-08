@@ -177,11 +177,7 @@ struct VaultView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Spacing.md)
-        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Theme.Surface.cardStroke, lineWidth: 1)
-        }
+        .glassCardStyle(tint: tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func calendarSection(_ entries: [DailyEntry]) -> some View {
@@ -204,11 +200,7 @@ struct VaultView: View {
             }
         }
         .padding(Theme.Spacing.lg)
-        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                .stroke(Theme.Surface.cardStroke, lineWidth: 1)
-        }
+        .glassCardStyle(tint: .teal.opacity(0.08))
     }
 
     private func recentSection(_ entries: [DailyEntry]) -> some View {
@@ -375,7 +367,7 @@ struct VaultToolbarListenedBadge: View {
         }
         .padding(.horizontal, 11)
         .padding(.vertical, 7)
-        .background(.regularMaterial, in: Capsule())
+        .glassPillStyle(tint: .red.opacity(0.08))
         .accessibilityLabel("\(count) people opened the app that day")
         .onAppear { isPulsing = !reduceMotion }
     }
@@ -421,11 +413,10 @@ private struct VaultTintedEntryRow: View {
         }
         .padding(Theme.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(rowBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(palette.accent.opacity(palette.isLoaded ? 0.28 : 0.12), lineWidth: 1)
-        }
+        .glassCardStyle(
+            tint: palette.accent.opacity(palette.isLoaded ? 0.16 : 0.06),
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+        )
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(palette.accent.opacity(palette.isLoaded ? 0.58 : 0.22))
@@ -434,18 +425,6 @@ private struct VaultTintedEntryRow: View {
         }
         .animation(.easeInOut(duration: 0.35), value: palette.accent)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
-    }
-
-    private var rowBackground: some ShapeStyle {
-        LinearGradient(
-            colors: [
-                palette.accent.opacity(palette.isLoaded ? 0.20 : 0.08),
-                Theme.Surface.card,
-                Theme.Surface.card
-            ],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
     }
 }
 

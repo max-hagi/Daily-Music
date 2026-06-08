@@ -44,4 +44,35 @@ enum Haptics {
         guard isEnabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(type)
     }
+
+    @MainActor @discardableResult
+    static func playArchetypeReveal(pattern: ArchetypeRevealFlare.HapticPattern, reduceMotion: Bool) -> Task<Void, Never>? {
+        guard isEnabled else { return nil }
+        let schedule = ArchetypeHapticSchedule.crispReward(pattern: pattern, reduceMotion: reduceMotion)
+        return Task { @MainActor in
+            let start = Date()
+            for beat in schedule.beats {
+                guard !Task.isCancelled else { return }
+                let delay = beat.time - Date().timeIntervalSince(start)
+                if delay > 0 {
+                    try? await Task.sleep(for: .milliseconds(Int(delay * 1000)))
+                }
+                guard !Task.isCancelled else { return }
+                playArchetypeBeat(beat.kind)
+            }
+        }
+    }
+
+    @MainActor private static func playArchetypeBeat(_ kind: ArchetypeHapticSchedule.Beat.Kind) {
+        switch kind {
+        case .anticipation:
+            tap()
+        case .flood:
+            thud()
+        case .accent:
+            select()
+        case .lockIn:
+            success()
+        }
+    }
 }

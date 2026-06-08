@@ -294,7 +294,7 @@ private struct TodayToolbarLiveBadge: View {
         }
         .padding(.horizontal, 11)
         .padding(.vertical, 7)
-        .background(.regularMaterial, in: Capsule())   // frosted-glass pill
+        .glassPillStyle(tint: .red.opacity(0.08))
         .onAppear { isPulsing = !reduceMotion }
     }
 

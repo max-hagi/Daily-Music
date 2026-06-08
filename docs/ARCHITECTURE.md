@@ -5,7 +5,7 @@
 > in the Supabase backend. Use it to answer "if something's wrong in X, where do
 > I look?"
 >
-> **Snapshot:** generated 2026-06-07 from the source tree. Regenerate when the
+> **Snapshot:** generated 2026-06-08 from the source tree. Regenerate when the
 > layering changes.
 >
 > **How to read the diagrams:** Mermaid renders inline on GitHub and in VS Code
@@ -229,11 +229,18 @@ flowchart TD
         InsightsView --> TasteMirrorBoard2["TasteMirrorBoard"] --> StandoutDetailView2["StandoutDetailView"]
         InsightsView --> WrappedView
         InsightsView --> LoadStateView2["LoadStateView"]
+        InsightsView -->|fullScreenCover| ArchetypeRevealView
     end
     subgraph State
-        IVM["InsightsViewModel → TasteMirror"]
+        IVM["InsightsViewModel<br/>→ TasteMirror + stableArchetype + reveal"]
         WVM["WrappedViewModel → Recap (TasteProfile)"]
         FStore2["FavoritesStore (ids)"]
+        SnapshotStore["ArchetypeSnapshotStore<br/>(UserDefaults)"]
+    end
+    subgraph Models
+        SnapModel["ArchetypeSnapshot<br/>+ ArchetypeSnapshotEvaluator"]
+        FlareModel["ArchetypeRevealFlare<br/>(per-archetype visual + haptic flavor)"]
+        RevealReq["ArchetypeRevealRequest<br/>(firstUnlock | weeklyChange)"]
     end
     subgraph Backend
         ES5["EntryService"] --> de5[("daily_entries")]
@@ -242,12 +249,23 @@ flowchart TD
     end
     InsightsView --> IVM --> ES5 & RatS5
     InsightsView --> FStore2
+    IVM --> SnapshotStore --> SnapModel
+    IVM -->|makes| RevealReq
+    ArchetypeRevealView --> FlareModel
     WrappedView --> WVM --> ES5 & CIS5 & RatS5
 ```
 
+`InsightsViewModel` now also manages **archetype stability**: it calls
+`ArchetypeSnapshotStore.evaluate()` on every load to stabilize the displayed
+archetype across daily taste changes (updates at most weekly) and gates a
+fullscreen reveal animation (`ArchetypeRevealView`) for first-unlock and
+weekly-change events. `ArchetypeRevealFlare` maps every `TasteProfile` to its
+own particle/light/haptic flavor. The stable archetype is persisted to
+`UserDefaults` via `ArchetypeSnapshotStore`; no backend round-trip required.
+
 `InsightsViewModel` produces a `TasteMirror`; `WrappedViewModel` produces a
 year-in-review `Recap`. Both read history + ratings; Wrapped also reads
-check-ins for streaks. See [InsightsView](Daily%20Music/Views/InsightsView.swift) · [WrappedView](Daily%20Music/Views/WrappedView.swift) · [TasteMirrorBoard](Daily%20Music/Views/Components/TasteMirrorBoard.swift).
+check-ins for streaks. See [InsightsView](Daily%20Music/Views/InsightsView.swift) · [InsightsViewModel](Daily%20Music/ViewModels/InsightsViewModel.swift) · [ArchetypeRevealView](Daily%20Music/Views/Components/ArchetypeRevealView.swift) · [ArchetypeSnapshotStore](Daily%20Music/Services/ArchetypeSnapshotStore.swift) · [ArchetypeSnapshot](Daily%20Music/Models/ArchetypeSnapshot.swift) · [ArchetypeRevealFlare](Daily%20Music/Models/ArchetypeRevealFlare.swift) · [WrappedView](Daily%20Music/Views/WrappedView.swift) · [TasteMirrorBoard](Daily%20Music/Views/Components/TasteMirrorBoard.swift).
 
 ### 3.6 Entry detail (the shared content card)
 
@@ -386,11 +404,17 @@ flowchart LR
     Friend --> UserProfile
     StreamingService --> DailyEntry
     LoadState["LoadState&lt;T&gt; (generic)"] --> DailyEntry
+    ArchetypeSnapshot["ArchetypeSnapshot<br/>(stable ID + pending reveal)"]
+    ArchetypeRevealFlare["ArchetypeRevealFlare<br/>(visual/haptic flavor)"] --> TasteProfile
+    ArchetypeRevealRequest["ArchetypeRevealRequest"] --> TasteProfile
+    ArchetypeSnapshot --> TasteProfile
 ```
 
 `DailyEntry` is the hub model — almost everything references it.
 `TasteMirror` (the insights payload) and `TasteComparison` (friend insights) are
-the two derived aggregates. See [Models/](Daily%20Music/Models).
+the two derived aggregates. `ArchetypeSnapshot` stabilizes the displayed
+archetype (persisted via `ArchetypeSnapshotStore`); `ArchetypeRevealFlare`
+provides per-archetype visual/haptic data for the reveal animation. See [Models/](Daily%20Music/Models).
 
 ---
 
@@ -412,3 +436,7 @@ the two derived aggregates. See [Models/](Daily%20Music/Models).
 | Settings not persisting | [SettingsViewModel](Daily%20Music/ViewModels/SettingsViewModel.swift) (UserDefaults + debounced `profiles` sync) |
 | Avatar upload fails | [AvatarPickerView](Daily%20Music/Views/Components/AvatarPickerView.swift) → [ProfileStore](Daily%20Music/ViewModels/ProfileStore.swift) → storage `avatars` |
 | `PGRST204` errors | a SQL migration wasn't applied in the Supabase dashboard (see CLAUDE/memory) |
+| Archetype reveal never fires / fires again after 7 days | [ArchetypeSnapshot](Daily%20Music/Models/ArchetypeSnapshot.swift) (`ArchetypeSnapshotEvaluator`) + [ArchetypeSnapshotStore](Daily%20Music/Services/ArchetypeSnapshotStore.swift) (`UserDefaults` key `insights.archetypeSnapshot`) |
+| Wrong archetype shown on Insights screen | [InsightsViewModel](Daily%20Music/ViewModels/InsightsViewModel.swift) `stableArchetype` — comes from snapshot, not live mirror |
+| Archetype reveal animation looks wrong / missing flare | [ArchetypeRevealFlare](Daily%20Music/Models/ArchetypeRevealFlare.swift) `flares` dict — check that the `TasteProfile` has an entry |
+| Glass effects not rendering | [Styles.swift](Daily%20Music/DesignSystem/Styles.swift) — requires iOS 26+ (`glassEffect` API) |

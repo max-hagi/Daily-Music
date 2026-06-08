@@ -13,13 +13,26 @@ import Foundation
 @Observable
 final class InsightsViewModel {
     private(set) var state: LoadState<TasteMirror> = .loading
+    private(set) var stableArchetype: TasteProfile?
+    var reveal: ArchetypeRevealRequest?
 
     private let entries: EntryService
     private let ratings: RatingService
+    private let snapshotStore: ArchetypeSnapshotStore
+    private let defaults: UserDefaults
 
-    init(entries: EntryService, ratings: RatingService) {
+    init(
+        entries: EntryService,
+        ratings: RatingService,
+        snapshotStore: ArchetypeSnapshotStore? = nil,
+        defaults: UserDefaults = .standard
+    ) {
         self.entries = entries
         self.ratings = ratings
+        self.snapshotStore = snapshotStore ?? ArchetypeSnapshotStore()
+        self.defaults = defaults
+        let snapshot = self.snapshotStore.load()
+        stableArchetype = TasteProfile.profile(id: snapshot.stableArchetypeID)
     }
 
     func load() async {
@@ -32,6 +45,52 @@ final class InsightsViewModel {
         }
         // Merge the onboarding taste-seed so the profile is established at onboarding
         // and evolves as real daily ratings accumulate.
-        state = .loaded(TasteMirror.build(from: rated + SeedRatings.load()))
+        let mirror = TasteMirror.build(from: rated + SeedRatings.load())
+        let snapshot = snapshotStore.evaluate(
+            candidate: mirror.archetype,
+            hasCompletedOnboarding: defaults.bool(forKey: "hasCompletedOnboarding")
+        )
+        stableArchetype = TasteProfile.profile(id: snapshot.stableArchetypeID)
+        reveal = makeReveal(from: snapshot, mirror: mirror)
+        state = .loaded(mirror)
+    }
+
+    func acknowledgeReveal() {
+        let snapshot = snapshotStore.acknowledgeReveal()
+        stableArchetype = TasteProfile.profile(id: snapshot.stableArchetypeID)
+        reveal = nil
+    }
+
+    private func makeReveal(from snapshot: ArchetypeSnapshot, mirror: TasteMirror) -> ArchetypeRevealRequest? {
+        guard let pending = snapshot.pendingRevealArchetypeID,
+              let newProfile = TasteProfile.profile(id: pending) else { return nil }
+        let previous = TasteProfile.profile(id: snapshot.previousArchetypeID)
+        let kind: ArchetypeRevealRequest.Kind = previous == nil ? .firstUnlock : .weeklyChange
+        return ArchetypeRevealRequest(
+            previousProfile: previous,
+            newProfile: newProfile,
+            reason: revealReason(for: mirror, fallback: newProfile),
+            kind: kind
+        )
+    }
+
+    private func revealReason(for mirror: TasteMirror, fallback: TasteProfile) -> String {
+        guard let modifier = mirror.winningModifier else {
+            if let mood = mirror.mood.topStandout?.name.lowercased() {
+                return "Your \(mood) picks are shaping the center of your taste."
+            }
+            return "Your recent ratings shifted the shape of your taste."
+        }
+
+        switch modifier.dimensionID {
+        case "decade":
+            return "\(modifier.categoryName) songs are glowing brighter in your daily picks."
+        case "theme":
+            return "Songs about \(modifier.categoryName.lowercased()) are rising through your taste."
+        case "genre":
+            return "\(modifier.categoryName) tracks are taking the lead in your mirror."
+        default:
+            return "\(fallback.title) is where your taste is landing this week."
+        }
     }
 }

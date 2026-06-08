@@ -19,14 +19,50 @@ struct CardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(Theme.Spacing.lg)
-            .background(
-                Theme.Surface.card,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-            )
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                    .stroke(Theme.Surface.cardStroke, lineWidth: 1)
+                    .stroke(.white.opacity(0.22), lineWidth: 1)
             }
+    }
+}
+
+struct GlassCardModifier<S: Shape>: ViewModifier {
+    var tint: Color?
+    var shape: S
+
+    func body(content: Content) -> some View {
+        content
+            .glassEffect(.regular.tint(tint), in: shape)
+            .overlay {
+                shape.stroke(.white.opacity(0.22), lineWidth: 1)
+            }
+    }
+}
+
+struct GlassPillModifier: ViewModifier {
+    var tint: Color?
+
+    func body(content: Content) -> some View {
+        content
+            .glassEffect(.regular.tint(tint), in: .capsule)
+            .overlay {
+                Capsule().stroke(.white.opacity(0.2), lineWidth: 1)
+            }
+    }
+}
+
+struct GlassIconButtonModifier: ViewModifier {
+    var tint: Color
+    var size: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .font(.headline.weight(.bold))
+            .foregroundStyle(tint)
+            .frame(width: size, height: size)
+            .glassEffect(.regular.tint(tint.opacity(0.14)).interactive(), in: .circle)
+            .contentShape(Circle())
     }
 }
 
@@ -35,6 +71,28 @@ struct CardModifier: ViewModifier {
 // the exact concrete type (which would be an unreadable nested generic).
 extension View {
     func cardStyle() -> some View { modifier(CardModifier()) }
+
+    func glassCardStyle<S: Shape>(
+        tint: Color? = nil,
+        in shape: S
+    ) -> some View {
+        modifier(GlassCardModifier(tint: tint, shape: shape))
+    }
+
+    func glassCardStyle(tint: Color? = nil) -> some View {
+        glassCardStyle(
+            tint: tint,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+        )
+    }
+
+    func glassPillStyle(tint: Color? = nil) -> some View {
+        modifier(GlassPillModifier(tint: tint))
+    }
+
+    func glassIconButtonStyle(tint: Color = Theme.Brand.gradient[0], size: CGFloat = 48) -> some View {
+        modifier(GlassIconButtonModifier(tint: tint, size: size))
+    }
 }
 
 // MARK: - Primary action button

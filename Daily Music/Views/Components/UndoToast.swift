@@ -29,8 +29,7 @@ struct UndoBanner: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 13)
-        .background(.regularMaterial, in: Capsule())
-        .overlay(Capsule().stroke(.primary.opacity(0.08), lineWidth: 1))
+        .glassPillStyle(tint: Theme.Brand.gradient[0].opacity(0.08))
         .shadow(color: .black.opacity(0.22), radius: 14, y: 6)
         .padding(.horizontal, 20)
     }

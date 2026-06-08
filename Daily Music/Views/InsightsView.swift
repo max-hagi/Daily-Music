@@ -41,6 +41,11 @@ struct InsightsView: View {
             .fullScreenCover(isPresented: $showingWrapped) {
                 WrappedView(favoriteIDs: env.favoritesStore.ids)
             }
+            .fullScreenCover(item: revealBinding) { request in
+                ArchetypeRevealView(request: request) {
+                    model?.acknowledgeReveal()
+                }
+            }
         }
         .task(id: env.favoritesStore.ids) {
             if model == nil {
@@ -66,18 +71,31 @@ struct InsightsView: View {
     }
 
     private var washColors: [Color] {
-        if case .loaded(let m) = model?.state { return (m.archetype ?? .balancedDefault).colors }
+        if case .loaded(let m) = model?.state {
+            return (model?.stableArchetype ?? m.archetype ?? .balancedDefault).colors
+        }
         return TasteProfile.balancedDefault.colors
+    }
+
+    private var revealBinding: Binding<ArchetypeRevealRequest?> {
+        Binding(
+            get: { model?.reveal },
+            set: { newValue in
+                if newValue == nil, model?.reveal != nil {
+                    model?.acknowledgeReveal()
+                }
+            }
+        )
     }
 
     // MARK: content
 
     private func content(_ mirror: TasteMirror) -> some View {
-        let accent = (mirror.archetype ?? .balancedDefault).colors[0]
+        let accent = (model?.stableArchetype ?? mirror.archetype ?? .balancedDefault).colors[0]
         return ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
                 startedHereCard
-                TasteMirrorBoard(mirror: mirror)
+                TasteMirrorBoard(mirror: mirror, displayArchetype: model?.stableArchetype)
                 wrappedButton(accent)
             }
             .padding()

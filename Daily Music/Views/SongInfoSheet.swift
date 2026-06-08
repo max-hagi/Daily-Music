@@ -91,11 +91,7 @@ struct SongInfoSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(Theme.Spacing.md)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                    .stroke(.white.opacity(0.24), lineWidth: 1)
-            }
+            .glassCardStyle(tint: palette.accent.opacity(0.12))
         }
         .buttonStyle(.plain)
         .disabled(albumDestinationURL == nil)
@@ -118,11 +114,7 @@ struct SongInfoSheet: View {
                     }
                 }
             }
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                    .stroke(.white.opacity(0.2), lineWidth: 1)
-            }
+            .glassCardStyle(tint: palette.accent.opacity(0.10))
         }
     }
 
@@ -149,7 +141,7 @@ struct SongInfoSheet: View {
                     EnergyDots(value: energy, accent: palette.accent)
                 }
                 .padding(Theme.Spacing.md)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+                .glassCardStyle(tint: palette.accent.opacity(0.08))
             }
         }
         .padding(.top, Theme.Spacing.sm)

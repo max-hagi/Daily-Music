@@ -16,10 +16,12 @@ struct TasteMirrorBoard: View {
     let mirror: TasteMirror
     /// false when showing a friend's mirror → hero copy switches from "you" to "they".
     var isCurrentUser: Bool = true
+    /// Insights passes the weekly-stable archetype here; friend mirrors leave it nil.
+    var displayArchetype: TasteProfile? = nil
     @State private var detail: StandoutDetail?
 
     /// Accent = the archetype's lead color (neutral default while still forming).
-    private var accent: Color { (mirror.archetype ?? .balancedDefault).colors[0] }
+    private var accent: Color { (displayArchetype ?? mirror.archetype ?? .balancedDefault).colors[0] }
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
@@ -42,8 +44,8 @@ struct TasteMirrorBoard: View {
     // MARK: hero
 
     private func hero(_ mirror: TasteMirror) -> some View {
-        let profile = mirror.archetype ?? .balancedDefault
-        let unlocked = mirror.archetype != nil
+        let profile = displayArchetype ?? mirror.archetype ?? .balancedDefault
+        let unlocked = displayArchetype != nil || mirror.archetype != nil
         let remaining = max(TasteMirror.Thresholds.minRatedArchetype - mirror.totalRated, 0)
         return ZStack(alignment: .bottomTrailing) {
             Image(systemName: profile.symbol)

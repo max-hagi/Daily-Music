@@ -92,11 +92,7 @@ struct FavoritesView: View {
                     Button { selectedEntry = entry } label: {
                         EntryRow(entry: entry)
                             .padding(Theme.Spacing.md)
-                            .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(Theme.Surface.cardStroke, lineWidth: 1)
-                            }
+                            .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -265,7 +261,7 @@ private struct FavoriteEntryPeek: View {
         }
         .padding(Theme.Spacing.md)
         .frame(width: 340, alignment: .leading)
-        .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
     private var metadataChips: [String] {

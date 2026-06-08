@@ -24,15 +24,15 @@ struct TasteProfile: Equatable {
     }
 
     // ── EUPHORIC ──────────────────────────────────────────────────────────
-    static let euphoricDiscoKid    = TasteProfile("euphoric_disco_kid",    "Disco Kid",      "music.quarternote.3", [c(0.98,0.72,0.12), c(0.82,0.42,0.08)])
+    static let euphoricDiscoKid    = TasteProfile("euphoric_disco_kid",    "Disco Darling",      "music.quarternote.3", [c(0.98,0.72,0.12), c(0.82,0.42,0.08)])
     static let euphoricSynthPopKid = TasteProfile("euphoric_synth_pop_kid","Synth-Pop Kid",  "waveform",            [c(0.10,0.78,0.96), c(0.04,0.40,0.80)])
-    static let euphoricFestivalKid = TasteProfile("euphoric_festival_kid", "Festival Kid",   "sparkles",            [c(0.96,0.28,0.62), c(0.55,0.20,0.90)])
+    static let euphoricFestivalKid = TasteProfile("euphoric_festival_kid", "Festival Goer",   "sparkles",            [c(0.96,0.28,0.62), c(0.55,0.20,0.90)])
     static let euphoricAnthemist   = TasteProfile("euphoric_anthemist",    "Anthemist",      "fist.raised.fill",    [c(0.80,0.22,0.90), c(0.45,0.10,0.68)])
     static let euphoricDefault     = TasteProfile("euphoric_default",      "Euphoric",       "sun.max.fill",        [c(1.0,0.55,0.16),  c(0.92,0.27,0.35)])
 
     // ── JOYFUL ────────────────────────────────────────────────────────────
     static let joyfulFlowerChild   = TasteProfile("joyful_flower_child",   "Flower Child",   "leaf.fill",           [c(0.55,0.82,0.35), c(0.22,0.58,0.18)])
-    static let joyfulBubblegumPop  = TasteProfile("joyful_bubblegum_pop",  "Bubblegum Pop",  "face.smiling.fill",   [c(0.99,0.50,0.75), c(0.88,0.22,0.52)])
+    static let joyfulBubblegumPop  = TasteProfile("joyful_bubblegum_pop",  "Pop Purist",  "face.smiling.fill",   [c(0.99,0.50,0.75), c(0.88,0.22,0.52)])
     static let joyfulIndieKid      = TasteProfile("joyful_indie_kid",      "Indie Kid",      "headphones",          [c(0.70,0.88,0.22), c(0.38,0.62,0.08)])
     static let joyfulYoungAtHeart  = TasteProfile("joyful_young_at_heart", "Young at Heart", "figure.walk",         [c(0.22,0.70,0.96), c(0.08,0.42,0.70)])
     static let joyfulDefault       = TasteProfile("joyful_default",        "Joy Seeker",     "face.smiling.fill",   [c(1.0,0.74,0.16),  c(0.96,0.45,0.18)])
@@ -68,11 +68,11 @@ struct TasteProfile: Equatable {
     static let melancholyGrungeKid         = TasteProfile("melancholy_grunge_kid",         "Grunge Kid",         "guitars.fill",     [c(0.42,0.46,0.36), c(0.20,0.22,0.15)])
     static let melancholyIndieConfessor    = TasteProfile("melancholy_indie_confessor",    "Indie Confessor",    "mic.fill",         [c(0.18,0.26,0.50), c(0.08,0.12,0.28)])
     static let melancholyIndieHeartbreaker = TasteProfile("melancholy_indie_heartbreaker", "Indie Heartbreaker","heart.slash.fill",  [c(0.62,0.15,0.58), c(0.32,0.06,0.32)])
-    static let melancholyDefault           = TasteProfile("melancholy_default",            "Brooder",            "cloud.moon.fill",  [c(0.34,0.40,0.62), c(0.16,0.20,0.38)])
+    static let melancholyDefault           = TasteProfile("melancholy_default",            "Melancholic",            "cloud.moon.fill",  [c(0.34,0.40,0.62), c(0.16,0.20,0.38)])
 
     // ── DEFIANT ───────────────────────────────────────────────────────────
     static let defiantPunkPurist   = TasteProfile("defiant_punk_purist",   "Punk Purist",    "hand.raised.fill",[c(0.80,0.08,0.08), c(0.40,0.04,0.04)])
-    static let defiantRockRebel    = TasteProfile("defiant_rock_rebel",    "Rock Rebel",     "guitars.fill",    [c(0.92,0.36,0.08), c(0.58,0.16,0.04)])
+    static let defiantRockRebel    = TasteProfile("defiant_rock_rebel",    "Rockstar",     "guitars.fill",    [c(0.92,0.36,0.08), c(0.58,0.16,0.04)])
     static let defiantGrungeRebel  = TasteProfile("defiant_grunge_rebel",  "Grunge Rebel",   "flame.fill",      [c(0.62,0.22,0.12), c(0.32,0.09,0.04)])
     static let defiantProtestRebel = TasteProfile("defiant_protest_rebel", "Protest Rebel",  "megaphone.fill",  [c(0.86,0.20,0.18), c(0.50,0.10,0.10)])
     static let defiantChampion     = TasteProfile("defiant_champion",      "Champion",       "figure.stand",    [c(0.88,0.70,0.08), c(0.70,0.28,0.08)])
@@ -88,6 +88,24 @@ struct TasteProfile: Equatable {
 
     // ── BALANCED ──────────────────────────────────────────────────────────
     static let balancedDefault = TasteProfile("balanced_default", "Eclectic", "circle.grid.2x2.fill", [c(0.21,0.49,0.93), c(0.11,0.31,0.70)])
+
+    static let allCases: [TasteProfile] = [
+        euphoricDiscoKid, euphoricSynthPopKid, euphoricFestivalKid, euphoricAnthemist, euphoricDefault,
+        joyfulFlowerChild, joyfulBubblegumPop, joyfulIndieKid, joyfulYoungAtHeart, joyfulDefault,
+        tenderCanyonSoul, tenderRomantic, tenderHopelessRomantic, tenderDefault,
+        sereneFreeSpirit, sereneMellowSoul, sereneAmbientWanderer, sereneDefault,
+        dreamyNeonRider, dreamyShoegazeKid, dreamyIndieMystic, dreamyDreamChaser, dreamyDefault,
+        nostalgicRockPilgrim, nostalgic80sTimeTraveler, nostalgic90sKid, nostalgicMemoryKeeper, nostalgicDefault,
+        melancholyDarkWaver, melancholyGrungeKid, melancholyIndieConfessor, melancholyIndieHeartbreaker, melancholyDefault,
+        defiantPunkPurist, defiantRockRebel, defiantGrungeRebel, defiantProtestRebel, defiantChampion, defiantDefault,
+        darkPostPunkPoet, darkIndustrialHeart, darkGothSoul, darkNoirSoul, darkDarkRebel, darkDefault,
+        balancedDefault
+    ]
+
+    static func profile(id: String?) -> TasteProfile? {
+        guard let id else { return nil }
+        return allCases.first { $0.id == id }
+    }
 
     // MARK: - resolve
 
