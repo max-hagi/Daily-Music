@@ -37,7 +37,7 @@ struct StandoutDetail: Identifiable, Equatable {
 
 /// Drives the per-category song list sheet from StandoutDetailView.
 struct CategoryDrill: Identifiable {
-    let id: String          // category name (unique within one sheet)
+    let id: String          // namespaced: "featured:<name>" or "row:<name>" to avoid collision
     let name: String
     let songs: [RatedSong]
 }
@@ -51,7 +51,7 @@ struct StandoutDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 Button {
-                    drill = CategoryDrill(id: detail.featuredName,
+                    drill = CategoryDrill(id: "featured:\(detail.featuredName)",
                                          name: detail.featuredName,
                                          songs: detail.featuredSongs)
                 } label: {
@@ -66,7 +66,7 @@ struct StandoutDetailView: View {
                     VStack(spacing: 10) {
                         ForEach(detail.rows) { row in
                             Button {
-                                drill = CategoryDrill(id: row.id,
+                                drill = CategoryDrill(id: "row:\(row.id)",
                                                      name: row.name,
                                                      songs: row.songs)
                             } label: {

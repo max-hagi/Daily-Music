@@ -48,16 +48,8 @@ struct CategorySongsSheet: View {
 
     private func songRow(_ rated: RatedSong) -> some View {
         HStack(spacing: Theme.Spacing.md) {
-            AsyncImage(url: rated.entry.albumArtURL) { phase in
-                switch phase {
-                case .success(let img):
-                    img.resizable().scaledToFill()
-                default:
-                    Rectangle().fill(.quaternary)
-                }
-            }
-            .frame(width: 44, height: 44)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            AlbumArtView(url: rated.entry.albumArtURL, cornerRadius: 8)
+                .frame(width: 44, height: 44)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(rated.entry.title)
@@ -71,6 +63,7 @@ struct CategorySongsSheet: View {
             Spacer()
             Text(rated.value > 0 ? "👍" : "👎")
                 .font(.title3)
+                .accessibilityLabel(rated.value > 0 ? "Liked" : "Disliked")
         }
         .padding(.vertical, 4)
     }
