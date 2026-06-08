@@ -71,7 +71,7 @@ struct TasteProfile: Equatable {
     static let melancholyDefault           = TasteProfile("melancholy_default",            "Brooder",            "cloud.moon.fill",  [c(0.34,0.40,0.62), c(0.16,0.20,0.38)])
 
     // ── DEFIANT ───────────────────────────────────────────────────────────
-    static let defiantPunkPurist   = TasteProfile("defiant_punk_purist",   "Punk Purist",    "megaphone.fill",  [c(0.80,0.08,0.08), c(0.40,0.04,0.04)])
+    static let defiantPunkPurist   = TasteProfile("defiant_punk_purist",   "Punk Purist",    "hand.raised.fill",[c(0.80,0.08,0.08), c(0.40,0.04,0.04)])
     static let defiantRockRebel    = TasteProfile("defiant_rock_rebel",    "Rock Rebel",     "guitars.fill",    [c(0.92,0.36,0.08), c(0.58,0.16,0.04)])
     static let defiantGrungeRebel  = TasteProfile("defiant_grunge_rebel",  "Grunge Rebel",   "flame.fill",      [c(0.62,0.22,0.12), c(0.32,0.09,0.04)])
     static let defiantProtestRebel = TasteProfile("defiant_protest_rebel", "Protest Rebel",  "megaphone.fill",  [c(0.86,0.20,0.18), c(0.50,0.10,0.10)])
@@ -83,7 +83,7 @@ struct TasteProfile: Equatable {
     static let darkIndustrialHeart = TasteProfile("dark_industrial_heart", "Industrial Heart","gearshape.fill",          [c(0.26,0.26,0.30), c(0.09,0.09,0.12)])
     static let darkGothSoul        = TasteProfile("dark_goth_soul",        "Goth Soul",       "moon.zzz.fill",           [c(0.38,0.15,0.55), c(0.14,0.05,0.26)])
     static let darkNoirSoul        = TasteProfile("dark_noir_soul",        "Noir Soul",       "smoke.fill",              [c(0.42,0.12,0.25), c(0.16,0.04,0.10)])
-    static let darkDarkRebel       = TasteProfile("dark_dark_rebel",       "Dark Rebel",      "bolt.fill",               [c(0.52,0.10,0.10), c(0.18,0.04,0.04)])
+    static let darkDarkRebel       = TasteProfile("dark_rebel",            "Dark Rebel",      "bolt.fill",               [c(0.52,0.10,0.10), c(0.18,0.04,0.04)])
     static let darkDefault         = TasteProfile("dark_default",          "Midnight Drifter","circle.lefthalf.filled",  [c(0.30,0.28,0.40), c(0.12,0.11,0.18)])
 
     // ── BALANCED ──────────────────────────────────────────────────────────
