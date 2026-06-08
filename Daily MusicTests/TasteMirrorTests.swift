@@ -49,10 +49,26 @@ struct TasteMirrorTests {
         #expect(abs(m.overallLikeRate - 0.6) < 0.0001)
     }
 
-    @Test func moodDominantIsMostLiked() {
+    @Test func moodDominantIsMostNetPositive() {
+        // Worked example: Melancholy net=7, Tender net=3 — Melancholy wins either way.
+        // The net-score-beats-raw-likes case is covered by moodNetScoreBeatRawLikes below.
         let m = TasteMirror.build(from: Self.workedExample())
         #expect(m.mood.dominant?.name == "Melancholy")
         #expect(m.mood.dominant?.likes == 9)
+    }
+
+    @Test func moodNetScoreBeatRawLikes() {
+        // A: 5 likes, 0 dislikes → net 5
+        // B: 7 likes, 5 dislikes → net 2  (raw-likes winner but net loser)
+        // C: 5 likes, 3 dislikes → net 2  (padding, makes dimension eligible)
+        let data: [RatedSong] =
+            (0..<5).map { RatedSong(entry: Self.entry(id: $0,       mood: "A"), value:  1) }
+          + (0..<7).map { RatedSong(entry: Self.entry(id: 100+$0,   mood: "B"), value:  1) }
+          + (0..<5).map { RatedSong(entry: Self.entry(id: 200+$0,   mood: "B"), value: -1) }
+          + (0..<5).map { RatedSong(entry: Self.entry(id: 300+$0,   mood: "C"), value:  1) }
+          + (0..<3).map { RatedSong(entry: Self.entry(id: 400+$0,   mood: "C"), value: -1) }
+        let m = TasteMirror.build(from: data)
+        #expect(m.mood.dominant?.name == "A")   // net 5, not raw-likes winner B (7)
     }
 
     @Test func moodOverIndexIsHighestRateAboveOverall() {

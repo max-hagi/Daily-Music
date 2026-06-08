@@ -56,6 +56,7 @@ struct TasteMirror: Equatable {
     let energy: EnergyInsight
     let archetype: TasteProfile?
     let isArchetypeUnlocked: Bool
+    let ratedSongs: [RatedSong]
 
     enum Thresholds {
         static let minPerCategory = 3
@@ -88,7 +89,8 @@ struct TasteMirror: Equatable {
         return TasteMirror(
             totalRated: total, overallLikeRate: overall,
             mood: mood, decade: decade, theme: theme, genre: genre, language: language,
-            energy: energy, archetype: archetype, isArchetypeUnlocked: isArchetypeUnlocked
+            energy: energy, archetype: archetype, isArchetypeUnlocked: isArchetypeUnlocked,
+            ratedSongs: rated
         )
     }
 }
@@ -110,7 +112,7 @@ extension TasteMirror {
         let names = Set(likes.keys).union(dislikes.keys)
         let cats = names
             .map { CategoryStat(name: $0, likes: likes[$0] ?? 0, dislikes: dislikes[$0] ?? 0) }
-            .sorted { ($0.likes, $0.total, $1.name) > ($1.likes, $1.total, $0.name) }
+            .sorted { ($0.likes - $0.dislikes, $0.likes, $1.name) > ($1.likes - $1.dislikes, $1.likes, $0.name) }
 
         let eligible = cats.filter { $0.total >= Thresholds.minPerCategory }
         let dominant = cats.first { $0.likes > 0 }
