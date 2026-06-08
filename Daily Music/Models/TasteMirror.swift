@@ -82,8 +82,7 @@ struct TasteMirror: Equatable {
         let isArchetypeUnlocked = total >= Thresholds.minRatedArchetype
         let archetype: TasteProfile? = isArchetypeUnlocked
             ? TasteProfile.resolve(mood: mood.topStandout?.name,
-                                   decade: decade.topStandout?.name,
-                                   theme: theme.topStandout?.name)
+                                   modifier: nil)
             : nil
 
         return TasteMirror(

@@ -143,7 +143,7 @@ struct TasteSeedView: View {
 
     // MARK: reveal
     private var reveal: some View {
-        let profile = TasteProfile.resolve(mood: read.mood, decade: read.decade, theme: nil)
+        let profile = TasteProfile.resolve(mood: read.mood, modifier: nil)
         return VStack(spacing: Theme.Spacing.lg) {
             Spacer()
             Image(systemName: profile.symbol)

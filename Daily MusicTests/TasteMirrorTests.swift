@@ -116,7 +116,7 @@ struct TasteMirrorTests {
     @Test func archetypeUnlocksWithEnoughRatings() {
         let m = TasteMirror.build(from: Self.workedExample())   // 30 ratings ≥ 10 → unlocked
         #expect(m.isArchetypeUnlocked == true)
-        #expect(m.archetype?.id == "MELANCHOLY_1980S")
+        #expect(m.archetype?.id == "melancholy_default")        // modifier nil until Task 3
     }
 
     @Test func archetypeNilBelowThreshold() {
@@ -128,7 +128,7 @@ struct TasteMirrorTests {
     @Test func archetypeFallsBackToMoodOnly() {
         // 24 melancholy songs, no year → no decade standout → mood-only default.
         let m = TasteMirror.build(from: Self.mood("Melancholy", likes: 18, dislikes: 6))
-        #expect(m.archetype?.id == "MELANCHOLY_DEFAULT")
+        #expect(m.archetype?.id == "melancholy_default")
     }
 }
 
