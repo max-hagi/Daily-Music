@@ -377,7 +377,9 @@ private struct VaultTintedEntryRow: View {
     let entry: DailyEntry
     var eyebrow: String?
 
+    @Environment(AppEnvironment.self) private var env
     @State private var palette = ArtworkPalette()
+    @State private var myRating: Int? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -407,6 +409,12 @@ private struct VaultTintedEntryRow: View {
 
             Spacer()
 
+            if let r = myRating {
+                Text(r > 0 ? "👍" : "👎")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(palette.accent.opacity(0.72))
@@ -425,6 +433,7 @@ private struct VaultTintedEntryRow: View {
         }
         .animation(.easeInOut(duration: 0.35), value: palette.accent)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
+        .task(id: entry.id) { myRating = try? await env.ratings.myRating(entryID: entry.id) }
     }
 }
 
