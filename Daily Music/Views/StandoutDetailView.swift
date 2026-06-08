@@ -16,6 +16,7 @@ struct StandoutRow: Identifiable, Equatable {
     let symbol: String?
     let likes: Int
     let total: Int
+    let songs: [RatedSong]                              // ← new
     var likeRate: Double { total > 0 ? Double(likes) / Double(total) : 0 }
 }
 
@@ -28,6 +29,7 @@ struct StandoutDetail: Identifiable, Equatable {
     let featuredName: String
     let featuredSymbol: String
     let featuredLine: String
+    let featuredSongs: [RatedSong]                      // ← new
     let rows: [StandoutRow]   // the OTHER categories (featured excluded)
     let standoutID: String?   // the over-index row, badged
     let skipID: String?       // the "you pass on these" row

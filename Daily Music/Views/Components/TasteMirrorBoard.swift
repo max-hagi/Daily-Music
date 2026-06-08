@@ -83,15 +83,32 @@ struct TasteMirrorBoard: View {
         .shadow(color: profile.colors[0].opacity(0.35), radius: 20, y: 10)
     }
 
-    /// Templated "why it's you" from the real standouts — never generated text.
+    /// Dynamic "why it's you" — cites the winning modifier's real stats.
     private func heroWhy(_ mirror: TasteMirror) -> String {
-        let mood = mirror.mood.topStandout
-        let pct = Int((mood?.likeRate ?? 0) * 100)
-        let overall = Int(mirror.overallLikeRate * 100)
-        let moodName = mood?.name.lowercased() ?? (isCurrentUser ? "the songs you keep" : "the songs they keep")
-        let era = mirror.decade.topStandout.map { " \($0.name)" } ?? ""
-        let who = isCurrentUser ? "you keep" : "they keep"
-        return "Because \(who) \(moodName)\(era) songs more than anything else (\(pct)% yes vs \(overall)% overall)."
+        let moodStat  = mirror.mood.topStandout
+        let moodName  = moodStat?.name.lowercased() ?? "certain"
+        let overall   = Int(mirror.overallLikeRate * 100)
+        let keep      = isCurrentUser ? "you keep" : "they keep"
+        let your      = isCurrentUser ? "your" : "their"
+
+        guard let wm = mirror.winningModifier else {
+            let pct = Int((moodStat?.likeRate ?? 0) * 100)
+            return "Because \(keep) \(moodName) songs more than anything else (\(pct)% yes vs \(overall)% overall)."
+        }
+
+        let pct    = Int(wm.likeRate * 100)
+        let margin = Int(wm.margin * 100)
+        switch wm.dimensionID {
+        case "decade":
+            return "Because \(keep) \(pct)% of \(wm.categoryName) songs — \(margin)pts above \(your) \(overall)% average."
+        case "theme":
+            return "Because \(keep) \(pct)% of songs about \(wm.categoryName.lowercased()) — \(margin)pts above average."
+        case "genre":
+            return "Because \(keep) \(pct)% of \(wm.categoryName) tracks — \(margin)pts above \(your) \(overall)% overall."
+        default:
+            let pct2 = Int((moodStat?.likeRate ?? 0) * 100)
+            return "Because \(keep) \(moodName) songs more than anything else (\(pct2)% yes vs \(overall)% overall)."
+        }
     }
 
     // MARK: marquee tiles
@@ -219,13 +236,18 @@ struct TasteMirrorBoard: View {
         guard let featured = dim.topStandout else { return nil }
         let rows = dim.categories
             .filter { $0.id != featured.id }
-            .map { StandoutRow(id: $0.id, name: $0.name, symbol: categorySymbol(dim.id, $0.name),
-                               likes: $0.likes, total: $0.total) }
+            .map { cat in
+                StandoutRow(id: cat.id, name: cat.name,
+                            symbol: categorySymbol(dim.id, cat.name),
+                            likes: cat.likes, total: cat.total,
+                            songs: mirror.songs(inDimension: dim, category: cat.name))
+            }
         return StandoutDetail(
             id: dim.title, title: dim.title, accent: accent,
             featuredName: featured.name,
             featuredSymbol: categorySymbol(dim.id, featured.name) ?? dimIcon(dim.id),
             featuredLine: "Keeps \(featured.likes) of \(featured.total) — \(Int(featured.likeRate * 100))% yes.",
+            featuredSongs: mirror.songs(inDimension: dim, category: featured.name),
             rows: rows,
             standoutID: dim.overIndex?.id,
             skipID: dim.skip?.id
@@ -237,13 +259,25 @@ struct TasteMirrorBoard: View {
         let order = ["Low": 0, "Medium": 1, "High": 2]
         let rows = energy.bands
             .sorted { (order[$0.name] ?? 9) < (order[$1.name] ?? 9) }
-            .map { StandoutRow(id: $0.id, name: "\($0.name) energy", symbol: nil,
-                               likes: $0.likes, total: $0.total) }
+            .map { band in
+                StandoutRow(id: band.id, name: "\(band.name) energy", symbol: nil,
+                            likes: band.likes, total: band.total,
+                            songs: mirror.songs(forDimensionID: "energy", category: band.id))
+            }
+        // Map leanLabel → EnergyBand raw value for the featured songs lookup.
+        let featuredBandID: String = {
+            switch lean {
+            case "Intimate":  return "Low"
+            case "Explosive": return "High"
+            default:          return "Medium"
+            }
+        }()
         return StandoutDetail(
             id: "Energy", title: "Energy", accent: accent,
             featuredName: lean,
             featuredSymbol: "bolt.fill",
             featuredLine: "Liked songs average \(String(format: "%.1f", mean)) out of 5.",
+            featuredSongs: mirror.songs(forDimensionID: "energy", category: featuredBandID),
             rows: rows, standoutID: nil, skipID: nil
         )
     }
