@@ -49,9 +49,9 @@ struct TasteMirrorTests {
         #expect(abs(m.overallLikeRate - 0.6) < 0.0001)
     }
 
-    @Test func moodDominantIsMostNetPositive() {
-        // Worked example: Melancholy net=7, Tender net=3 — Melancholy wins either way.
-        // The net-score-beats-raw-likes case is covered by moodNetScoreBeatRawLikes below.
+    @Test func moodDominantWorkedExample() {
+        // Melancholy net=7, Tender net=3 — winner is the same under both old and new sorts.
+        // See moodNetScoreBeatRawLikes for the discriminating case.
         let m = TasteMirror.build(from: Self.workedExample())
         #expect(m.mood.dominant?.name == "Melancholy")
         #expect(m.mood.dominant?.likes == 9)
