@@ -35,21 +35,45 @@ struct StandoutDetail: Identifiable, Equatable {
     let skipID: String?       // the "you pass on these" row
 }
 
+/// Drives the per-category song list sheet from StandoutDetailView.
+struct CategoryDrill: Identifiable {
+    let id: String          // category name (unique within one sheet)
+    let name: String
+    let songs: [RatedSong]
+}
+
 struct StandoutDetailView: View {
     let detail: StandoutDetail
     @Environment(\.dismiss) private var dismiss
+    @State private var drill: CategoryDrill?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                featured
+                Button {
+                    drill = CategoryDrill(id: detail.featuredName,
+                                         name: detail.featuredName,
+                                         songs: detail.featuredSongs)
+                } label: {
+                    featured
+                }
+                .buttonStyle(.plain)
                 if !detail.rows.isEmpty {
                     Text("The rest of your \(detail.title.lowercased())")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
                     VStack(spacing: 10) {
-                        ForEach(detail.rows) { rowView($0) }
+                        ForEach(detail.rows) { row in
+                            Button {
+                                drill = CategoryDrill(id: row.id,
+                                                     name: row.name,
+                                                     songs: row.songs)
+                            } label: {
+                                rowView(row)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
             }
@@ -59,6 +83,9 @@ struct StandoutDetailView: View {
         .presentationBackground(.regularMaterial)
         .presentationCornerRadius(34)
         .presentationDragIndicator(.visible)
+        .sheet(item: $drill) { d in
+            CategorySongsSheet(title: d.name, songs: d.songs)
+        }
     }
 
     // MARK: featured statement
