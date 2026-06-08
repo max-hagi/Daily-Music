@@ -95,7 +95,11 @@ struct InsightsView: View {
         return ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
                 startedHereCard
-                TasteMirrorBoard(mirror: mirror, displayArchetype: model?.stableArchetype)
+                TasteMirrorBoard(
+                    mirror: mirror,
+                    displayArchetype: model?.stableArchetype,
+                    onRatingChanged: { Task { await model?.load() } }
+                )
                 wrappedButton(accent)
             }
             .padding()
