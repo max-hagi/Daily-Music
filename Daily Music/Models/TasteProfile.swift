@@ -113,7 +113,7 @@ struct TasteProfile: Equatable {
             return joyfulFlowerChild
         case ("Joyful", let d?) where isDecade(d, atLeast: 2000) && !isDecade(d, atLeast: 2020):
             return joyfulBubblegumPop
-        case ("Joyful", "Indie"):
+        case ("Joyful", "Alternative"), ("Joyful", "Indie Rock"):
             return joyfulIndieKid
         case ("Joyful", "Coming of Age"):
             return joyfulYoungAtHeart
@@ -147,7 +147,7 @@ struct TasteProfile: Equatable {
             return dreamyShoegazeKid
         case ("Dreamy", "Longing & Desire"), ("Dreamy", "Memory & Nostalgia"):
             return dreamyDreamChaser
-        case ("Dreamy", "Indie"):
+        case ("Dreamy", "Alternative"), ("Dreamy", "Indie Rock"):
             return dreamyIndieMystic
         case ("Dreamy", _):
             return dreamyDefault
@@ -185,7 +185,7 @@ struct TasteProfile: Equatable {
             return defiantRockRebel
         case ("Defiant", "Empowerment & Self-Worth"), ("Defiant", "Hope & Perseverance"):
             return defiantChampion
-        case ("Defiant", "Punk"):
+        case ("Defiant", "Punk"), ("Defiant", "Punk Rock"):
             return defiantPunkPurist
         case ("Defiant", _):
             return defiantDefault

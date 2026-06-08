@@ -106,7 +106,8 @@ struct TasteMirrorBoard: View {
         case "theme":
             return "Because \(keep) \(pct)% of songs about \(wm.categoryName.lowercased()) — \(margin)pts above \(your) \(overall)% average."
         case "genre":
-            return "Because \(keep) \(pct)% of \(wm.categoryName) tracks — \(margin)pts above \(your) \(overall)% overall."
+            return "Because \(keep) \(pct)% of \(wm.categoryName) tracks — \(margin)pts above \(your) \(overall)% average."
+        // "language" modifier exists but has no dedicated archetypes in v2 — falls through to mood fallback.
         default:
             let fallbackPct = Int((moodStat?.likeRate ?? 0) * 100)
             return "Because \(keep) \(moodName) songs more than anything else (\(fallbackPct)% yes vs \(overall)% overall)."
