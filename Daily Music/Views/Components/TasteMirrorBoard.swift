@@ -18,6 +18,7 @@ struct TasteMirrorBoard: View {
     var isCurrentUser: Bool = true
     /// Insights passes the weekly-stable archetype here; friend mirrors leave it nil.
     var displayArchetype: TasteProfile? = nil
+    var onRatingChanged: (() -> Void)? = nil
     @State private var detail: StandoutDetail?
 
     /// Accent = the archetype's lead color (neutral default while still forming).
@@ -38,7 +39,7 @@ struct TasteMirrorBoard: View {
             secondaryRow(mirror.genre, lead: "Genre", accent: accent)
             secondaryRow(mirror.language, lead: "Language", accent: accent)
         }
-        .sheet(item: $detail) { StandoutDetailView(detail: $0) }
+        .sheet(item: $detail) { StandoutDetailView(detail: $0, onRatingChanged: onRatingChanged) }
     }
 
     // MARK: hero
