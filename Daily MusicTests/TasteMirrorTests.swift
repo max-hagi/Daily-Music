@@ -181,6 +181,27 @@ struct TasteMirrorTests {
         #expect(melancholySongs.count == 11)
         #expect(melancholySongs.first?.value == 1)   // liked first
     }
+
+    @Test func songsSecondaryDateSortIsReverseChronological() {
+        // Within the same rating group (all liked), songs should be newest first.
+        // entry(id:) derives date from TimeInterval(id) * 86_400 → higher id = later date.
+        let data: [RatedSong] = [
+            RatedSong(entry: Self.entry(id: 10, mood: "Dreamy"), value: 1),  // oldest liked
+            RatedSong(entry: Self.entry(id: 30, mood: "Dreamy"), value: 1),  // newest liked
+            RatedSong(entry: Self.entry(id: 20, mood: "Dreamy"), value: 1),  // middle liked
+            RatedSong(entry: Self.entry(id: 25, mood: "Dreamy"), value: -1), // disliked
+        ]
+        // Pad to unlock the dimension (needs ≥10 total rated)
+        let pad = (0..<7).map { RatedSong(entry: Self.entry(id: 100+$0, mood: "Serene"), value: 1) }
+        let m = TasteMirror.build(from: data + pad)
+        let songs = m.songs(inDimension: m.mood, category: "Dreamy")
+        // 3 liked (newest first), then 1 disliked
+        #expect(songs.count == 4)
+        #expect(songs[0].entry.id == Self.entry(id: 30, mood: "Dreamy").id)  // newest liked
+        #expect(songs[1].entry.id == Self.entry(id: 20, mood: "Dreamy").id)  // middle liked
+        #expect(songs[2].entry.id == Self.entry(id: 10, mood: "Dreamy").id)  // oldest liked
+        #expect(songs[3].value == -1)                                          // disliked last
+    }
 }
 
 struct TasteComparisonTests {
