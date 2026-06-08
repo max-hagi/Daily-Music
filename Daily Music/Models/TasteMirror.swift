@@ -45,6 +45,16 @@ struct EnergyInsight: Equatable {
     let isUnlocked: Bool
 }
 
+/// The single cross-dimension modifier that most over-indexes vs the user's average.
+/// Captures enough context to produce dynamic hero copy.
+struct WinningModifier: Equatable {
+    let dimensionID: String    // "decade" | "theme" | "genre" | "language"
+    let categoryName: String   // e.g. "1980s", "Heartbreak", "Rock"
+    let likeRate: Double       // like-rate within this category
+    let total: Int             // total ratings in this category
+    let margin: Double         // likeRate − overallLikeRate
+}
+
 struct TasteMirror: Equatable {
     let totalRated: Int
     let overallLikeRate: Double
@@ -57,6 +67,7 @@ struct TasteMirror: Equatable {
     let archetype: TasteProfile?
     let isArchetypeUnlocked: Bool
     let ratedSongs: [RatedSong]
+    let winningModifier: WinningModifier?
 
     enum Thresholds {
         static let minPerCategory = 3
@@ -78,18 +89,33 @@ struct TasteMirror: Equatable {
         let language = dimension(id: "language", title: "Language", from: rated, overall: overall, totalRated: total) { $0.language }
         // --- energy ---
         let energy = energyInsight(from: rated, overall: overall, totalRated: total)
+        // --- modifier selector ---
+        // Loop [decade, theme, genre, language] in priority order; keep the dimension
+        // whose over-index margin above overall is highest. First-seen-maximum ensures
+        // decade wins on a tie (array order).
+        var best: WinningModifier? = nil
+        for (dimID, dim) in [("decade", decade), ("theme", theme), ("genre", genre), ("language", language)] {
+            guard let oi = dim.overIndex else { continue }
+            let margin = oi.likeRate - overall
+            if best == nil || margin > best!.margin {
+                best = WinningModifier(dimensionID: dimID, categoryName: oi.name,
+                                       likeRate: oi.likeRate, total: oi.total, margin: margin)
+            }
+        }
+        let winningModifier = best
+
         // --- archetype ---
         let isArchetypeUnlocked = total >= Thresholds.minRatedArchetype
         let archetype: TasteProfile? = isArchetypeUnlocked
             ? TasteProfile.resolve(mood: mood.topStandout?.name,
-                                   modifier: nil)
+                                   modifier: winningModifier?.categoryName)
             : nil
 
         return TasteMirror(
             totalRated: total, overallLikeRate: overall,
             mood: mood, decade: decade, theme: theme, genre: genre, language: language,
             energy: energy, archetype: archetype, isArchetypeUnlocked: isArchetypeUnlocked,
-            ratedSongs: rated
+            ratedSongs: rated, winningModifier: winningModifier
         )
     }
 }
@@ -151,4 +177,36 @@ extension TasteMirror {
 extension DimensionInsight {
     /// The headline category: a genuine over-index if present, else the most-liked.
     var topStandout: CategoryStat? { overIndex ?? dominant }
+}
+
+extension TasteMirror {
+    // MARK: drill-down queries
+
+    /// All rated songs that belong to `category` in the given dimension, liked first
+    /// then reverse-chronological.
+    func songs(inDimension dimension: DimensionInsight, category: String) -> [RatedSong] {
+        songs(forDimensionID: dimension.id, category: category)
+    }
+
+    /// Same as `songs(inDimension:category:)` but identified by raw dimension string ID
+    /// (needed for energy, whose insight type is `EnergyInsight`, not `DimensionInsight`).
+    func songs(forDimensionID dimensionID: String, category: String) -> [RatedSong] {
+        func tag(_ entry: DailyEntry) -> String? {
+            switch dimensionID {
+            case "mood":     return entry.mood
+            case "decade":   return entry.decade
+            case "theme":    return entry.theme
+            case "genre":    return entry.genre
+            case "language": return entry.language
+            case "energy":   return entry.energy.map { EnergyBand.band(for: $0).rawValue }
+            default:         return nil
+            }
+        }
+        return ratedSongs
+            .filter { tag($0.entry) == category }
+            .sorted {
+                if $0.value != $1.value { return $0.value > $1.value }
+                return $0.entry.date > $1.entry.date
+            }
+    }
 }

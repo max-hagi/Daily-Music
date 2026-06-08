@@ -114,9 +114,11 @@ struct TasteMirrorTests {
     }
 
     @Test func archetypeUnlocksWithEnoughRatings() {
-        let m = TasteMirror.build(from: Self.workedExample())   // 30 ratings ≥ 10 → unlocked
+        // Worked example: Melancholy dominant, decade "1980s" over-indexes at 81.8% vs 60% overall.
+        // Modifier selector picks "1980s" → melancholy_dark_waver.
+        let m = TasteMirror.build(from: Self.workedExample())
         #expect(m.isArchetypeUnlocked == true)
-        #expect(m.archetype?.id == "melancholy_default")        // modifier nil until Task 3
+        #expect(m.archetype?.id == "melancholy_dark_waver")
     }
 
     @Test func archetypeNilBelowThreshold() {
@@ -129,6 +131,55 @@ struct TasteMirrorTests {
         // 24 melancholy songs, no year → no decade standout → mood-only default.
         let m = TasteMirror.build(from: Self.mood("Melancholy", likes: 18, dislikes: 6))
         #expect(m.archetype?.id == "melancholy_default")
+    }
+
+    @Test func ratedSongsStoredOnMirror() {
+        let data = Self.workedExample()
+        let m = TasteMirror.build(from: data)
+        #expect(m.ratedSongs.count == data.count)
+    }
+
+    @Test func modifierSelectorPicksHighestMargin() {
+        // Decade "1980s": 9/11 = 81.8% (margin +21.8pp above 60% overall)
+        // No theme/genre over-index in worked example → decade wins.
+        let m = TasteMirror.build(from: Self.workedExample())
+        #expect(m.winningModifier?.dimensionID == "decade")
+        #expect(m.winningModifier?.categoryName == "1980s")
+    }
+
+    @Test func modifierSelectorPrefersThemeOverDecadeWhenMarginHigher() {
+        // 30 songs: give Heartbreak theme a higher over-index margin than decade.
+        // Heartbreak: 9 liked, 0 disliked → 100% (margin +40pp above 60% overall)
+        // Decade 1980s: 9 liked, 2 disliked → 81.8% (margin +21.8pp above 60% overall)
+        let heartbreak: [RatedSong] = (0..<9).map {
+            RatedSong(entry: Self.entry(id: 500+$0, mood: "Melancholy", year: 1985, theme: "Heartbreak"), value: 1)
+        }
+        let other = Self.mood("Tender", likes: 4, dislikes: 1)
+                  + Self.mood("Dreamy", likes: 2, dislikes: 2)
+                  + Self.mood("Euphoric", likes: 2, dislikes: 5)
+                  + Self.mood("Defiant", likes: 1, dislikes: 2)
+                  + (0..<2).map { RatedSong(entry: Self.entry(id: 600+$0, mood: "Melancholy", year: 1985), value: -1) }
+        let m = TasteMirror.build(from: heartbreak + other)
+        // theme "Heartbreak" margin (40pp) > decade "1980s" margin (21.8pp)
+        #expect(m.winningModifier?.dimensionID == "theme")
+        #expect(m.winningModifier?.categoryName == "Heartbreak")
+    }
+
+    @Test func modifierNilWhenNoOverIndex() {
+        // All songs same mood, no year/theme/genre → no dimension over-indexes.
+        let data = Self.mood("Melancholy", likes: 18, dislikes: 6)
+        let m = TasteMirror.build(from: data)
+        #expect(m.winningModifier == nil)
+    }
+
+    @Test func songsFilteredByDimensionCategory() {
+        // 9 Melancholy/1980s + 2 Melancholy/1980s disliked + other moods.
+        let data = Self.workedExample()
+        let m = TasteMirror.build(from: data)
+        let melancholySongs = m.songs(inDimension: m.mood, category: "Melancholy")
+        // 9 liked + 2 disliked = 11 Melancholy songs; liked come first.
+        #expect(melancholySongs.count == 11)
+        #expect(melancholySongs.first?.value == 1)   // liked first
     }
 }
 
