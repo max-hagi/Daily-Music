@@ -51,6 +51,7 @@ struct RootView: View {
                 MainTabView()
                     .task {
                         await env.favoritesStore.load()
+                        await env.ratingsStore.load()
                         await env.profileStore.load()
                     }
                     // Asymmetric transition: different animation for appearing

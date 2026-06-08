@@ -39,6 +39,7 @@ final class AppEnvironment {
     let musicPlayer: MusicPlayer
     let session: SessionStore
     let favoritesStore: FavoritesStore
+    let ratingsStore: RatingsStore
     let profileStore: ProfileStore
     let friendsStore: FriendsStore
     let friendNudgeStore: FriendNudgeStore
@@ -81,6 +82,7 @@ final class AppEnvironment {
         self.musicPlayer = MusicPlayer(engine: musicEngine)
         self.session = SessionStore(auth: auth)
         self.favoritesStore = FavoritesStore(service: favorites)
+        self.ratingsStore = RatingsStore(service: ratings)
         self.profileStore = ProfileStore(service: profiles)
         self.friendsStore = FriendsStore(service: friends)
         self.friendNudgeStore = FriendNudgeStore(service: friendNudges)

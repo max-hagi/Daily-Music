@@ -379,7 +379,10 @@ private struct VaultTintedEntryRow: View {
 
     @Environment(AppEnvironment.self) private var env
     @State private var palette = ArtworkPalette()
-    @State private var myRating: Int? = nil
+
+    // Reactive: reads from the shared RatingsStore — updates instantly when any
+    // other view (e.g. CategorySongsSheet) writes a new value.
+    private var myRating: Int? { env.ratingsStore.rating(for: entry.id) }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -433,7 +436,6 @@ private struct VaultTintedEntryRow: View {
         }
         .animation(.easeInOut(duration: 0.35), value: palette.accent)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
-        .task(id: entry.id) { myRating = try? await env.ratings.myRating(entryID: entry.id) }
     }
 }
 

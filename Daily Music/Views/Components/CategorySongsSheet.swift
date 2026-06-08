@@ -21,8 +21,9 @@ struct CategorySongsSheet: View {
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
-    // Tracks optimistic overrides; keyed by entry id.
-    @State private var localRatings: [UUID: Int?] = [:]
+    // Only used for seed songs (UserDefaults path). Catalog songs read directly
+    // from env.ratingsStore, which is @Observable and updates every row atomically.
+    @State private var seedLocalRatings: [UUID: Int?] = [:]
 
     var body: some View {
         NavigationStack {
@@ -55,7 +56,9 @@ struct CategorySongsSheet: View {
         .presentationCornerRadius(34)
         .presentationDragIndicator(.visible)
         .onAppear {
-            localRatings = Dictionary(uniqueKeysWithValues: songs.map { ($0.entry.id, $0.value) })
+            // Seed-song optimistic overrides seeded from initial list value.
+            let seedSongs = songs.filter { $0.entry.date == .distantPast }
+            seedLocalRatings = Dictionary(uniqueKeysWithValues: seedSongs.map { ($0.entry.id, $0.value) })
         }
     }
 
@@ -82,7 +85,15 @@ struct CategorySongsSheet: View {
     }
 
     private func ratingButtons(_ rated: RatedSong) -> some View {
-        let current = localRatings[rated.entry.id] ?? rated.value
+        // Seed songs: read from local optimistic override (UserDefaults path).
+        // Catalog songs: read from the shared RatingsStore so updates propagate
+        // app-wide the instant they're written anywhere.
+        let current: Int?
+        if rated.entry.date == .distantPast {
+            current = seedLocalRatings[rated.entry.id] ?? rated.value
+        } else {
+            current = env.ratingsStore.rating(for: rated.entry.id) ?? rated.value
+        }
         return HStack(spacing: 6) {
             thumbButton(value: 1,  symbol: "hand.thumbsup.fill",   tint: .green,
                         isActive: current == 1,  rated: rated)
@@ -115,11 +126,11 @@ struct CategorySongsSheet: View {
     // MARK: write
 
     private func setRating(_ newValue: Int?, for rated: RatedSong) {
-        localRatings[rated.entry.id] = newValue   // optimistic
-
         Task {
             if rated.entry.date == .distantPast {
                 // Onboarding seed song — persisted in UserDefaults, not Supabase.
+                // Optimistic-update the local override first so the row snaps.
+                seedLocalRatings[rated.entry.id] = newValue
                 var seeds = SeedRatings.load()
                 if let newValue {
                     if let i = seeds.firstIndex(where: { $0.entry.id == rated.entry.id }) {
@@ -132,8 +143,9 @@ struct CategorySongsSheet: View {
                 }
                 SeedRatings.save(seeds)
             } else {
-                // Catalog song — write to Supabase song_ratings.
-                try? await env.ratings.setRating(newValue, entryID: rated.entry.id)
+                // Catalog song — delegate entirely to RatingsStore (optimistic + Supabase).
+                // Every other RatingBar in the app sees the change immediately via the store.
+                await env.ratingsStore.setRating(newValue, entryID: rated.entry.id)
             }
             onRatingChanged?()
         }
