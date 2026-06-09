@@ -231,7 +231,7 @@ struct TasteMirrorBoard: View {
             Text(lead.uppercased())
                 .font(.caption2.weight(.heavy))
                 .foregroundStyle(.secondary)
-            Text("Keep rating")
+            Text("Rate more to unlock")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
@@ -295,7 +295,7 @@ struct TasteMirrorBoard: View {
             id: dim.title, title: dim.title, accent: accent,
             featuredName: featured.name,
             featuredSymbol: categorySymbol(dim.id, featured.name) ?? dimIcon(dim.id),
-            featuredLine: "Keeps \(featured.likes) of \(featured.total) — \(Int(featured.likeRate * 100))% yes.",
+            featuredLine: featuredLineString(likes: featured.likes, total: featured.total, likeRate: featured.likeRate),
             featuredSongs: mirror.songs(inDimension: dim, category: featured.name),
             rows: rows,
             standoutID: dim.overIndex?.id,
@@ -325,7 +325,7 @@ struct TasteMirrorBoard: View {
             id: "Energy", title: "Energy", accent: accent,
             featuredName: lean,
             featuredSymbol: "bolt.fill",
-            featuredLine: "Liked songs average \(String(format: "%.1f", mean)) out of 5.",
+            featuredLine: "\(isCurrentUser ? "Your" : "Their") saved songs lean \(lean), averaging a \(String(format: "%.1f", mean)) out of 5 on energy.",
             featuredSongs: mirror.songs(forDimensionID: "energy", category: featuredBandID),
             rows: rows, standoutID: nil, skipID: nil
         )
