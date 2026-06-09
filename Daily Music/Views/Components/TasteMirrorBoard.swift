@@ -117,9 +117,9 @@ struct TasteMirrorBoard: View {
                 HStack {
                     Image(systemName: profile.symbol)
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(profile.heroTopTint)
                         .frame(width: 52, height: 52)
-                        .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(profile.heroTopTint.opacity(0.18), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     Spacer()
                     Text(unlocked ? (isCurrentUser ? "YOUR ARCHETYPE" : "THEIR ARCHETYPE") : "FORMING")
                         .font(.caption.weight(.heavy))
@@ -146,7 +146,7 @@ struct TasteMirrorBoard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Theme.Spacing.lg)
-        .background(LinearGradient(colors: profile.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+        .background(ArchetypeHeroBackground(profile: profile))
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: profile.colors[0].opacity(0.35), radius: 20, y: 10)
     }

@@ -105,6 +105,14 @@ struct TasteProfile: Equatable {
         [c(0.13, 0.33, 0.96), c(0.07, 0.19, 0.48)]
     )
 
+    /// Foreground tint for badge/icon at the top of the hero card.
+    /// Romantic has a light top gradient, so badge text must be dark.
+    var heroTopTint: Color {
+        id == "hopeless_romantic"
+            ? Color(red: 0.37, green: 0.0, blue: 0.22).opacity(0.85)
+            : .white
+    }
+
     static let allCases: [TasteProfile] = [
         partyAnimal, flowerChild, hopelessRomantic, theHippie, theStargazer,
         bornInTheWrongGeneration, theMelancholic, loudAndProud, theOutsider, theShapeshifter
