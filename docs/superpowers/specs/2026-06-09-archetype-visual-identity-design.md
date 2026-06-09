@@ -137,8 +137,15 @@ The decorative layers are pure SwiftUI overlays. No images, no assets. All done 
 
 ---
 
+## Friend Mirrors
+
+Friend mirrors (`FriendInsightsView` / `TasteMirrorBoard` with `isCurrentUser: false`) get the same per-archetype visual backgrounds and the same rewritten copy. Existing read-only restrictions are unchanged: no tappable tiles, no detail sheets, no rating affordances. Only the hero card background and "why" text are affected, which are already rendered by `TasteMirrorBoard` and will pick up the changes automatically.
+
+The `isCurrentUser` flag controls interactivity only — it does not affect which background or copy variant is shown.
+
+---
+
 ## Out of Scope
 
 - The standout tiles and secondary rows are not being restyled in this pass (they already pick up the accent color).
 - The `InsightsView` color wash is not changing.
-- Friend mirrors are not in scope.
