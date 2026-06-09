@@ -24,8 +24,8 @@ struct ArchetypeRevealTests {
         }
     }
 
-    @Test func festivalGoerMapsToPartyFlare() {
-        let flare = ArchetypeRevealFlare.flare(for: .euphoricFestivalKid)
+    @Test func partyAnimalMapsToPartyFlare() {
+        let flare = ArchetypeRevealFlare.flare(for: .partyAnimal)
 
         #expect(flare.particleStyle == .confetti)
         #expect(flare.lightStyle == .partyBeams)

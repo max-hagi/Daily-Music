@@ -77,8 +77,8 @@ final class WrappedViewModel {
                 // `top` is an optional tuple; `?.artist` / `?? 0` unwrap it safely.
                 topArtist: top?.artist,
                 topArtistPlays: top?.count ?? 0,
-                // `?? .balancedDefault` covers the "not enough ratings yet" case.
-                profile: mirror.archetype ?? .balancedDefault
+                // `?? .theShapeshifter` covers the "not enough ratings yet" case.
+                profile: mirror.archetype ?? .theShapeshifter
             ))
         } catch {
             state = .failed(error)

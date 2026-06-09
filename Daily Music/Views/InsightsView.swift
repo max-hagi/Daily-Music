@@ -72,9 +72,9 @@ struct InsightsView: View {
 
     private var washColors: [Color] {
         if case .loaded(let m) = model?.state {
-            return (m.archetype ?? .balancedDefault).colors
+            return (m.archetype ?? .theShapeshifter).colors
         }
-        return TasteProfile.balancedDefault.colors
+        return TasteProfile.theShapeshifter.colors
     }
 
     private var revealBinding: Binding<ArchetypeRevealRequest?> {
@@ -91,7 +91,7 @@ struct InsightsView: View {
     // MARK: content
 
     private func content(_ mirror: TasteMirror) -> some View {
-        let accent = (mirror.archetype ?? .balancedDefault).colors[0]
+        let accent = (mirror.archetype ?? .theShapeshifter).colors[0]
         return ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
                 startedHereCard
@@ -100,7 +100,9 @@ struct InsightsView: View {
                     displayArchetype: mirror.archetype,
                     onRatingChanged: { Task { await model?.load() } }
                 )
+                replayButton(mirror)
                 revealCountdown(for: mirror)
+                historySection(accent: accent)
                 wrappedButton(accent)
             }
             .padding()
@@ -109,6 +111,50 @@ struct InsightsView: View {
         .refreshable {
             await model?.load()
             Haptics.tap()
+        }
+    }
+
+    @ViewBuilder
+    private func replayButton(_ mirror: TasteMirror) -> some View {
+        if mirror.isArchetypeUnlocked {
+            Button {
+                model?.replayReveal()
+            } label: {
+                Label("Replay reveal", systemImage: "arrow.counterclockwise")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
+    }
+
+    @ViewBuilder
+    private func historySection(accent: Color) -> some View {
+        let entries = model?.historyEntries ?? []
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("YOUR HISTORY")
+                .font(.caption2.weight(.heavy))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if entries.isEmpty {
+                Text("Your daily songs will appear here once you start listening.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, Theme.Spacing.lg)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(entries) { item in
+                        HistoryEntryRow(
+                            item: item,
+                            accent: accent,
+                            onRatingChanged: { Task { await model?.load() } }
+                        )
+                    }
+                }
+            }
         }
     }
 

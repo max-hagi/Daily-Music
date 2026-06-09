@@ -9,12 +9,19 @@
 
 import Foundation
 
+struct HistoryEntry: Identifiable {
+    let entry: DailyEntry
+    var rating: Int?   // +1 liked / -1 disliked / nil unrated
+    var id: UUID { entry.id }
+}
+
 @MainActor
 @Observable
 final class InsightsViewModel {
     private(set) var state: LoadState<TasteMirror> = .loading
     private(set) var stableArchetype: TasteProfile?
     private(set) var nextRevealDate: Date?
+    private(set) var historyEntries: [HistoryEntry] = []
     var reveal: ArchetypeRevealRequest?
 
     private let entries: EntryService
@@ -47,6 +54,9 @@ final class InsightsViewModel {
         // Merge the onboarding taste-seed so the profile is established at onboarding
         // and evolves as real daily ratings accumulate.
         let mirror = TasteMirror.build(from: rated + SeedRatings.load())
+        historyEntries = history
+            .sorted { $0.date > $1.date }
+            .map { HistoryEntry(entry: $0, rating: myRatings[$0.id]) }
         let snapshot = snapshotStore.evaluate(
             candidate: mirror.archetype,
             hasCompletedOnboarding: defaults.bool(forKey: "hasCompletedOnboarding")
@@ -55,6 +65,17 @@ final class InsightsViewModel {
         nextRevealDate = snapshot.lastEvaluatedAt.map { $0.addingTimeInterval(ArchetypeSnapshotEvaluator.cadence) }
         reveal = makeReveal(from: snapshot, mirror: mirror)
         state = .loaded(mirror)
+    }
+
+    func replayReveal() {
+        guard case .loaded(let mirror) = state,
+              let profile = stableArchetype ?? mirror.archetype else { return }
+        reveal = ArchetypeRevealRequest(
+            previousProfile: nil,
+            newProfile: profile,
+            reason: revealReason(for: mirror, fallback: profile),
+            kind: .firstUnlock
+        )
     }
 
     func acknowledgeReveal() {

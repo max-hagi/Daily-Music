@@ -7,7 +7,7 @@ struct ArchetypeSnapshotTests {
 
     @Test func nilCandidateLeavesSnapshotUnchanged() {
         let snapshot = ArchetypeSnapshot(
-            stableArchetypeID: "euphoric_default",
+            stableArchetypeID: "party_animal",
             previousArchetypeID: nil,
             pendingRevealArchetypeID: nil,
             lastEvaluatedAt: start,
@@ -28,14 +28,14 @@ struct ArchetypeSnapshotTests {
     @Test func firstPostOnboardingCandidateCreatesFirstUnlockRevealOnce() {
         let result = ArchetypeSnapshotEvaluator.evaluate(
             snapshot: .empty,
-            candidate: .euphoricFestivalKid,
+            candidate: .partyAnimal,
             now: start,
             hasCompletedOnboarding: true
         )
 
-        #expect(result.stableArchetypeID == "euphoric_festival_kid")
+        #expect(result.stableArchetypeID == "party_animal")
         #expect(result.previousArchetypeID == nil)
-        #expect(result.pendingRevealArchetypeID == "euphoric_festival_kid")
+        #expect(result.pendingRevealArchetypeID == "party_animal")
         #expect(result.hasPlayedFirstUnlockReveal == false)
         #expect(result.lastEvaluatedAt == start)
     }
@@ -43,21 +43,21 @@ struct ArchetypeSnapshotTests {
     @Test func candidateBeforeOnboardingStoresStableWithoutReveal() {
         let result = ArchetypeSnapshotEvaluator.evaluate(
             snapshot: .empty,
-            candidate: .euphoricFestivalKid,
+            candidate: .partyAnimal,
             now: start,
             hasCompletedOnboarding: false
         )
 
-        #expect(result.stableArchetypeID == "euphoric_festival_kid")
+        #expect(result.stableArchetypeID == "party_animal")
         #expect(result.pendingRevealArchetypeID == nil)
         #expect(result.hasPlayedFirstUnlockReveal == false)
     }
 
     @Test func acknowledgingFirstUnlockClearsPendingAndRecordsReveal() {
         let snapshot = ArchetypeSnapshot(
-            stableArchetypeID: "euphoric_festival_kid",
+            stableArchetypeID: "party_animal",
             previousArchetypeID: nil,
-            pendingRevealArchetypeID: "euphoric_festival_kid",
+            pendingRevealArchetypeID: "party_animal",
             lastEvaluatedAt: start,
             lastRevealedArchetypeID: nil,
             hasPlayedFirstUnlockReveal: false
@@ -66,47 +66,47 @@ struct ArchetypeSnapshotTests {
         let acknowledged = ArchetypeSnapshotEvaluator.acknowledgeReveal(snapshot)
 
         #expect(acknowledged.pendingRevealArchetypeID == nil)
-        #expect(acknowledged.lastRevealedArchetypeID == "euphoric_festival_kid")
+        #expect(acknowledged.lastRevealedArchetypeID == "party_animal")
         #expect(acknowledged.hasPlayedFirstUnlockReveal == true)
     }
 
     @Test func sameCandidateAfterCadenceUpdatesEvaluationWithoutReveal() {
         let snapshot = ArchetypeSnapshot(
-            stableArchetypeID: "euphoric_festival_kid",
+            stableArchetypeID: "party_animal",
             previousArchetypeID: nil,
             pendingRevealArchetypeID: nil,
             lastEvaluatedAt: start,
-            lastRevealedArchetypeID: "euphoric_festival_kid",
+            lastRevealedArchetypeID: "party_animal",
             hasPlayedFirstUnlockReveal: true
         )
         let later = start.addingTimeInterval(ArchetypeSnapshotEvaluator.cadence + 1)
 
         let result = ArchetypeSnapshotEvaluator.evaluate(
             snapshot: snapshot,
-            candidate: .euphoricFestivalKid,
+            candidate: .partyAnimal,
             now: later,
             hasCompletedOnboarding: true
         )
 
-        #expect(result.stableArchetypeID == "euphoric_festival_kid")
+        #expect(result.stableArchetypeID == "party_animal")
         #expect(result.pendingRevealArchetypeID == nil)
         #expect(result.lastEvaluatedAt == later)
     }
 
     @Test func differentCandidateBeforeCadenceDoesNotReveal() {
         let snapshot = ArchetypeSnapshot(
-            stableArchetypeID: "euphoric_festival_kid",
+            stableArchetypeID: "party_animal",
             previousArchetypeID: nil,
             pendingRevealArchetypeID: nil,
             lastEvaluatedAt: start,
-            lastRevealedArchetypeID: "euphoric_festival_kid",
+            lastRevealedArchetypeID: "party_animal",
             hasPlayedFirstUnlockReveal: true
         )
         let soon = start.addingTimeInterval(ArchetypeSnapshotEvaluator.cadence - 1)
 
         let result = ArchetypeSnapshotEvaluator.evaluate(
             snapshot: snapshot,
-            candidate: .melancholyDarkWaver,
+            candidate: .theMelancholic,
             now: soon,
             hasCompletedOnboarding: true
         )
@@ -116,62 +116,62 @@ struct ArchetypeSnapshotTests {
 
     @Test func differentCandidateAfterCadenceCreatesWeeklyChangeReveal() {
         let snapshot = ArchetypeSnapshot(
-            stableArchetypeID: "euphoric_festival_kid",
+            stableArchetypeID: "party_animal",
             previousArchetypeID: nil,
             pendingRevealArchetypeID: nil,
             lastEvaluatedAt: start,
-            lastRevealedArchetypeID: "euphoric_festival_kid",
+            lastRevealedArchetypeID: "party_animal",
             hasPlayedFirstUnlockReveal: true
         )
         let later = start.addingTimeInterval(ArchetypeSnapshotEvaluator.cadence + 1)
 
         let result = ArchetypeSnapshotEvaluator.evaluate(
             snapshot: snapshot,
-            candidate: .melancholyDarkWaver,
+            candidate: .theMelancholic,
             now: later,
             hasCompletedOnboarding: true
         )
 
-        #expect(result.stableArchetypeID == "melancholy_dark_waver")
-        #expect(result.previousArchetypeID == "euphoric_festival_kid")
-        #expect(result.pendingRevealArchetypeID == "melancholy_dark_waver")
+        #expect(result.stableArchetypeID == "the_melancholic")
+        #expect(result.previousArchetypeID == "party_animal")
+        #expect(result.pendingRevealArchetypeID == "the_melancholic")
         #expect(result.lastEvaluatedAt == later)
     }
 
     @Test func deferredFirstUnlockFiresAfterOnboardingCompletes() {
         let preOnboarding = ArchetypeSnapshotEvaluator.evaluate(
             snapshot: .empty,
-            candidate: .euphoricFestivalKid,
+            candidate: .partyAnimal,
             now: start,
             hasCompletedOnboarding: false
         )
         // Onboarding completes; re-evaluate within cadence
         let postOnboarding = ArchetypeSnapshotEvaluator.evaluate(
             snapshot: preOnboarding,
-            candidate: .euphoricFestivalKid,
+            candidate: .partyAnimal,
             now: start.addingTimeInterval(60),
             hasCompletedOnboarding: true
         )
 
-        #expect(postOnboarding.stableArchetypeID == "euphoric_festival_kid")
-        #expect(postOnboarding.pendingRevealArchetypeID == "euphoric_festival_kid")
+        #expect(postOnboarding.stableArchetypeID == "party_animal")
+        #expect(postOnboarding.pendingRevealArchetypeID == "party_animal")
         #expect(postOnboarding.hasPlayedFirstUnlockReveal == false)
     }
 
     @Test func pendingRevealIsNotOverwritten() {
         let snapshot = ArchetypeSnapshot(
-            stableArchetypeID: "melancholy_dark_waver",
-            previousArchetypeID: "euphoric_festival_kid",
-            pendingRevealArchetypeID: "melancholy_dark_waver",
+            stableArchetypeID: "the_melancholic",
+            previousArchetypeID: "party_animal",
+            pendingRevealArchetypeID: "the_melancholic",
             lastEvaluatedAt: start,
-            lastRevealedArchetypeID: "euphoric_festival_kid",
+            lastRevealedArchetypeID: "party_animal",
             hasPlayedFirstUnlockReveal: true
         )
         let later = start.addingTimeInterval(ArchetypeSnapshotEvaluator.cadence + 1)
 
         let result = ArchetypeSnapshotEvaluator.evaluate(
             snapshot: snapshot,
-            candidate: .darkGothSoul,
+            candidate: .theOutsider,
             now: later,
             hasCompletedOnboarding: true
         )

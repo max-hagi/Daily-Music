@@ -25,7 +25,7 @@ struct ArchetypeRevealView: View {
     @State private var hapticTask: Task<Void, Never>?
 
     private var flare: ArchetypeRevealFlare { .flare(for: request.newProfile) }
-    private var oldColors: [Color] { request.previousProfile?.colors ?? TasteProfile.balancedDefault.colors }
+    private var oldColors: [Color] { request.previousProfile?.colors ?? TasteProfile.theShapeshifter.colors }
     private var newColors: [Color] { request.newProfile.colors }
 
     var body: some View {

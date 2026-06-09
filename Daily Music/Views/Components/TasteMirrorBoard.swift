@@ -22,11 +22,13 @@ struct TasteMirrorBoard: View {
     @State private var detail: StandoutDetail?
 
     /// Accent = the archetype's lead color (neutral default while still forming).
-    private var accent: Color { (displayArchetype ?? mirror.archetype ?? .balancedDefault).colors[0] }
+    private var accent: Color { (displayArchetype ?? mirror.archetype ?? .theShapeshifter).colors[0] }
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
             hero(mirror)
+
+            sectionLabel("WHY YOU'RE YOU")
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14),
                                 GridItem(.flexible(), spacing: 14)], spacing: 14) {
@@ -45,7 +47,7 @@ struct TasteMirrorBoard: View {
     // MARK: hero
 
     private func hero(_ mirror: TasteMirror) -> some View {
-        let profile = displayArchetype ?? mirror.archetype ?? .balancedDefault
+        let profile = displayArchetype ?? mirror.archetype ?? .theShapeshifter
         let unlocked = displayArchetype != nil || mirror.archetype != nil
         let remaining = max(TasteMirror.Thresholds.minRatedArchetype - mirror.totalRated, 0)
         return ZStack(alignment: .bottomTrailing) {
@@ -72,10 +74,16 @@ struct TasteMirrorBoard: View {
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)
                     .fixedSize(horizontal: false, vertical: true)
+                if unlocked {
+                    Text(profile.tagline)
+                        .font(.callout.italic())
+                        .foregroundStyle(.white.opacity(0.82))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Text(unlocked ? heroWhy(mirror)
                               : "\(isCurrentUser ? "Your" : "Their") portrait takes shape at \(TasteMirror.Thresholds.minRatedArchetype) ratings.")
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.62))
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,6 +123,15 @@ struct TasteMirrorBoard: View {
             let fallbackPct = Int((moodStat?.likeRate ?? 0) * 100)
             return "Because \(keep) \(moodName) songs more than anything else (\(fallbackPct)% yes vs \(overall)% overall)."
         }
+    }
+
+    // MARK: section label
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2.weight(.heavy))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: marquee tiles

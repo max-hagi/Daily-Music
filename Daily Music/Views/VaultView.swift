@@ -82,6 +82,7 @@ struct VaultView: View {
             reactions = (try? await env.reactions.myReactions()) ?? [:]
             Haptics.tap()
         }
+        
         // Tapping any Vault song presents a dedicated fullscreen detail instead of
         // pushing inside this NavigationStack. This keeps the Vault list/calendar
         // state intact while letting the song screen mimic Today's immersive layout.
@@ -150,6 +151,7 @@ struct VaultView: View {
             in: RoundedRectangle(cornerRadius: 26, style: .continuous)
         )
         .shadow(color: Color(red: 0.9, green: 0.38, blue: 0.26).opacity(0.2), radius: 18, y: 10)
+
     }
 
     private func archiveStats(_ entries: [DailyEntry]) -> some View {

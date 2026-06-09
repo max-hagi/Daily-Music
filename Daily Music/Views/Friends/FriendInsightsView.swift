@@ -297,7 +297,7 @@ struct FriendInsightsView: View {
     }
 
     private var washColors: [Color] {
-        if case .loaded(let r) = model?.state { return (r.mirror.archetype ?? .balancedDefault).colors }
-        return TasteProfile.balancedDefault.colors
+        if case .loaded(let r) = model?.state { return (r.mirror.archetype ?? .theShapeshifter).colors }
+        return TasteProfile.theShapeshifter.colors
     }
 }

@@ -114,11 +114,10 @@ struct TasteMirrorTests {
     }
 
     @Test func archetypeUnlocksWithEnoughRatings() {
-        // Worked example: Melancholy dominant, decade "1980s" over-indexes at 81.8% vs 60% overall.
-        // Modifier selector picks "1980s" → melancholy_dark_waver.
+        // Worked example: Melancholy dominant → the_melancholic (modifier is flavor text only).
         let m = TasteMirror.build(from: Self.workedExample())
         #expect(m.isArchetypeUnlocked == true)
-        #expect(m.archetype?.id == "melancholy_dark_waver")
+        #expect(m.archetype?.id == "the_melancholic")
     }
 
     @Test func archetypeNilBelowThreshold() {
@@ -128,9 +127,9 @@ struct TasteMirrorTests {
     }
 
     @Test func archetypeFallsBackToMoodOnly() {
-        // 24 melancholy songs, no year → no decade standout → mood-only default.
+        // 24 melancholy songs, no year → no decade standout → mood-only lookup.
         let m = TasteMirror.build(from: Self.mood("Melancholy", likes: 18, dislikes: 6))
-        #expect(m.archetype?.id == "melancholy_default")
+        #expect(m.archetype?.id == "the_melancholic")
     }
 
     @Test func ratedSongsStoredOnMirror() {
