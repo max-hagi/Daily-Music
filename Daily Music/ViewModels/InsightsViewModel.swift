@@ -14,6 +14,7 @@ import Foundation
 final class InsightsViewModel {
     private(set) var state: LoadState<TasteMirror> = .loading
     private(set) var stableArchetype: TasteProfile?
+    private(set) var nextRevealDate: Date?
     var reveal: ArchetypeRevealRequest?
 
     private let entries: EntryService
@@ -51,6 +52,7 @@ final class InsightsViewModel {
             hasCompletedOnboarding: defaults.bool(forKey: "hasCompletedOnboarding")
         )
         stableArchetype = TasteProfile.profile(id: snapshot.stableArchetypeID)
+        nextRevealDate = snapshot.lastEvaluatedAt.map { $0.addingTimeInterval(ArchetypeSnapshotEvaluator.cadence) }
         reveal = makeReveal(from: snapshot, mirror: mirror)
         state = .loaded(mirror)
     }

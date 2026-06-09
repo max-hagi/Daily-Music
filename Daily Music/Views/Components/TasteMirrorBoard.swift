@@ -202,7 +202,7 @@ struct TasteMirrorBoard: View {
 
     @ViewBuilder
     private func secondaryRow(_ dim: DimensionInsight, lead: String, accent: Color) -> some View {
-        if dim.isUnlocked, let s = dim.topStandout {
+        if dim.isUnlocked, let s = dim.dominant {
             let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
             let row = HStack(spacing: Theme.Spacing.md) {
                 Image(systemName: dimIcon(dim.id))
@@ -227,7 +227,7 @@ struct TasteMirrorBoard: View {
             .padding(.vertical, 15)
 
             if isCurrentUser {
-                Button { detail = makeDetail(dim: dim, accent: accent) } label: { row }
+                Button { detail = makeDetail(dim: dim, accent: accent, featured: s) } label: { row }
                     .buttonStyle(.plain)
                     .glassEffect(.regular.interactive(), in: shape)
             } else {
@@ -238,8 +238,8 @@ struct TasteMirrorBoard: View {
 
     // MARK: detail builders
 
-    private func makeDetail(dim: DimensionInsight, accent: Color) -> StandoutDetail? {
-        guard let featured = dim.topStandout else { return nil }
+    private func makeDetail(dim: DimensionInsight, accent: Color, featured: CategoryStat? = nil) -> StandoutDetail? {
+        guard let featured = featured ?? dim.topStandout else { return nil }
         let rows = dim.categories
             .filter { $0.id != featured.id }
             .map { cat in

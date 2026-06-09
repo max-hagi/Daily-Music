@@ -72,7 +72,7 @@ struct InsightsView: View {
 
     private var washColors: [Color] {
         if case .loaded(let m) = model?.state {
-            return (model?.stableArchetype ?? m.archetype ?? .balancedDefault).colors
+            return (m.archetype ?? .balancedDefault).colors
         }
         return TasteProfile.balancedDefault.colors
     }
@@ -91,15 +91,16 @@ struct InsightsView: View {
     // MARK: content
 
     private func content(_ mirror: TasteMirror) -> some View {
-        let accent = (model?.stableArchetype ?? mirror.archetype ?? .balancedDefault).colors[0]
+        let accent = (mirror.archetype ?? .balancedDefault).colors[0]
         return ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
                 startedHereCard
                 TasteMirrorBoard(
                     mirror: mirror,
-                    displayArchetype: model?.stableArchetype,
+                    displayArchetype: mirror.archetype,
                     onRatingChanged: { Task { await model?.load() } }
                 )
+                revealCountdown(for: mirror)
                 wrappedButton(accent)
             }
             .padding()
@@ -117,6 +118,19 @@ struct InsightsView: View {
         }
         .buttonStyle(PrimaryActionButtonStyle(tint: accent))
         .padding(.top, Theme.Spacing.xs)
+    }
+
+    @ViewBuilder
+    private func revealCountdown(for mirror: TasteMirror) -> some View {
+        if mirror.isArchetypeUnlocked, let next = model?.nextRevealDate {
+            let days = max(0, Calendar.current.dateComponents([.day], from: .now, to: next).day ?? 0)
+            if days > 0 {
+                Text("Next reveal in \(days) day\(days == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+        }
     }
 
     @ViewBuilder private var startedHereCard: some View {
