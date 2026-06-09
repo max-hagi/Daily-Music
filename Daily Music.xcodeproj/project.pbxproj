@@ -24,6 +24,7 @@
 		D4E5F6A1B2C3D4E5F6A1B2C3 /* AvatarImageProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A1B2C3D4E5F6A1B2C4 /* AvatarImageProcessorTests.swift */; };
 		E5F6A1B2C3D4E5F6A1B2C3D4 /* ProfileStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A1B2C3D4E5F6A1B2C3D5 /* ProfileStoreTests.swift */; };
 		F6A1B2C3D4E5F6A1B2C3D4E5 /* FriendCodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A1B2C3D4E5F6A1B2C3D4E6 /* FriendCodeTests.swift */; };
+		AA11BB22CC33DD44EE55FF67 /* ArchetypeCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* ArchetypeCopyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +56,7 @@
 		D5D413F7473F6C57E546C1EA /* ArchetypeSnapshotTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArchetypeSnapshotTests.swift; sourceTree = "<group>"; };
 		E5F6A1B2C3D4E5F6A1B2C3D5 /* ProfileStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProfileStoreTests.swift; sourceTree = "<group>"; };
 		F6A1B2C3D4E5F6A1B2C3D4E6 /* FriendCodeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendCodeTests.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF66 /* ArchetypeCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArchetypeCopyTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -103,6 +105,7 @@
 				D5D413F7473F6C57E546C1EA /* ArchetypeSnapshotTests.swift */,
 				B7B501C622830FDCCDFA988E /* ArchetypeRevealTests.swift */,
 				B6F8A1D4C5E7401FA6B8D913 /* LiquidGlassStyleTests.swift */,
+				AA11BB22CC33DD44EE55FF66 /* ArchetypeCopyTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -261,6 +264,7 @@
 				757406A9EE882CBC5E185CA4 /* ArchetypeSnapshotTests.swift in Sources */,
 				9F5825D17AE73206DEAA9846 /* ArchetypeRevealTests.swift in Sources */,
 				B6F8A1D4C5E7401FA6B8D912 /* LiquidGlassStyleTests.swift in Sources */,
+				AA11BB22CC33DD44EE55FF67 /* ArchetypeCopyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

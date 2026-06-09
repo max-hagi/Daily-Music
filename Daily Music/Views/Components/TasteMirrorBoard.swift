@@ -21,27 +21,84 @@ struct TasteMirrorBoard: View {
     var onRatingChanged: (() -> Void)? = nil
     @State private var detail: StandoutDetail?
 
+    // MARK: entrance animation state
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
+
     /// Accent = the archetype's lead color (neutral default while still forming).
     private var accent: Color { (displayArchetype ?? mirror.archetype ?? .theShapeshifter).colors[0] }
 
+    /// The archetype ID being displayed — changing it re-triggers the entrance.
+    private var currentArchetypeID: String? { (displayArchetype ?? mirror.archetype)?.id }
+
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
+            // ── Act 1: Hero ── punches in first, big spring
             hero(mirror)
+                .modifier(EntranceModifier(
+                    appeared: appeared, reduceMotion: reduceMotion,
+                    scale: 0.88, offsetY: 28, delay: 0,
+                    response: 0.50, damping: 0.60
+                ))
 
+            // ── Section label: fades in just after hero settles ──
             sectionLabel("WHY YOU'RE YOU")
+                .modifier(FadeInModifier(
+                    appeared: appeared, reduceMotion: reduceMotion, delay: 0.08
+                ))
 
+            // ── Act 2: Tile grid — staggered spring pop ──
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14),
                                 GridItem(.flexible(), spacing: 14)], spacing: 14) {
-                marqueeTile(mirror.mood, lead: "Mood", accent: accent)
-                marqueeTile(mirror.decade, lead: "Era", accent: accent)
-                marqueeTile(mirror.theme, lead: "Theme", accent: accent)
+                marqueeTile(mirror.mood,   lead: "Mood",   accent: accent)
+                    .modifier(EntranceModifier(
+                        appeared: appeared, reduceMotion: reduceMotion,
+                        scale: 0.80, offsetY: 16, delay: 0.10,
+                        response: 0.44, damping: 0.56
+                    ))
+                marqueeTile(mirror.decade, lead: "Era",    accent: accent)
+                    .modifier(EntranceModifier(
+                        appeared: appeared, reduceMotion: reduceMotion,
+                        scale: 0.80, offsetY: 16, delay: 0.16,
+                        response: 0.44, damping: 0.56
+                    ))
+                marqueeTile(mirror.theme,  lead: "Theme",  accent: accent)
+                    .modifier(EntranceModifier(
+                        appeared: appeared, reduceMotion: reduceMotion,
+                        scale: 0.80, offsetY: 16, delay: 0.22,
+                        response: 0.44, damping: 0.56
+                    ))
                 energyTile(mirror.energy, accent: accent)
+                    .modifier(EntranceModifier(
+                        appeared: appeared, reduceMotion: reduceMotion,
+                        scale: 0.80, offsetY: 16, delay: 0.28,
+                        response: 0.44, damping: 0.56
+                    ))
             }
 
-            secondaryRow(mirror.genre, lead: "Genre", accent: accent)
+            // ── Act 3: Secondary rows drift in last ──
+            secondaryRow(mirror.genre,    lead: "Genre",    accent: accent)
+                .modifier(FadeInModifier(
+                    appeared: appeared, reduceMotion: reduceMotion, delay: 0.34
+                ))
             secondaryRow(mirror.language, lead: "Language", accent: accent)
+                .modifier(FadeInModifier(
+                    appeared: appeared, reduceMotion: reduceMotion, delay: 0.38
+                ))
         }
         .sheet(item: $detail) { StandoutDetailView(detail: $0, onRatingChanged: onRatingChanged) }
+        .onAppear {
+            guard !appeared else { return }
+            appeared = true
+        }
+        .onChange(of: currentArchetypeID) { _, _ in
+            guard !reduceMotion else { return }
+            appeared = false
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 40_000_000) // 40 ms gap
+                appeared = true
+            }
+        }
     }
 
     // MARK: hero
@@ -80,7 +137,7 @@ struct TasteMirrorBoard: View {
                         .foregroundStyle(.white.opacity(0.82))
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(unlocked ? heroWhy(mirror)
+                Text(unlocked ? archetypeHeroCopy(profile: profile, winningModifier: mirror.winningModifier, isCurrentUser: isCurrentUser)
                               : "\(isCurrentUser ? "Your" : "Their") portrait takes shape at \(TasteMirror.Thresholds.minRatedArchetype) ratings.")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.white.opacity(0.62))
@@ -92,37 +149,6 @@ struct TasteMirrorBoard: View {
         .background(LinearGradient(colors: profile.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: profile.colors[0].opacity(0.35), radius: 20, y: 10)
-    }
-
-    /// Dynamic "why it's you" — cites the winning modifier's real stats.
-    private func heroWhy(_ mirror: TasteMirror) -> String {
-        let moodStat  = mirror.mood.topStandout
-        let moodName  = moodStat?.name.lowercased() ?? "certain"
-        let overall   = Int(mirror.overallLikeRate * 100)
-        let keep      = isCurrentUser ? "you keep" : "they keep"
-        let your      = isCurrentUser ? "your" : "their"
-
-        guard let wm = mirror.winningModifier else {
-            let pct = Int((moodStat?.likeRate ?? 0) * 100)
-            return "Because \(keep) \(moodName) songs more than anything else (\(pct)% yes vs \(overall)% overall)."
-        }
-
-        let pct    = Int(wm.likeRate * 100)
-        // WinningModifier requires likeRate >= overall + Thresholds.overIndexMargin (10pp),
-        // so margin is always ≥ 10. Clamp to 1 as a defensive floor.
-        let margin = max(1, Int(wm.margin * 100))
-        switch wm.dimensionID {
-        case "decade":
-            return "Because \(keep) \(pct)% of \(wm.categoryName) songs — \(margin)pts above \(your) \(overall)% average."
-        case "theme":
-            return "Because \(keep) \(pct)% of songs about \(wm.categoryName.lowercased()) — \(margin)pts above \(your) \(overall)% average."
-        case "genre":
-            return "Because \(keep) \(pct)% of \(wm.categoryName) tracks — \(margin)pts above \(your) \(overall)% average."
-        // "language" modifier exists but has no dedicated archetypes in v2 — falls through to mood fallback.
-        default:
-            let fallbackPct = Int((moodStat?.likeRate ?? 0) * 100)
-            return "Because \(keep) \(moodName) songs more than anything else (\(fallbackPct)% yes vs \(overall)% overall)."
-        }
     }
 
     // MARK: section label
@@ -326,5 +352,50 @@ struct TasteMirrorBoard: View {
         case "theme": SongTheme(rawValue: name)?.symbol
         default:      nil
         }
+    }
+}
+
+// MARK: - Entrance animation helpers
+
+/// Punchy spring scale + lift + fade. Used for the hero card and each tile.
+private struct EntranceModifier: ViewModifier {
+    let appeared: Bool
+    let reduceMotion: Bool
+    var scale: CGFloat = 0.88
+    var offsetY: CGFloat = 20
+    var delay: Double = 0
+    var response: Double = 0.50
+    var damping: Double = 0.62
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(appeared ? 1 : scale)
+            .offset(y: appeared ? 0 : offsetY)
+            .opacity(appeared ? 1 : 0)
+            .animation(
+                reduceMotion
+                    ? .none
+                    : .spring(response: response, dampingFraction: damping).delay(delay),
+                value: appeared
+            )
+    }
+}
+
+/// Simple opacity drift. Used for labels and secondary rows.
+private struct FadeInModifier: ViewModifier {
+    let appeared: Bool
+    let reduceMotion: Bool
+    var delay: Double = 0
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 8)
+            .animation(
+                reduceMotion
+                    ? .none
+                    : .easeOut(duration: 0.35).delay(delay),
+                value: appeared
+            )
     }
 }
