@@ -10,6 +10,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
     @State private var model: SettingsViewModel?
 
     var body: some View {
@@ -23,6 +24,12 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+        }
+        .onChange(of: env.session.isSignedIn) { _, signedIn in
+            // Sign-out happens inside this sheet; RootView swaps to SignInView
+            // underneath, but the sheet won't tear itself down — dismiss it so
+            // no settings chrome lingers over the sign-in screen.
+            if !signedIn { dismiss() }
         }
         .task {
             if model == nil {
@@ -295,7 +302,7 @@ private struct SettingsForm: View {
                 }
             }
 
-            Toggle("Weekly recap", isOn: $model.weeklyRecapEnabled)
+            Toggle("Monthly recap", isOn: $model.weeklyRecapEnabled)
         } header: {
             Text("Notifications")
         } footer: {
