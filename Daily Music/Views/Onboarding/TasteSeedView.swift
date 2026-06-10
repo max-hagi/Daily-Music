@@ -143,7 +143,9 @@ struct TasteSeedView: View {
 
     // MARK: reveal
     private var reveal: some View {
-        let profile = TasteProfile.resolve(mood: read.mood, modifier: nil)
+        // All 10 starter songs are judged by the time reveal shows, which clears
+        // the unlock threshold — use the real engine for the first-read profile.
+        let profile = TasteMirror.build(from: picks).archetype ?? .theShapeshifter
         return VStack(spacing: Theme.Spacing.lg) {
             Spacer()
             Image(systemName: profile.symbol)

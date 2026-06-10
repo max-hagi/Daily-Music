@@ -126,10 +126,11 @@ struct TasteMirrorTests {
         #expect(m.archetype == nil)
     }
 
-    @Test func archetypeFallsBackToMoodOnly() {
-        // 24 melancholy songs, no year → no decade standout → mood-only lookup.
+    @Test func singleCategoryHistoryIsShapeshifter() {
+        // Engine v2: every rated song is Melancholy → no contrast between
+        // categories → no signature. The Shapeshifter is the honest answer.
         let m = TasteMirror.build(from: Self.mood("Melancholy", likes: 18, dislikes: 6))
-        #expect(m.archetype?.id == "the_melancholic")
+        #expect(m.archetype?.id == "the_shapeshifter")
     }
 
     @Test func ratedSongsStoredOnMirror() {
@@ -200,6 +201,32 @@ struct TasteMirrorTests {
         #expect(songs[1].entry.id == Self.entry(id: 20, mood: "Dreamy").id)  // middle liked
         #expect(songs[2].entry.id == Self.entry(id: 10, mood: "Dreamy").id)  // oldest liked
         #expect(songs[3].value == -1)                                          // disliked last
+    }
+
+    // MARK: engine v2 — mirror API
+
+    @Test func mirrorExposesEvidenceForTheWinner() {
+        let m = TasteMirror.build(from: Self.workedExample())
+        #expect(m.archetype?.id == "the_melancholic")
+        #expect(m.evidence?.facts.first?.category == "Melancholy")
+    }
+
+    @Test func heartOnlySongsDoNotInflateTileMath() {
+        var data = Self.workedExample()
+        data.append(RatedSong(entry: Self.entry(id: 999, mood: "Serene"), value: 0, isFavorite: true))
+        let m = TasteMirror.build(from: data)
+        #expect(m.totalRated == 30)                       // value-0 excluded
+        #expect(!m.ratedSongs.contains { $0.value == 0 }) // drill-downs unchanged
+    }
+
+    @Test func mirrorPassesIncumbentThrough() {
+        let data = ArchetypeScorerTests.songs(6, value: 1, mood: "Joyful", idBase: 0)
+            + ArchetypeScorerTests.songs(2, value: -1, mood: "Joyful", idBase: 50)
+            + ArchetypeScorerTests.songs(6, value: 1, mood: "Euphoric", hearts: 1, idBase: 100)
+            + ArchetypeScorerTests.songs(2, value: -1, mood: "Euphoric", idBase: 150)
+            + ArchetypeScorerTests.songs(6, value: -1, mood: "Dark", idBase: 200)
+        #expect(TasteMirror.build(from: data).archetype?.id == "party_animal")
+        #expect(TasteMirror.build(from: data, incumbentID: "flower_child").archetype?.id == "flower_child")
     }
 
     // MARK: engine v2 — RatedSong fields

@@ -132,22 +132,4 @@ struct TasteProfile: Equatable {
         return allCases.first { $0.id == id }
     }
 
-    // MARK: - resolve
-
-    /// Resolve the archetype from the user's dominant mood. The `modifier`
-    /// parameter is unused here — it surfaces as flavor text in the hero copy.
-    static func resolve(mood: String?, modifier: String?) -> TasteProfile {
-        switch mood {
-        case "Euphoric":   return partyAnimal
-        case "Joyful":     return flowerChild
-        case "Tender":     return hopelessRomantic
-        case "Serene":     return theHippie
-        case "Dreamy":     return theStargazer
-        case "Nostalgic":  return bornInTheWrongGeneration
-        case "Melancholy": return theMelancholic
-        case "Defiant":    return loudAndProud
-        case "Dark":       return theOutsider
-        default:           return theShapeshifter
-        }
-    }
 }

@@ -92,31 +92,33 @@ struct TasteMirror: Equatable {
     let isArchetypeUnlocked: Bool
     let ratedSongs: [RatedSong]
     let winningModifier: WinningModifier?
+    /// Receipts behind the winning archetype (nil while locked).
+    let evidence: ArchetypeEvidence?
 
     enum Thresholds {
         static let minPerCategory = 3
         static let overIndexMargin = 0.10
         static let minRatedDimension = 10
-        static let minRatedArchetype = 10   // a profile is established by the ~10-song onboarding taste-seed, then evolves
+        static let minRatedArchetype = 10
     }
 
-    static func build(from rated: [RatedSong]) -> TasteMirror {
-        let total = rated.count
-        let likes = rated.filter { $0.value > 0 }.count
+    static func build(from rated: [RatedSong], incumbentID: String? = nil) -> TasteMirror {
+        // Heart-only songs (value 0) feed the archetype scorer but not the
+        // tiles — totalRated, dimensions, and drill-downs keep their meaning.
+        let thumbed = rated.filter { $0.value != 0 }
+        let total = thumbed.count
+        let likes = thumbed.filter { $0.value > 0 }.count
         let overall = total > 0 ? Double(likes) / Double(total) : 0
 
         // --- dimensions ---
-        let mood = dimension(id: "mood", title: "Mood", from: rated, overall: overall, totalRated: total) { $0.mood }
-        let decade = dimension(id: "decade", title: "Decade", from: rated, overall: overall, totalRated: total) { $0.decade }
-        let theme = dimension(id: "theme", title: "Theme", from: rated, overall: overall, totalRated: total) { $0.theme }
-        let genre = dimension(id: "genre", title: "Genre", from: rated, overall: overall, totalRated: total) { $0.genre }
-        let language = dimension(id: "language", title: "Language", from: rated, overall: overall, totalRated: total) { $0.language }
+        let mood = dimension(id: "mood", title: "Mood", from: thumbed, overall: overall, totalRated: total) { $0.mood }
+        let decade = dimension(id: "decade", title: "Decade", from: thumbed, overall: overall, totalRated: total) { $0.decade }
+        let theme = dimension(id: "theme", title: "Theme", from: thumbed, overall: overall, totalRated: total) { $0.theme }
+        let genre = dimension(id: "genre", title: "Genre", from: thumbed, overall: overall, totalRated: total) { $0.genre }
+        let language = dimension(id: "language", title: "Language", from: thumbed, overall: overall, totalRated: total) { $0.language }
         // --- energy ---
-        let energy = energyInsight(from: rated, overall: overall, totalRated: total)
+        let energy = energyInsight(from: thumbed, overall: overall, totalRated: total)
         // --- modifier selector ---
-        // Loop [decade, theme, genre, language] in priority order; keep the dimension
-        // whose over-index margin above overall is highest. First-seen-maximum ensures
-        // decade wins on a tie (array order).
         var best: WinningModifier? = nil
         for (dimID, dim) in [("decade", decade), ("theme", theme), ("genre", genre), ("language", language)] {
             guard let oi = dim.overIndex else { continue }
@@ -128,18 +130,18 @@ struct TasteMirror: Equatable {
         }
         let winningModifier = best
 
-        // --- archetype ---
+        // --- archetype: v2 affinity scorer (hearts included via `rated`) ---
         let isArchetypeUnlocked = total >= Thresholds.minRatedArchetype
-        let archetype: TasteProfile? = isArchetypeUnlocked
-            ? TasteProfile.resolve(mood: mood.topStandout?.name,
-                                   modifier: winningModifier?.categoryName)
+        let scored = isArchetypeUnlocked
+            ? ArchetypeScorer.score(rated, incumbentID: incumbentID)
             : nil
 
         return TasteMirror(
             totalRated: total, overallLikeRate: overall,
             mood: mood, decade: decade, theme: theme, genre: genre, language: language,
-            energy: energy, archetype: archetype, isArchetypeUnlocked: isArchetypeUnlocked,
-            ratedSongs: rated, winningModifier: winningModifier
+            energy: energy, archetype: scored?.profile, isArchetypeUnlocked: isArchetypeUnlocked,
+            ratedSongs: thumbed, winningModifier: winningModifier,
+            evidence: scored?.evidence
         )
     }
 }
@@ -156,7 +158,8 @@ extension TasteMirror {
         var dislikes: [String: Int] = [:]
         for r in rated {
             guard let name = key(r.entry), !name.isEmpty else { continue }
-            if r.value > 0 { likes[name, default: 0] += 1 } else { dislikes[name, default: 0] += 1 }
+            if r.value > 0 { likes[name, default: 0] += 1 }
+            else if r.value < 0 { dislikes[name, default: 0] += 1 }
         }
         let names = Set(likes.keys).union(dislikes.keys)
         let cats = names
