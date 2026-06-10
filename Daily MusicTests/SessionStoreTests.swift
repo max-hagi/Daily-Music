@@ -81,6 +81,27 @@ struct SessionStoreTests {
         #expect(!store.hasPendingEmailCode)
         #expect(store.errorMessage == nil)
     }
+
+    // MARK: SignInArtCache
+
+    @Test func signInArtCacheRoundTrips() {
+        let defaults = UserDefaults(suiteName: "SignInArtCacheTests")!
+        defaults.removePersistentDomain(forName: "SignInArtCacheTests")
+
+        #expect(SignInArtCache.load(defaults: defaults).isEmpty)
+
+        let urls = [URL(string: "https://example.com/a.jpg")!,
+                    URL(string: "https://example.com/b.jpg")!]
+        SignInArtCache.save(urls, defaults: defaults)
+        #expect(SignInArtCache.load(defaults: defaults) == urls)
+
+        // Saving a fresh set replaces, not appends.
+        let fresh = [URL(string: "https://example.com/c.jpg")!]
+        SignInArtCache.save(fresh, defaults: defaults)
+        #expect(SignInArtCache.load(defaults: defaults) == fresh)
+
+        defaults.removePersistentDomain(forName: "SignInArtCacheTests")
+    }
 }
 
 private final class RecordingAuthService: AuthService {

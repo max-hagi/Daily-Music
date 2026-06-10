@@ -123,10 +123,18 @@ struct SignInView: View {
         }
     }
 
-    /// Pull real covers from the current entry source for the moving cover wall.
+    /// Pull real covers for the moving cover wall: last visit's set renders
+    /// instantly from the local cache, then a background fetch refreshes it.
     private func loadArt() async {
+        if artURLs.isEmpty {
+            artURLs = SignInArtCache.load()
+        }
         let entries = (try? await env.entries.publishedHistory()) ?? []
-        artURLs = Array(entries.compactMap(\.albumArtURL).prefix(24))
+        let fresh = Array(entries.compactMap(\.albumArtURL).prefix(24))
+        if !fresh.isEmpty {
+            artURLs = fresh
+            SignInArtCache.save(fresh)
+        }
     }
 }
 
