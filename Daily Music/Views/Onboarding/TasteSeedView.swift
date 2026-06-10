@@ -2,11 +2,12 @@
 //  TasteSeedView.swift
 //  Daily Music
 //
-//  The onboarding "find your frequency" flow, shown as a full-screen cover right
-//  after the name step: a warm intro → the StarterPack rated one song at a time (tap
-//  the art to preview, 👍/👎) → an instant first-read reveal. The 👍/👎 are saved via
-//  SeedRatings to seed the user's REAL taste mirror, so a profile is established at
-//  onboarding and then evolves from daily ratings. Same gesture as the daily ritual.
+//  The onboarding "find your frequency" flow: a warm intro (with audio consent)
+//  → the StarterPack rated via a swipe card deck (auto-playing, looping previews,
+//  👍/👎 fallback thumbs) → an instant first-read reveal → straight into today's
+//  first listening ceremony. The 👍/👎 picks are saved via SeedRatings to seed
+//  the user's REAL taste mirror, so a profile is established at onboarding and
+//  then evolves from daily ratings. Same gesture as the daily ritual.
 //
 
 import SwiftUI
@@ -21,17 +22,14 @@ struct TasteSeedView: View {
 
     private enum Phase: Equatable { case intro, rating, reveal }
     @State private var phase: Phase = .intro
-    @State private var index = 0
-    @State private var picks: [RatedSong] = []
+    @State private var deck = TasteSeedDeck(songs: StarterPack.songs)
     @State private var read = StartingRead()
 
-    private let songs = StarterPack.songs
     private var player: MusicPlayer { env.musicPlayer }
     private var firstName: String {
         let n = displayName.split(separator: " ").first.map(String.init) ?? displayName
         return n.isEmpty ? "there" : n
     }
-    private var current: DailyEntry { songs[min(index, songs.count - 1)] }
 
     var body: some View {
         ZStack {
@@ -52,7 +50,19 @@ struct TasteSeedView: View {
             }
         }
         .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.85), value: phase)
-        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: index)
+        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: deck.index)
+        .onChange(of: phase) { _, newPhase in
+            // Begin tapped → rating starts → first preview auto-plays. The Begin
+            // tap is the consenting user gesture for audio.
+            guard newPhase == .rating, let song = deck.current else { return }
+            Task { await player.toggle(song) }
+        }
+        .onChange(of: player.state) { _, newState in
+            // Loop: a finished preview restarts until the user swipes.
+            guard phase == .rating, newState == .finished,
+                  let song = deck.current, player.nowPlayingEntryID == song.id else { return }
+            Task { await player.toggle(song) }   // toggle from .finished replays fresh
+        }
     }
 
     // MARK: intro
@@ -65,7 +75,7 @@ struct TasteSeedView: View {
             Text("Alright, \(firstName) —\nlet's find your frequency")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .multilineTextAlignment(.center)
-            Text("Tap a song to hear a taste, then react 👍 or 👎. This seeds your taste profile — it grows from your daily songs after.")
+            Text("Songs will play out loud — headphones on 🎧. Swipe right if you're into it, left if not. This seeds your taste profile; it grows from your daily songs after.")
                 .font(.callout.weight(.medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -80,62 +90,44 @@ struct TasteSeedView: View {
         }
     }
 
-    // MARK: rating — one song at a time
+    // MARK: rating — the swipe deck
     private var ratingView: some View {
-        let song = current
-        let isPreviewing = player.isPlaying(song)
-        return VStack(spacing: Theme.Spacing.lg) {
+        VStack(spacing: Theme.Spacing.lg) {
             Spacer(minLength: Theme.Spacing.xl)
-            Text("\(index + 1) of \(songs.count)")
+            Text(deck.positionText)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.secondary)
 
-            Button { togglePreview(song) } label: {
-                ZStack(alignment: .bottomTrailing) {
-                    AlbumArtView(url: song.albumArtURL, cornerRadius: 24)
-                        .frame(maxWidth: 300)
-                    Image(systemName: isPreviewing ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 40))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.white)
-                        .padding(12)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isPreviewing ? "Pause preview" : "Preview \(song.title)")
+            TasteSeedCardStack(
+                cards: deck.upcoming,
+                onTapFront: { if let song = deck.current { togglePreview(song) } },
+                onJudge: judge
+            )
 
-            VStack(spacing: 4) {
-                Text(song.title)
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
-                    .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.8)
-                Text(song.artist)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.secondary).lineLimit(1)
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-
-            Text("Tap the art to hear a taste")
+            Text(player.state == .paused ? "Tap the art to resume" : "Previewing — tap the art to pause")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
 
             Spacer()
 
+            // Compact fallbacks: swiping is the primary gesture, but the thumbs
+            // stay for one-handed reach, VoiceOver, and Reduce Motion users.
             HStack(spacing: Theme.Spacing.xl) {
                 judgmentButton(value: -1, symbol: "hand.thumbsdown.fill", tint: .secondary)
                 judgmentButton(value: 1, symbol: "hand.thumbsup.fill", tint: Theme.Brand.gradient[0])
             }
-            .padding(.bottom, 40)
+            .padding(.bottom, 32)
         }
     }
 
     private func judgmentButton(value: Int, symbol: String, tint: Color) -> some View {
         Button { judge(value) } label: {
             Image(systemName: symbol)
-                .font(.system(size: 34, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 92, height: 92)
+                .frame(width: 56, height: 56)
                 .background(tint, in: Circle())
-                .shadow(color: tint.opacity(0.35), radius: 12, y: 6)
+                .shadow(color: tint.opacity(0.3), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(value > 0 ? "Like" : "Dislike")
@@ -143,9 +135,9 @@ struct TasteSeedView: View {
 
     // MARK: reveal
     private var reveal: some View {
-        // All 10 starter songs are judged by the time reveal shows, which clears
+        // All starter songs are judged by the time reveal shows, which clears
         // the unlock threshold — use the real engine for the first-read profile.
-        let profile = TasteMirror.build(from: picks).archetype ?? .theShapeshifter
+        let profile = TasteMirror.build(from: deck.picks).archetype ?? .theShapeshifter
         return VStack(spacing: Theme.Spacing.lg) {
             Spacer()
             Image(systemName: profile.symbol)
@@ -165,7 +157,7 @@ struct TasteSeedView: View {
                 .padding(.horizontal, Theme.Spacing.xl)
             Spacer()
             Button { stopAndExit { onComplete(read) } } label: {
-                Text("Continue").frame(maxWidth: .infinity)
+                Text("Hear today's song").frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryActionButtonStyle(tint: profile.colors.first ?? Theme.Brand.gradient[0]))
             .padding(.horizontal, 28)
@@ -185,13 +177,13 @@ struct TasteSeedView: View {
 
     private func judge(_ value: Int) {
         Haptics.tap()
-        picks.append(RatedSong(entry: current, value: value))
-        Task { await player.stop() }
-        if index + 1 < songs.count {
-            index += 1
+        deck.judge(value)
+        if let next = deck.current {
+            Task { await player.toggle(next) }   // different entry → starts fresh
         } else {
-            read = StartingRead.from(picks: picks)
-            SeedRatings.save(picks)   // seed the real taste mirror
+            read = StartingRead.from(picks: deck.picks)
+            SeedRatings.save(deck.picks)   // seed the real taste mirror
+            Task { await player.stop() }
             phase = .reveal
         }
     }
