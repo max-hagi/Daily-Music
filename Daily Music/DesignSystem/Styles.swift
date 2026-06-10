@@ -136,3 +136,28 @@ struct PressableCardButtonStyle: ButtonStyle {
             .animation(.spring(response: 0.3, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }
+
+// MARK: - Glass card
+
+/// The onboarding glass language: frosted card with a hairline highlight stroke
+/// and a soft drop shadow, for content floating on the bloom backdrop.
+struct GlassCard: ViewModifier {
+    var cornerRadius: CGFloat = 14
+
+    func body(content: Content) -> some View {
+        content
+            .background(.ultraThinMaterial,
+                        in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(.white.opacity(0.35), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 14, y: 6)
+    }
+}
+
+extension View {
+    func glassCard(cornerRadius: CGFloat = 14) -> some View {
+        modifier(GlassCard(cornerRadius: cornerRadius))
+    }
+}
