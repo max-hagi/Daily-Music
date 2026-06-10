@@ -43,6 +43,11 @@ final class AppEnvironment {
     let profileStore: ProfileStore
     let friendsStore: FriendsStore
     let friendNudgeStore: FriendNudgeStore
+    let catchUpLog: CatchUpLog
+    /// Day-one handoff: set when the taste-seed reveal completes so TodayView
+    /// raises the first ceremony immediately (no settle beat). One-shot —
+    /// TodayView clears it after consuming.
+    var launchIntoCeremony = false
 
     init(
         auth: AuthService,
@@ -86,6 +91,7 @@ final class AppEnvironment {
         self.profileStore = ProfileStore(service: profiles)
         self.friendsStore = FriendsStore(service: friends)
         self.friendNudgeStore = FriendNudgeStore(service: friendNudges)
+        self.catchUpLog = CatchUpLog()
     }
 
     // Two factory methods that assemble a fully-wired container. Picking `mock()`

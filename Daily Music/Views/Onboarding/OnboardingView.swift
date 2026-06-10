@@ -68,6 +68,7 @@ struct OnboardingView: View {
                 startingDecade = read.decade ?? ""
                 tasteSeedDone = true
                 showingTasteSeed = false
+                env.launchIntoCeremony = true   // reveal's button promised today's song
                 advance()
             } onSkip: {
                 tasteSeedDone = true
@@ -152,10 +153,19 @@ struct OnboardingView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: step)
     }
 
+    /// After a notification-permission denial on the reminder step, the primary
+    /// button itself becomes the way forward — never leave the main path stuck.
+    private var primaryButtonTitle: String {
+        if step == 1, settings?.permissionDenied == true {
+            return "Continue without reminders"
+        }
+        return step == totalSteps - 1 ? "Finish" : "Continue"
+    }
+
     private var buttons: some View {
         VStack(spacing: 6) {
             Button { primaryAction() } label: {
-                Text(step == totalSteps - 1 ? "Finish" : "Continue")
+                Text(primaryButtonTitle)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryActionButtonStyle(tint: Theme.Brand.gradient[0]))
@@ -187,7 +197,13 @@ struct OnboardingView: View {
             advance()
             return
         }
-        enableReminderAndAdvance()
+        if settings?.permissionDenied == true {
+            // Permission already denied → the primary button moves on without
+            // reminders (re-asking is pointless; iOS won't re-prompt).
+            disableReminderAndAdvance()
+        } else {
+            enableReminderAndAdvance()
+        }
     }
 
     private func skipAction() {

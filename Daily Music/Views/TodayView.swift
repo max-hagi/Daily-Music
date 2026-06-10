@@ -18,6 +18,9 @@ struct TodayView: View {
     @State private var model: TodayViewModel?
     @State private var showingSettings = false   // drives the Settings sheet
     @State private var showingListening = false  // drives the immersive listen cover
+    /// True when the listen cover was auto-opened as today's first-listen
+    /// ceremony (gets the reveal intro); false for manual headphones taps.
+    @State private var listeningIsCeremony = false
     @AppStorage("heardEntryID") private var heardEntryID = ""  // last entry the user listened to
 
     var body: some View {
@@ -70,12 +73,19 @@ struct TodayView: View {
                     }
                 }
 
+                ToolbarItem(placement: .topBarLeading) {
+                    if let streak = model?.streak, streak.current > 0 {
+                        TodayToolbarStreakBadge(streak: streak)
+                    }
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     TodayToolbarLiveBadge(count: model?.listenersToday)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
+                        listeningIsCeremony = false   // direct intent → no intro beat
                         showingListening = true
                     } label: {
                         Image(systemName: "headphones")
@@ -91,16 +101,28 @@ struct TodayView: View {
             }
             .fullScreenCover(isPresented: $showingListening) {
                 if let entry = loadedEntry {
-                    ListeningView(entry: entry) {
+                    ListeningView(entry: entry, showsRevealIntro: listeningIsCeremony) {
                         heardEntryID = entry.id.uuidString
                         showingListening = false
+                        // Reading mode is silent: moving to the story (or the clip
+                        // finishing) hands the room back — no audio left running.
+                        Task { await env.musicPlayer.stop() }
                     }
                 }
             }
             .onChange(of: loadedEntry?.id) { _, _ in
                 guard let entry = loadedEntry else { return }
                 let heard = heardEntryID.isEmpty ? nil : heardEntryID
-                if ListeningCeremony.shouldAutoOpen(todayEntryID: entry.id, heardEntryID: heard) {
+                guard ListeningCeremony.shouldAutoOpen(todayEntryID: entry.id, heardEntryID: heard) else { return }
+                // Normally Today settles for a beat before the ceremony rises; on
+                // day one (straight from the onboarding reveal) the beat is zero
+                // so the arc — rate songs → archetype → first song — is unbroken.
+                let fromOnboarding = env.launchIntoCeremony
+                env.launchIntoCeremony = false
+                listeningIsCeremony = true
+                Task {
+                    try? await Task.sleep(for: ListeningCeremony.autoOpenDelay(launchingFromOnboarding: fromOnboarding))
+                    guard loadedEntry?.id == entry.id else { return }
                     showingListening = true
                 }
             }
@@ -259,6 +281,99 @@ private struct TodayErrorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
+    }
+}
+
+// The daily streak pill — the loss-aversion lever made visible. Shows the run
+// ("flame 12"); on milestone days it names the achievement ("· one week") and
+// celebrates once with a success haptic.
+private struct TodayToolbarStreakBadge: View {
+    let streak: Streak
+
+    // Remember the last milestone we celebrated so reopening the app on the
+    // same day doesn't replay the haptic.
+    @AppStorage("lastCelebratedStreakMilestone") private var lastCelebratedMilestone = 0
+    @State private var showingDetail = false
+
+    var body: some View {
+        Button {
+            Haptics.select()
+            showingDetail = true
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "flame.fill")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.orange)
+
+                Text(label)
+                    .font(.caption.weight(.heavy))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                    .contentTransition(.numericText())
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .glassPillStyle(tint: .orange.opacity(streak.isMilestoneToday ? 0.22 : 0.08))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+        .onAppear { celebrateMilestoneIfNeeded() }
+        .popover(isPresented: $showingDetail, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+            streakDetail
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    /// Tap detail: the goal-gradient copy ("2 days to two weeks") that only
+    /// VoiceOver heard before, plus the all-time best for a sense of history.
+    private var streakDetail: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("\(streak.current)-day streak", systemImage: "flame.fill")
+                .font(.subheadline.weight(.heavy))
+                .foregroundStyle(.orange)
+
+            if streak.isMilestoneToday {
+                Text("You just hit \(Streak.milestoneName(streak.current))!")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+            } else if let next = streak.nextMilestone, let togo = streak.daysToNextMilestone {
+                Text("\(togo) day\(togo == 1 ? "" : "s") to \(Streak.milestoneName(next))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+
+            if streak.best > streak.current {
+                Text("Best run: \(streak.best) days")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
+    }
+
+    private var label: String {
+        if streak.isMilestoneToday {
+            return "\(streak.current) · \(Streak.milestoneName(streak.current))"
+        }
+        return "\(streak.current)"
+    }
+
+    private var accessibilityText: String {
+        var text = "\(streak.current)-day streak."
+        if streak.isMilestoneToday {
+            text += " You reached \(Streak.milestoneName(streak.current))!"
+        } else if let next = streak.nextMilestone, let togo = streak.daysToNextMilestone {
+            text += " \(togo) day\(togo == 1 ? "" : "s") until \(Streak.milestoneName(next))."
+        }
+        return text
+    }
+
+    private func celebrateMilestoneIfNeeded() {
+        guard streak.isMilestoneToday, lastCelebratedMilestone != streak.current else { return }
+        lastCelebratedMilestone = streak.current
+        Haptics.success()
     }
 }
 
