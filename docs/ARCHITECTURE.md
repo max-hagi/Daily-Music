@@ -5,7 +5,7 @@
 > in the Supabase backend. Use it to answer "if something's wrong in X, where do
 > I look?"
 >
-> **Snapshot:** generated 2026-06-08 from the source tree. Regenerate when the
+> **Snapshot:** generated 2026-06-10 from the source tree. Regenerate when the
 > layering changes.
 >
 > **How to read the diagrams:** Mermaid renders inline on GitHub and in VS Code
@@ -95,7 +95,9 @@ flowchart TD
 
 `RootView` is the gate: it restores the session, reconciles onboarding state
 against `profiles.onboarded_at`, then routes. Deep links (`dailymusic://friend/…`,
-`dailymusic://today`) are captured here via `.onOpenURL`.
+`dailymusic://today`, `dailymusic://wrapped` — the last fired by the
+1st-of-month recap notification, landing on Insights with last month's Wrapped
+presented) are captured here via `.onOpenURL`.
 
 **Files:** [Daily_MusicApp](Daily%20Music/Daily_MusicApp.swift) · [RootView](Daily%20Music/App/RootView.swift) · [MainTabView](Daily%20Music/Views/MainTabView.swift)
 
@@ -131,7 +133,11 @@ flowchart TD
 ```
 
 Today's "today's pick" + check-in flow lives in `TodayViewModel`; the listener
-count comes from a Postgres RPC, not a table. See [TodayView](Daily%20Music/Views/TodayView.swift) · [TodayViewModel](Daily%20Music/ViewModels/TodayViewModel.swift).
+count comes from a Postgres RPC, not a table. After recording the check-in the
+VM also computes a [`Streak`](Daily%20Music/Models/Streak.swift) (current run /
+best run / milestone progress) from `CheckInService.checkInDates()`, shown as
+the flame pill in Today's toolbar (`TodayToolbarStreakBadge`). See
+[TodayView](Daily%20Music/Views/TodayView.swift) · [TodayViewModel](Daily%20Music/ViewModels/TodayViewModel.swift).
 
 ### 3.2 Vault (calendar history)
 
@@ -157,7 +163,13 @@ flowchart TD
 ```
 
 `VaultView` loads its own reactions map directly from `ReactionsService` (not via
-the VM) and drives the player. See [VaultView](Daily%20Music/Views/VaultView.swift) · [VaultViewModel](Daily%20Music/ViewModels/VaultViewModel.swift) · [CalendarMonthView](Daily%20Music/Views/Components/CalendarMonthView.swift).
+the VM) and drives the player. The hero is data-driven via the shared
+[CatchUp](Daily%20Music/Models/CatchUp.swift) rule: last week's entries on days
+with no check-in, minus ones already opened in the Vault (`CatchUpLog`, a
+UserDefaults-backed store on `AppEnvironment`). The same rule feeds the Vault
+tab badge in `MainTabView`, so catching up clears both live. "Recent picks →
+See all" pushes `VaultAllSongsView`, the full searchable archive
+(title/artist/genre/mood). See [VaultView](Daily%20Music/Views/VaultView.swift) · [VaultViewModel](Daily%20Music/ViewModels/VaultViewModel.swift) · [CalendarMonthView](Daily%20Music/Views/Components/CalendarMonthView.swift).
 
 ### 3.3 Favorites
 
@@ -255,17 +267,29 @@ flowchart TD
     WrappedView --> WVM --> ES5 & CIS5 & RatS5
 ```
 
-`InsightsViewModel` now also manages **archetype stability**: it calls
-`ArchetypeSnapshotStore.evaluate()` on every load to stabilize the displayed
-archetype across daily taste changes (updates at most weekly) and gates a
-fullscreen reveal animation (`ArchetypeRevealView`) for first-unlock and
-weekly-change events. `ArchetypeRevealFlare` maps every `TasteProfile` to its
-own particle/light/haptic flavor. The stable archetype is persisted to
-`UserDefaults` via `ArchetypeSnapshotStore`; no backend round-trip required.
+`InsightsViewModel.load(favoriteIDs:)` builds `[RatedSong]` from history +
+ratings + hearts: thumbed songs carry their rating and `isFavorite` flag;
+favorited-but-unrated songs join as value-0 heart-only signal so the scorer
+hears them without distorting the tile math. The array (+ `SeedRatings`) is
+passed to `TasteMirror.build(from:incumbentID:)` together with the snapshot
+store's incumbent ID for hysteresis.
+
+**Archetype Engine v2** (`ArchetypeAffinity.swift`): `ArchetypeScorer` computes
+per-archetype affinity scores by dot-producting the user's recency-weighted,
+Laplace-smoothed like-rates against each archetype's weight vectors over moods,
+energy bands, themes, and genres. `isFavorite` adds a +0.75 boost on top of a 👍.
+The winner needs `scoreFloor = 0.02` to beat The Shapeshifter, and must clear the
+incumbent by `stickyMargin = 0.015` (hysteresis). Evidence facts (top
+contributing dimension/category with raw counts) surface as receipts in the hero
+card and as the archetype reveal reason. `TasteProfile` has 11 identities (10
+affinity-scored + The Shapeshifter fallback) including the new **The Pophead**
+(`the_pophead`, genre-anchored).
+
+`InsightsViewModel` also manages **archetype stability**: `ArchetypeSnapshotStore.evaluate()` stabilizes the displayed archetype (updates at most weekly) and gates a fullscreen reveal animation (`ArchetypeRevealView`) for first-unlock and weekly-change events. `ArchetypeRevealFlare` maps every `TasteProfile` to its own particle/light/haptic flavor. Persisted to `UserDefaults`; no backend round-trip.
 
 `InsightsViewModel` produces a `TasteMirror`; `WrappedViewModel` produces a
 year-in-review `Recap`. Both read history + ratings; Wrapped also reads
-check-ins for streaks. See [InsightsView](Daily%20Music/Views/InsightsView.swift) · [InsightsViewModel](Daily%20Music/ViewModels/InsightsViewModel.swift) · [ArchetypeRevealView](Daily%20Music/Views/Components/ArchetypeRevealView.swift) · [ArchetypeSnapshotStore](Daily%20Music/Services/ArchetypeSnapshotStore.swift) · [ArchetypeSnapshot](Daily%20Music/Models/ArchetypeSnapshot.swift) · [ArchetypeRevealFlare](Daily%20Music/Models/ArchetypeRevealFlare.swift) · [WrappedView](Daily%20Music/Views/WrappedView.swift) · [TasteMirrorBoard](Daily%20Music/Views/Components/TasteMirrorBoard.swift).
+check-ins for streaks. See [InsightsView](Daily%20Music/Views/InsightsView.swift) · [InsightsViewModel](Daily%20Music/ViewModels/InsightsViewModel.swift) · [ArchetypeAffinity](Daily%20Music/Models/ArchetypeAffinity.swift) · [TasteMirror](Daily%20Music/Models/TasteMirror.swift) · [ArchetypeRevealView](Daily%20Music/Views/Components/ArchetypeRevealView.swift) · [ArchetypeSnapshotStore](Daily%20Music/Services/ArchetypeSnapshotStore.swift) · [ArchetypeSnapshot](Daily%20Music/Models/ArchetypeSnapshot.swift) · [ArchetypeRevealFlare](Daily%20Music/Models/ArchetypeRevealFlare.swift) · [WrappedView](Daily%20Music/Views/WrappedView.swift) · [TasteMirrorBoard](Daily%20Music/Views/Components/TasteMirrorBoard.swift).
 
 ### 3.6 Entry detail (the shared content card)
 
@@ -309,7 +333,16 @@ flowchart TD
 
 `MusicPlayer` is a thin state wrapper around a swappable `MusicEngine`. Today
 `live()` uses `PreviewMusicEngine` (free 30-sec iTunes previews, no paid
-account); the MusicKit engine is wired but not enabled. See [ListeningView](Daily%20Music/Views/ListeningView.swift) · [MusicPlayer](Daily%20Music/Services/MusicPlayer.swift) · [PreviewMusicEngine](Daily%20Music/Services/Music/PreviewMusicEngine.swift).
+account); the MusicKit engine is wired but not enabled. The engine protocol
+distinguishes `play()` (fresh start) from `resume()` (continue after pause) —
+pause/play must NOT restart the clip — and `MusicPlayer.restart()` backs the
+player's back-to-start button.
+
+`ListeningView` doubles as the **first-listen ceremony**: when opened with
+`showsRevealIntro` (auto-open from Today only), it holds on an intro beat
+("Your song of the day", tap to skip) before revealing the artwork and starting
+playback. Manual opens skip the intro. Advancing to the story stops playback
+(TodayView's `onAdvance`). See [ListeningView](Daily%20Music/Views/ListeningView.swift) · [MusicPlayer](Daily%20Music/Services/MusicPlayer.swift) · [PreviewMusicEngine](Daily%20Music/Services/Music/PreviewMusicEngine.swift).
 
 ### 3.8 Auth & Onboarding
 
@@ -369,7 +402,7 @@ table is the fastest way to go from "this data is wrong" to "this table/RPC".
 | [EntryService](Daily%20Music/Services/EntryService.swift) | [SupabaseEntryService](Daily%20Music/Services/Supabase/SupabaseEntryService.swift) | table `daily_entries` |
 | [FavoritesService](Daily%20Music/Services/FavoritesService.swift) | [SupabaseFavouritesService](Daily%20Music/Services/Supabase/SupabaseFavouritesService.swift) | table `favourites` |
 | [CheckInService](Daily%20Music/Services/CheckInService.swift) | [SupabaseCheckInService](Daily%20Music/Services/Supabase/SupabaseCheckInService.swift) | table `check_ins` |
-| [SharedStatsService](Daily%20Music/Services/SharedStatsService.swift) | [SupabaseSharedStatsService](Daily%20Music/Services/Supabase/SupabaseSharedStatsService.swift) | rpc `todays_listener_count` |
+| [SharedStatsService](Daily%20Music/Services/SharedStatsService.swift) | [SupabaseSharedStatsService](Daily%20Music/Services/Supabase/SupabaseSharedStatsService.swift) | rpc `todays_listener_count` · rpc `listener_count_on` (archive days; SQL in `docs/superpowers/specs/archive-listener-counts.sql`) |
 | [ReactionsService](Daily%20Music/Services/ReactionsService.swift) | [SupabaseReactionsService](Daily%20Music/Services/Supabase/SupabaseReactionsService.swift) | table `reactions` |
 | [RatingService](Daily%20Music/Services/RatingService.swift) | [SupabaseRatingService](Daily%20Music/Services/Supabase/SupabaseRatingService.swift) | table `song_ratings` |
 | [CatalogInfoService](Daily%20Music/Services/CatalogInfoService.swift) | `LiveCatalogInfoService` | iTunes lookup API (external) |
@@ -377,10 +410,30 @@ table is the fastest way to go from "this data is wrong" to "this table/RPC".
 | [ProfileService](Daily%20Music/Services/ProfileService.swift) | [SupabaseProfileService](Daily%20Music/Services/Supabase/SupabaseProfileService.swift) | table `profiles` · storage `avatars` |
 | [FriendService](Daily%20Music/Services/FriendService.swift) | [SupabaseFriendService](Daily%20Music/Services/Supabase/SupabaseFriendService.swift) | `my_friends`, `incoming_requests`, rpc `claim_friend_code` |
 | [FriendNudgeService](Daily%20Music/Services/FriendNudgeService.swift) | [SupabaseFriendNudgeService](Daily%20Music/Services/Supabase/SupabaseFriendNudgeService.swift) | edge fn `send-friend-nudge` |
-| [NotificationService](Daily%20Music/Services/NotificationService.swift) | `LocalNotificationService` | local (UNUserNotificationCenter) |
+| [NotificationService](Daily%20Music/Services/NotificationService.swift) | `LocalNotificationService` | local (UNUserNotificationCenter) — schedules a rolling 14-day window of dated reminders with rotating copy from [ReminderCopy](Daily%20Music/Models/ReminderCopy.swift); the soonest one carries the live streak. Refreshed on app open by `MainTabView.refreshReminderWindow()` |
 | [PushRegistrationService](Daily%20Music/Services/PushRegistrationService.swift) | `SupabasePushRegistrationService` | device-token registration |
 
 Edge functions live in [`supabase/functions/`](supabase/functions): `delete-account`, `send-friend-nudge`.
+
+### Widget extension
+
+[`DailyMusicWidget/`](DailyMusicWidget) is a separate WidgetKit target
+(`DailyMusicWidgetExtension`, embedded in the app). "Today's Drop" shows
+today's pick on the Home/Lock Screen (small, medium, accessory-rectangular).
+Its timeline provider fetches the public `daily_entries` row straight from
+Supabase REST with the anon key (no app group needed — same public data the
+sign-in cover wall reads) and refreshes after local midnight, or every 30 min
+until the drop lands. Tapping deep-links `dailymusic://today` (handled in
+`RootView`; the scheme is registered via the app's partial
+[`Info.plist`](Daily%20Music/Info.plist), merged into the generated one). The
+widget keeps its own gitignored `SupabaseConfig.swift` copy.
+
+Both targets share the App Group `group.maxhagi.Daily-Music` (entitlements files
+at each target root). The app publishes a streak snapshot into it via
+[SharedStreak](Daily%20Music/Services/SharedStreak.swift) (called from
+`TodayViewModel` and `MainTabView`), and the widget reads it through its own
+`SharedStreakReader` — hiding the flame past the snapshot's valid-through day
+so it never shows a streak that may have silently broken.
 
 ---
 
@@ -393,14 +446,20 @@ flowchart LR
     DailyEntry["DailyEntry (core)"]
     UserProfile
     TasteProfile
-    TasteMirror --> DailyEntry
+    RatedSong["RatedSong<br/>(value, isFavorite, ratedAt)"] --> DailyEntry
+    TasteMirror --> RatedSong
     TasteMirror --> TasteProfile
+    TasteMirror --> ArchetypeEvidence
+    ArchetypeAffinity["ArchetypeAffinity<br/>(weight vectors per profile)"] --> TasteProfile
+    ArchetypeScorer["ArchetypeScorer<br/>(affinity engine)"] --> ArchetypeAffinity
+    ArchetypeScorer --> RatedSong
+    ArchetypeEvidence["ArchetypeEvidence<br/>(scored facts / receipts)"]
     TasteComparison --> DailyEntry
     TasteComparison --> TasteMirror
     StartingRead --> TasteMirror
     StarterPack --> DailyEntry
     StarterPack --> SeedRatings
-    SeedRatings --> StarterPack
+    SeedRatings --> RatedSong
     Friend --> UserProfile
     StreamingService --> DailyEntry
     LoadState["LoadState&lt;T&gt; (generic)"] --> DailyEntry
@@ -410,11 +469,15 @@ flowchart LR
     ArchetypeSnapshot --> TasteProfile
 ```
 
-`DailyEntry` is the hub model — almost everything references it.
-`TasteMirror` (the insights payload) and `TasteComparison` (friend insights) are
-the two derived aggregates. `ArchetypeSnapshot` stabilizes the displayed
-archetype (persisted via `ArchetypeSnapshotStore`); `ArchetypeRevealFlare`
-provides per-archetype visual/haptic data for the reveal animation. See [Models/](Daily%20Music/Models).
+`DailyEntry` is the hub model — almost everything references it. `RatedSong`
+wraps a `DailyEntry` with the user's judgment (`value`), heart flag (`isFavorite`),
+and timestamp (`ratedAt` for recency decay). `TasteMirror` (the insights payload)
+and `TasteComparison` (friend insights) are the two derived aggregates.
+`ArchetypeScorer` produces the winning archetype + `ArchetypeEvidence` (raw
+facts that power the receipts copy); `ArchetypeAffinity` holds each archetype's
+weight vectors. `ArchetypeSnapshot` stabilizes the displayed archetype (persisted
+via `ArchetypeSnapshotStore`); `ArchetypeRevealFlare` provides per-archetype
+visual/haptic data for the reveal animation. See [Models/](Daily%20Music/Models).
 
 ---
 
@@ -439,4 +502,9 @@ provides per-archetype visual/haptic data for the reveal animation. See [Models/
 | Archetype reveal never fires / fires again after 7 days | [ArchetypeSnapshot](Daily%20Music/Models/ArchetypeSnapshot.swift) (`ArchetypeSnapshotEvaluator`) + [ArchetypeSnapshotStore](Daily%20Music/Services/ArchetypeSnapshotStore.swift) (`UserDefaults` key `insights.archetypeSnapshot`) |
 | Wrong archetype shown on Insights screen | [InsightsViewModel](Daily%20Music/ViewModels/InsightsViewModel.swift) `stableArchetype` — comes from snapshot, not live mirror |
 | Archetype reveal animation looks wrong / missing flare | [ArchetypeRevealFlare](Daily%20Music/Models/ArchetypeRevealFlare.swift) `flares` dict — check that the `TasteProfile` has an entry |
+| Archetype score feels wrong / favorites not influencing | [ArchetypeAffinity](Daily%20Music/Models/ArchetypeAffinity.swift) weight vectors + `ArchetypeScorer.score()` — check `isFavorite` is being set by the VM and that `favoriteBoost`, `halfLifeDays`, `stickyMargin` constants look right |
 | Glass effects not rendering | [Styles.swift](Daily%20Music/DesignSystem/Styles.swift) — requires iOS 26+ (`glassEffect` API) |
+| Streak pill wrong / missing on Today | [Streak](Daily%20Music/Models/Streak.swift) (`Streak.compute`) ← `check_ins` via [TodayViewModel](Daily%20Music/ViewModels/TodayViewModel.swift) |
+| Reminders fire with stale/identical copy | [ReminderCopy](Daily%20Music/Models/ReminderCopy.swift) + `LocalNotificationService` rolling window + `MainTabView.refreshReminderWindow()` |
+| Archive "N listened" badge missing | rpc `listener_count_on` not applied — run `docs/superpowers/specs/archive-listener-counts.sql` in the dashboard |
+| Widget empty / never updates | [TodayDropWidget](DailyMusicWidget/TodayDropWidget.swift) provider — REST fetch with widget's own `SupabaseConfig.swift` (gitignored; recreate if missing) |
