@@ -324,6 +324,8 @@ reusable. Guest sessions are read-only; the gating reads `SessionStore`. See
 flowchart TD
     ListeningView --> AlbumArtView
     ListeningView --> MusicPlayer
+    TasteSeedView --> TasteSeedDeck["TasteSeedDeck<br/>(pure state machine)"]
+    TasteSeedView --> TasteSeedCardStack["TasteSeedCardStack<br/>(swipe deck view)"]
     TasteSeedView --> MusicPlayer
     MusicPlayer --> MusicEngine{{"MusicEngine (protocol)"}}
     MusicEngine -.live.-> PreviewMusicEngine["PreviewMusicEngine<br/>iTunes 30s previews"]
@@ -342,7 +344,11 @@ player's back-to-start button.
 `showsRevealIntro` (auto-open from Today only), it holds on an intro beat
 ("Your song of the day", tap to skip) before revealing the artwork and starting
 playback. Manual opens skip the intro. Advancing to the story stops playback
-(TodayView's `onAdvance`). See [ListeningView](Daily%20Music/Views/ListeningView.swift) · [MusicPlayer](Daily%20Music/Services/MusicPlayer.swift) · [PreviewMusicEngine](Daily%20Music/Services/Music/PreviewMusicEngine.swift).
+(TodayView's `onAdvance`).
+
+**Taste seed auto-play + loop:** `TasteSeedView` owns the intro → rating → reveal phase machine and a `TasteSeedDeck` state machine (which card is front, which peek behind, what's been judged). `TasteSeedCardStack` is a dumb swipe view: drag with rotation, INTO IT / NAH badge, fling past threshold. When the rating phase starts (Begin tapped), the front card's preview starts automatically; when `MusicPlayer` reports `.finished`, `toggle(current)` is called again — `toggle` from `.finished` replays fresh, implementing the loop. Judging advances the deck and starts the next card's preview via `toggle`. Compact 👍/👎 fallback buttons stay for accessibility and Reduce Motion.
+
+See [ListeningView](Daily%20Music/Views/ListeningView.swift) · [MusicPlayer](Daily%20Music/Services/MusicPlayer.swift) · [PreviewMusicEngine](Daily%20Music/Services/Music/PreviewMusicEngine.swift) · [TasteSeedView](Daily%20Music/Views/Onboarding/TasteSeedView.swift) · [TasteSeedDeck](Daily%20Music/Models/TasteSeedDeck.swift) · [TasteSeedCardStack](Daily%20Music/Views/Onboarding/TasteSeedCardStack.swift).
 
 ### 3.8 Auth & Onboarding
 
@@ -367,8 +373,11 @@ flowchart TD
 
 `SessionStore` is the single source of truth for auth (`isSignedIn` drives
 `RootView`). Onboarding reuses one `SettingsViewModel` across steps and stamps
-completion to `profiles.onboarded_at` via `ProfileStore.markOnboarded()`. See
-[SignInView](Daily%20Music/Views/SignInView.swift) · [EmailSignInSheet](Daily%20Music/Views/EmailSignInSheet.swift) · [OnboardingView](Daily%20Music/Views/Onboarding/OnboardingView.swift) · [SessionStore](Daily%20Music/ViewModels/SessionStore.swift).
+completion to `profiles.onboarded_at` via `ProfileStore.markOnboarded()`.
+
+**Day-one ceremony handoff:** when the taste-seed reveal completes (`TasteSeedView` fires `onComplete`), `OnboardingView` sets `AppEnvironment.launchIntoCeremony = true`. `TodayView`'s `.onChange(of: loadedEntry?.id)` consumes this flag: if set, it clears it and opens the ceremony with `ListeningCeremony.autoOpenDelay(launchingFromOnboarding: true)` (`.zero`) — skipping the normal 0.6s settle beat so the arc (rate 10 songs → archetype reveal → today's first song) is unbroken. The flag is one-shot; every subsequent day uses the normal delayed rise.
+
+See [SignInView](Daily%20Music/Views/SignInView.swift) · [EmailSignInSheet](Daily%20Music/Views/EmailSignInSheet.swift) · [OnboardingView](Daily%20Music/Views/Onboarding/OnboardingView.swift) · [SessionStore](Daily%20Music/ViewModels/SessionStore.swift) · [ListeningCeremony](Daily%20Music/Models/ListeningCeremony.swift).
 
 ### 3.9 Settings & Profile
 
