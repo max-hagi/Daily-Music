@@ -123,6 +123,60 @@ struct TasteSeedTests {
         UserDefaults.standard.synchronize()
     }
 
+    // MARK: TasteSeedDeck
+
+    private func tinyDeck() -> TasteSeedDeck {
+        TasteSeedDeck(songs: [
+            entry(mood: "Euphoric", genre: "Pop", year: 2020),
+            entry(mood: "Melancholy", genre: "Alternative", year: 2015),
+            entry(mood: "Defiant", genre: "Rock", year: 1991),
+            entry(mood: "Dreamy", genre: "Alternative", year: 2018),
+        ])
+    }
+
+    @Test func deckStartsAtFirstSong() {
+        let deck = tinyDeck()
+        #expect(deck.current?.id == deck.songs[0].id)
+        #expect(deck.positionText == "1 of 4")
+        #expect(!deck.isComplete)
+        #expect(deck.picks.isEmpty)
+    }
+
+    @Test func judgingAdvancesAndRecordsThePick() {
+        var deck = tinyDeck()
+        deck.judge(1)
+        #expect(deck.current?.id == deck.songs[1].id)
+        #expect(deck.positionText == "2 of 4")
+        #expect(deck.picks.count == 1)
+        #expect(deck.picks[0].value == 1)
+        #expect(deck.picks[0].entry.id == deck.songs[0].id)
+    }
+
+    @Test func judgingTheLastSongCompletesTheDeck() {
+        var deck = tinyDeck()
+        deck.judge(1); deck.judge(-1); deck.judge(1); deck.judge(-1)
+        #expect(deck.isComplete)
+        #expect(deck.current == nil)
+        #expect(deck.picks.count == 4)
+        #expect(deck.picks.map(\.value) == [1, -1, 1, -1])
+    }
+
+    @Test func judgingPastTheEndIsANoOp() {
+        var deck = tinyDeck()
+        for _ in 0..<6 { deck.judge(1) }   // 2 extra judgments
+        #expect(deck.picks.count == 4)
+        #expect(deck.isComplete)
+    }
+
+    @Test func upcomingShowsFrontPlusPeekingCards() {
+        var deck = tinyDeck()
+        #expect(deck.upcoming.map(\.id) == Array(deck.songs.prefix(3)).map(\.id))
+        deck.judge(1); deck.judge(1)
+        #expect(deck.upcoming.map(\.id) == [deck.songs[2].id, deck.songs[3].id])  // only 2 left
+        deck.judge(1); deck.judge(1)
+        #expect(deck.upcoming.isEmpty)
+    }
+
     @Test func seedRatingsMutate_insertNew() {
         // Ensure clean state before test
         UserDefaults.standard.removeObject(forKey: "tasteSeedRatings")
