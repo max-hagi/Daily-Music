@@ -37,6 +37,15 @@ struct TasteSeedCardStack: View {
         VStack(spacing: 10) {
             AlbumArtView(url: song.albumArtURL, cornerRadius: 24)
                 .frame(maxWidth: 300)
+                .overlay {
+                    // Full-card wash: the whole cover tints toward the verdict
+                    // as the drag commits, so the direction reads at a glance.
+                    if isFront, drag.width != 0 {
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(drag.width > 0 ? Color.green : Color.red)
+                            .opacity(Double(min(1, abs(drag.width) / commitDistance)) * 0.35)
+                    }
+                }
                 .overlay(alignment: .topLeading) { if isFront { badge } }
             VStack(spacing: 2) {
                 Text(song.title)
@@ -71,10 +80,10 @@ struct TasteSeedCardStack: View {
         if drag.width != 0 {
             Text(drag.width > 0 ? "INTO IT" : "NAH")
                 .font(.system(size: 22, weight: .black, design: .rounded))
-                .foregroundStyle(drag.width > 0 ? .green : .secondary)
+                .foregroundStyle(drag.width > 0 ? .green : .red)
                 .padding(.horizontal, 10).padding(.vertical, 4)
                 .overlay(RoundedRectangle(cornerRadius: 8)
-                    .stroke(drag.width > 0 ? Color.green : Color.secondary, lineWidth: 3))
+                    .stroke(drag.width > 0 ? Color.green : Color.red, lineWidth: 3))
                 .rotationEffect(.degrees(drag.width > 0 ? -12 : 12))
                 .padding(14)
                 .opacity(Double(strength))
