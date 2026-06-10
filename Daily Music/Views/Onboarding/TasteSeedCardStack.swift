@@ -33,33 +33,23 @@ struct TasteSeedCardStack: View {
 
     @ViewBuilder
     private func card(_ song: DailyEntry, depth: Int) -> some View {
+        // Art-only cards: title/artist live in TasteSeedView below the deck so
+        // the peeking back cards can never overlap the song text.
         let isFront = depth == 0
-        VStack(spacing: 10) {
-            AlbumArtView(url: song.albumArtURL, cornerRadius: 24)
-                .frame(maxWidth: 300)
-                .overlay {
-                    // Full-card wash: the whole cover tints toward the verdict
-                    // as the drag commits, so the direction reads at a glance.
-                    if isFront, drag.width != 0 {
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(drag.width > 0 ? Color.green : Color.red)
-                            .opacity(Double(min(1, abs(drag.width) / commitDistance)) * 0.35)
-                    }
+        AlbumArtView(url: song.albumArtURL, cornerRadius: 24)
+            .frame(maxWidth: 300)
+            .overlay {
+                // Full-card wash: the whole cover tints toward the verdict
+                // as the drag commits, so the direction reads at a glance.
+                if isFront, drag.width != 0 {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(drag.width > 0 ? Color.green : Color.red)
+                        .opacity(Double(min(1, abs(drag.width) / commitDistance)) * 0.35)
                 }
-                .overlay(alignment: .topLeading) { if isFront { badge } }
-            VStack(spacing: 2) {
-                Text(song.title)
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
-                    .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.8)
-                Text(song.artist)
-                    .font(.headline)
-                    .foregroundStyle(.secondary).lineLimit(1)
             }
-            .padding(.horizontal, Theme.Spacing.lg)
-            .opacity(isFront ? 1 : 0)   // only the front card shows its meta
-        }
-        .scaleEffect(isFront ? 1 : 1 - 0.06 * CGFloat(depth))
-        .offset(y: isFront ? 0 : CGFloat(depth) * 14)
+            .overlay(alignment: .topLeading) { if isFront { badge } }
+        .scaleEffect(isFront ? 1 : 1 - 0.05 * CGFloat(depth))
+        .offset(y: isFront ? 0 : CGFloat(depth) * -16)   // back cards peek above
         .rotationEffect(.degrees(isFront ? Double(drag.width / 18) : (depth == 1 ? -2.5 : 2.5)))
         .offset(isFront ? drag : .zero)
         .shadow(color: .black.opacity(isFront ? 0.25 : 0.1), radius: 14, y: 8)

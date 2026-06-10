@@ -92,21 +92,24 @@ struct TasteSeedView: View {
 
     // MARK: rating — the swipe deck
     private var ratingView: some View {
-        VStack(spacing: Theme.Spacing.lg) {
+        VStack(spacing: Theme.Spacing.md) {
             Spacer(minLength: Theme.Spacing.xl)
-            Text(deck.positionText)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
+            deckDots
 
             TasteSeedCardStack(
                 cards: deck.upcoming,
                 onTapFront: { if let song = deck.current { togglePreview(song) } },
                 onJudge: judge
             )
+            .frame(height: 330)
 
-            Text(player.state == .paused ? "Tap the art to resume" : "Previewing — tap the art to pause")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            if let song = deck.current {
+                songMeta(song)
+                    .id(deck.index)   // crossfade the block per card
+                    .transition(.opacity)
+            }
+
+            swipeHints
 
             Spacer()
 
@@ -118,6 +121,74 @@ struct TasteSeedView: View {
             }
             .padding(.bottom, 32)
         }
+    }
+
+    /// Deck progress: one dot per starter song — filled when judged, big when current.
+    private var deckDots: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<deck.songs.count, id: \.self) { i in
+                Circle()
+                    .fill(i <= deck.index ? Theme.Brand.gradient[0] : Color.secondary.opacity(0.25))
+                    .frame(width: i == deck.index ? 9 : 6, height: i == deck.index ? 9 : 6)
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: deck.index)
+        .accessibilityLabel(deck.positionText)
+    }
+
+    /// Title, artist, live preview progress, and the song's flavor tags — fixed
+    /// below the deck so the peeking cards never collide with text.
+    private func songMeta(_ song: DailyEntry) -> some View {
+        VStack(spacing: 8) {
+            Text(song.title)
+                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.8)
+            Text(song.artist)
+                .font(.headline)
+                .foregroundStyle(.secondary).lineLimit(1)
+
+            // Live preview bar — shows the clip moving (tap the art to pause).
+            ZStack(alignment: .leading) {
+                Capsule().fill(.quaternary)
+                Capsule().fill(Theme.Brand.gradient[0])
+                    .frame(width: 200 * player.progress)
+            }
+            .frame(width: 200, height: 4)
+            .padding(.top, 2)
+            .accessibilityHidden(true)
+
+            HStack(spacing: 6) {
+                ForEach([song.mood, song.genre, song.year.map(String.init)].compactMap { $0 }, id: \.self) { tag in
+                    Text(tag)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 9).padding(.vertical, 4)
+                        .background(.thinMaterial, in: Capsule())
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+    }
+
+    /// Explicit gesture affordance — which direction means what.
+    private var swipeHints: some View {
+        HStack {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.left")
+                Text("Nah")
+            }
+            .foregroundStyle(.red.opacity(0.75))
+            Spacer()
+            HStack(spacing: 6) {
+                Text("Into it")
+                Image(systemName: "arrow.right")
+            }
+            .foregroundStyle(.green)
+        }
+        .font(.subheadline.weight(.bold))
+        .padding(.horizontal, 56)
+        .padding(.top, 4)
+        .accessibilityHidden(true)   // the card exposes Like/Dislike actions
     }
 
     private func judgmentButton(value: Int, symbol: String, tint: Color) -> some View {
