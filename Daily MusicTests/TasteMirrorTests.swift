@@ -389,4 +389,25 @@ struct ArchetypeScorerTests {
     @Test func emptyInputScoresNil() {
         #expect(ArchetypeScorer.score([]) == nil)
     }
+
+    @Test func incumbentKeepsTitleInsideStickyMargin() {
+        // One heart on a Euphoric keep gives Party Animal a sliver of an edge
+        // over Flower Child — big enough to win cold, too small to dethrone.
+        let data = Self.songs(6, value: 1, mood: "Joyful", idBase: 0)
+            + Self.songs(2, value: -1, mood: "Joyful", idBase: 50)
+            + Self.songs(6, value: 1, mood: "Euphoric", hearts: 1, idBase: 100)
+            + Self.songs(2, value: -1, mood: "Euphoric", idBase: 150)
+            + Self.songs(6, value: -1, mood: "Dark", idBase: 200)
+        let cold = ArchetypeScorer.score(data)
+        let sticky = ArchetypeScorer.score(data, incumbentID: "flower_child")
+        #expect(cold?.profile.id == "party_animal")
+        #expect(sticky?.profile.id == "flower_child")
+        // A decisive lead must still dethrone: hearts on three Euphoric keeps.
+        let decisive = Self.songs(6, value: 1, mood: "Joyful", idBase: 0)
+            + Self.songs(2, value: -1, mood: "Joyful", idBase: 50)
+            + Self.songs(6, value: 1, mood: "Euphoric", hearts: 3, idBase: 100)
+            + Self.songs(2, value: -1, mood: "Euphoric", idBase: 150)
+            + Self.songs(6, value: -1, mood: "Dark", idBase: 200)
+        #expect(ArchetypeScorer.score(decisive, incumbentID: "flower_child")?.profile.id == "party_animal")
+    }
 }
