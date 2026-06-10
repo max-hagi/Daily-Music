@@ -11,6 +11,7 @@ import SwiftUI
 struct OnboardingHelloStep: View {
     @Binding var displayName: String
     @Binding var avatarURL: String?
+    var accent: Color = .purple
 
     var body: some View {
         VStack(spacing: Theme.Spacing.md) {
@@ -18,7 +19,8 @@ struct OnboardingHelloStep: View {
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
             Text("What should we call you?")
                 .foregroundStyle(.secondary)
-            ProfileEditor(displayName: $displayName, avatarURL: $avatarURL, nameRequired: true)
+            ProfileEditor(displayName: $displayName, avatarURL: $avatarURL,
+                          nameRequired: true, accent: accent)
                 .padding(.top, 8)
         }
         .multilineTextAlignment(.center)

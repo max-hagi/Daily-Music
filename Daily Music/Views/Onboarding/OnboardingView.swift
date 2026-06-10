@@ -95,7 +95,8 @@ struct OnboardingView: View {
     @ViewBuilder private var stepContent: some View {
         switch step {
         case 0:
-            OnboardingHelloStep(displayName: $displayName, avatarURL: $avatarURL)
+            OnboardingHelloStep(displayName: $displayName, avatarURL: $avatarURL,
+                                accent: stepAccent)
         case 1:
             if let settings {
                 OnboardingReminderStep(settings: settings)
@@ -104,7 +105,7 @@ struct OnboardingView: View {
             }
         default:
             if let settings {
-                OnboardingListenStep(settings: settings)
+                OnboardingListenStep(settings: settings, accent: stepAccent)
             } else {
                 onboardingStepLoader
             }

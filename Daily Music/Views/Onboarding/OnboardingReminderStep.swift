@@ -15,6 +15,9 @@ struct OnboardingReminderStep: View {
                        displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel)
                 .labelsHidden()
+                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .glassCard(cornerRadius: 20)
 
             if settings.permissionDenied {
                 Text("Notifications are blocked right now. You can skip for now or enable them in Settings later.")

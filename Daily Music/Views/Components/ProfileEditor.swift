@@ -15,6 +15,9 @@ struct ProfileEditor: View {
     /// When true, show a "required" hint under the name field (used by onboarding,
     /// where the name is mandatory). Settings' edit-profile leaves this off.
     var nameRequired: Bool = false
+    /// Optional accent for the onboarding bloom look: colored glow behind the
+    /// avatar and the glass treatment on the name field. Settings leaves it nil.
+    var accent: Color? = nil
 
     private var nameIsBlank: Bool {
         displayName.trimmingCharacters(in: .whitespaces).isEmpty
@@ -24,6 +27,7 @@ struct ProfileEditor: View {
         VStack(spacing: 20) {
             AvatarPickerView(avatarURL: $avatarURL,
                              displayName: displayName.isEmpty ? nil : displayName)
+                .shadow(color: (accent ?? .clear).opacity(0.35), radius: 18, y: 8)
             VStack(spacing: 6) {
                 TextField("Your name", text: $displayName)
                     .textInputAutocapitalization(.words)
@@ -31,7 +35,7 @@ struct ProfileEditor: View {
                     .font(.title3.weight(.semibold))
                     .padding(.vertical, 12)
                     .padding(.horizontal)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .glassCard()
                     .padding(.horizontal)
 
                 if nameRequired {

@@ -11,6 +11,7 @@ import SwiftUI
 
 struct OnboardingListenStep: View {
     @Bindable var settings: SettingsViewModel
+    var accent: Color = .orange
 
     var body: some View {
         VStack(spacing: Theme.Spacing.md) {
@@ -21,6 +22,7 @@ struct OnboardingListenStep: View {
 
             VStack(spacing: 10) {
                 ForEach(StreamingService.allCases) { service in
+                    let selected = settings.preferredStreamingService == service
                     Button {
                         settings.preferredStreamingService = service
                     } label: {
@@ -28,18 +30,24 @@ struct OnboardingListenStep: View {
                             ServiceLogo(service: service)
                             Text(service.displayName).fontWeight(.semibold)
                             Spacer()
-                            if settings.preferredStreamingService == service {
+                            if selected {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(Theme.Brand.gradient[0])
+                                    .foregroundStyle(accent)
                             }
                         }
                         .padding()
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .glassCard()
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(selected ? accent : .clear, lineWidth: 1.5)
+                        )
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8),
+                       value: settings.preferredStreamingService)
         }
         .multilineTextAlignment(.center)
         .padding(.horizontal, 28)
