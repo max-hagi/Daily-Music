@@ -32,6 +32,16 @@ struct OnboardingView: View {
 
     private let totalSteps = 3
 
+    /// Per-step accent (dots, button, selection marks) and bloom palette.
+    private static let accents: [Color] = [.purple, .cyan, .orange]
+    private static let palettes: [[Color]] = [
+        [.purple, .cyan, .pink],          // 1 · say hello — violet
+        [.cyan, .purple, .teal],          // 2 · reminder — cyan
+        [Color.orange, .pink, .yellow],   // 3 · listen — amber
+    ]
+    private var stepAccent: Color { Self.accents[min(step, Self.accents.count - 1)] }
+    private var stepPalette: [Color] { Self.palettes[min(step, Self.palettes.count - 1)] }
+
     var body: some View {
         VStack(spacing: 0) {
             header.padding(.top, 16)
@@ -43,7 +53,7 @@ struct OnboardingView: View {
             buttons.padding(.horizontal, 28).padding(.bottom, 32)
         }
         .clipped()   // keep the sliding step content from bleeding past the edges
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(OnboardingBloomBackground(palette: stepPalette).ignoresSafeArea())
         .task {
             if settings == nil {
                 settings = SettingsViewModel(
@@ -102,7 +112,7 @@ struct OnboardingView: View {
     }
 
     private var onboardingStepLoader: some View {
-        MusicLoadingView(title: nil, tint: Theme.Brand.gradient[0])
+        MusicLoadingView(title: nil, tint: stepAccent)
             .frame(height: 120)
     }
 
@@ -146,7 +156,7 @@ struct OnboardingView: View {
         HStack(spacing: 6) {
             ForEach(0..<totalSteps, id: \.self) { i in
                 Capsule()
-                    .fill(i == step ? Theme.Brand.gradient[0] : Color.secondary.opacity(0.3))
+                    .fill(i == step ? stepAccent : Color.secondary.opacity(0.3))
                     .frame(width: i == step ? 18 : 7, height: 7)
             }
         }
@@ -168,7 +178,7 @@ struct OnboardingView: View {
                 Text(primaryButtonTitle)
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(PrimaryActionButtonStyle(tint: Theme.Brand.gradient[0]))
+            .buttonStyle(PrimaryActionButtonStyle(tint: stepAccent))
             .disabled((step == 0 && !nameFilled) || isSaving || isApplyingReminder)
 
             if let saveError {
@@ -178,9 +188,10 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
             }
 
-            // Skip is offered only on the optional steps (2 & 3), never on step 1.
-            if step > 0 {
-                Button(step == totalSteps - 1 ? "Skip" : "Skip for now") { skipAction() }
+            // Skip is offered only on the reminder step. The listen step always
+            // saves a choice (preferredStreamingService defaults to Apple Music).
+            if step == 1 {
+                Button("Skip for now") { skipAction() }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .disabled(isSaving || isApplyingReminder)
