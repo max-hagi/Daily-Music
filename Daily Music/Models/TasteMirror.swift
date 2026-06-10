@@ -10,10 +10,34 @@
 
 import Foundation
 
-/// One rated song: a tagged entry plus the user's judgment (+1 👍 / -1 👎).
+/// One judged song: a tagged entry plus the user's judgment.
+/// value: +1 👍 / -1 👎 / 0 = no thumb (heart-only — feeds the scorer, not the tiles).
 struct RatedSong: Equatable, Codable {
     let entry: DailyEntry
     let value: Int
+    var isFavorite: Bool = false
+    var ratedAt: Date? = nil
+
+    /// When the judgment happened. Catalog songs are rated on their drop day,
+    /// so `entry.date` is the natural fallback; seeds carry an explicit stamp.
+    var effectiveRatedAt: Date { ratedAt ?? entry.date }
+
+    init(entry: DailyEntry, value: Int, isFavorite: Bool = false, ratedAt: Date? = nil) {
+        self.entry = entry
+        self.value = value
+        self.isFavorite = isFavorite
+        self.ratedAt = ratedAt
+    }
+
+    // Pre-v2 persisted seed JSON lacks the new keys — decode them as optional
+    // so an upgrade never wipes the onboarding seed.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        entry = try c.decode(DailyEntry.self, forKey: .entry)
+        value = try c.decode(Int.self, forKey: .value)
+        isFavorite = try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+        ratedAt = try c.decodeIfPresent(Date.self, forKey: .ratedAt)
+    }
 }
 
 /// Tallies for one category within a dimension (e.g. mood "Melancholy").

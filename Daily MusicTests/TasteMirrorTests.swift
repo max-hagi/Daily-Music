@@ -201,6 +201,29 @@ struct TasteMirrorTests {
         #expect(songs[2].entry.id == Self.entry(id: 10, mood: "Dreamy").id)  // oldest liked
         #expect(songs[3].value == -1)                                          // disliked last
     }
+
+    // MARK: engine v2 — RatedSong fields
+
+    @Test func ratedSongDecodesLegacyJSONWithoutNewFields() throws {
+        // Pre-v2 persisted seed payloads have only `entry` + `value`.
+        let legacy = RatedSong(entry: Self.entry(id: 1, mood: "Serene"), value: 1)
+        var json = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(legacy)) as! [String: Any]
+        json.removeValue(forKey: "isFavorite")
+        json.removeValue(forKey: "ratedAt")
+        let data = try JSONSerialization.data(withJSONObject: json)
+        let decoded = try JSONDecoder().decode(RatedSong.self, from: data)
+        #expect(decoded.value == 1)
+        #expect(decoded.isFavorite == false)
+        #expect(decoded.ratedAt == nil)
+    }
+
+    @Test func effectiveRatedAtFallsBackToEntryDate() {
+        let e = Self.entry(id: 7)
+        #expect(RatedSong(entry: e, value: 1).effectiveRatedAt == e.date)
+        let stamp = Date(timeIntervalSince1970: 99_999)
+        #expect(RatedSong(entry: e, value: 1, ratedAt: stamp).effectiveRatedAt == stamp)
+    }
 }
 
 struct TasteComparisonTests {
