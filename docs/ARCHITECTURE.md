@@ -359,6 +359,8 @@ flowchart TD
     EmailSignInSheet --> Session
     Session --> AuthService --> SupaAuth["SupabaseAuthService<br/>Supabase Auth + delete-account fn"]
 
+    OnboardingView --> Bloom["OnboardingBloomBackground<br/>drifting per-step color blobs"]
+    TasteSeedView --> Bloom
     OnboardingView --> OnboardingHelloStep
     OnboardingView --> TasteSeedView
     OnboardingView --> OnboardingListenStep
@@ -374,6 +376,16 @@ flowchart TD
 `SessionStore` is the single source of truth for auth (`isSignedIn` drives
 `RootView`). Onboarding reuses one `SettingsViewModel` across steps and stamps
 completion to `profiles.onboarded_at` via `ProfileStore.markOnboarded()`.
+
+**Bloom look:** every onboarding surface sits on `OnboardingBloomBackground` —
+three blurred circles drifting over an adaptive base (light/dark; `forceDark`
+while rating), with a per-step palette/accent (violet → cyan → amber) and an
+artwork-tinted palette during the taste-seed rating (via `ArtworkPalette`).
+Content floats on `glassCard()` (in `DesignSystem/Styles.swift`). The listen
+step is **not skippable** (`preferredStreamingService` defaults to Apple Music);
+after a successful Finish, a "You're all set" send-off holds the wizard and its
+**Hear today's song** button flips `hasCompletedOnboarding` +
+`launchIntoCeremony`, dropping the user straight into the ceremony.
 
 **Day-one ceremony handoff:** when the taste-seed reveal completes (`TasteSeedView` fires `onComplete`), `OnboardingView` sets `AppEnvironment.launchIntoCeremony = true`. `TodayView`'s `.onChange(of: loadedEntry?.id)` consumes this flag: if set, it clears it and opens the ceremony with `ListeningCeremony.autoOpenDelay(launchingFromOnboarding: true)` (`.zero`) — skipping the normal 0.6s settle beat so the arc (rate 10 songs → archetype reveal → today's first song) is unbroken. The flag is one-shot; every subsequent day uses the normal delayed rise.
 
