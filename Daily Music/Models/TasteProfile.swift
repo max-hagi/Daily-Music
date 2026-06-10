@@ -2,7 +2,7 @@
 //  TasteProfile.swift
 //  Daily Music
 //
-//  The synthesised archetype. 9 mood-anchored identities + 1 balanced fallback.
+//  The synthesised archetype. 9 mood-anchored + 1 genre-anchored identities + 1 balanced fallback.
 //  NOT scored — a pure mood lookup on the user's top mood. The winning modifier
 //  (decade/theme/genre) surfaces as flavor text in the hero, not as a branch here.
 //
@@ -51,8 +51,8 @@ struct TasteProfile: Equatable {
 
     // ── SERENE ────────────────────────────────────────────────────────────
     static let theHippie = TasteProfile(
-        "the_hippie", "The Hippie",
-        "Peace and love, man. ☮️ Peace and love.",
+        "the_hippie", "Golden Hour",
+        "Life at 0.75× speed. On purpose.",
         "bird.fill",
         [c(0.13, 0.70, 0.67), c(0.0, 0.50, 0.50)]
     )
@@ -75,7 +75,7 @@ struct TasteProfile: Equatable {
 
     // ── MELANCHOLY ────────────────────────────────────────────────────────
     static let theMelancholic = TasteProfile(
-        "the_melancholic", "The Melancholic",
+        "the_melancholic", "The Poet",
         "Won't listen to anything that doesn't mean something. Everything means something.",
         "cloud.moon.fill",
         [c(0.29, 0.44, 0.65), c(0.10, 0.14, 0.49)]
@@ -97,6 +97,14 @@ struct TasteProfile: Equatable {
         [c(0.48, 0.31, 0.75), c(0.10, 0.04, 0.18)]
     )
 
+    // ── POP (genre-anchored — the first archetype that needs the scorer) ──
+    static let thePophead = TasteProfile(
+        "the_pophead", "The Pophead",
+        "Knows every word. Including the ad-libs.",
+        "music.mic",
+        [c(1.0, 0.36, 0.62), c(0.62, 0.12, 0.78)]
+    )
+
     // ── BALANCED (no dominant mood) ───────────────────────────────────────
     static let theShapeshifter = TasteProfile(
         "the_shapeshifter", "The Shapeshifter",
@@ -115,7 +123,8 @@ struct TasteProfile: Equatable {
 
     static let allCases: [TasteProfile] = [
         partyAnimal, flowerChild, hopelessRomantic, theHippie, theStargazer,
-        bornInTheWrongGeneration, theMelancholic, loudAndProud, theOutsider, theShapeshifter
+        bornInTheWrongGeneration, theMelancholic, loudAndProud, theOutsider,
+        thePophead, theShapeshifter
     ]
 
     static func profile(id: String?) -> TasteProfile? {

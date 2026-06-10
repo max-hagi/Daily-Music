@@ -151,4 +151,21 @@ final class ArchetypeCopyTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - Engine v2 cast
+
+    func test_cast_retitlesKeepFrozenIDs() {
+        XCTAssertEqual(TasteProfile.theHippie.id, "the_hippie")
+        XCTAssertEqual(TasteProfile.theHippie.title, "Golden Hour")
+        XCTAssertEqual(TasteProfile.theHippie.tagline, "Life at 0.75× speed. On purpose.")
+        XCTAssertEqual(TasteProfile.theMelancholic.id, "the_melancholic")
+        XCTAssertEqual(TasteProfile.theMelancholic.title, "The Poet")
+    }
+
+    func test_pophead_existsAndIsRegistered() {
+        XCTAssertEqual(TasteProfile.thePophead.id, "the_pophead")
+        XCTAssertEqual(TasteProfile.thePophead.title, "The Pophead")
+        XCTAssertTrue(TasteProfile.allCases.contains(TasteProfile.thePophead))
+        XCTAssertEqual(TasteProfile.profile(id: "the_pophead")?.title, "The Pophead")
+    }
 }
