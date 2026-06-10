@@ -142,6 +142,14 @@ struct TasteMirrorBoard: View {
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.white.opacity(0.62))
                     .fixedSize(horizontal: false, vertical: true)
+                if unlocked, profile.id == mirror.archetype?.id,
+                   let evidence = mirror.evidence,
+                   let receipts = archetypeReceiptsCopy(evidence: evidence, isCurrentUser: isCurrentUser) {
+                    Text(receipts)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

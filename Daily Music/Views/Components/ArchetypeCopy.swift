@@ -38,7 +38,7 @@ func archetypeHeroCopy(
         return "A tender song comes on and \(you) say yes. More often than not. More often than almost anything."
 
     case "the_hippie":
-        return "\(You) keep serene songs more than almost any other mood. Everything else is just noise."
+        return "\(You) keep serene songs more than almost any other mood. Golden-hour pace, every day of the week."
 
     case "the_stargazer":
         if let wm = winningModifier, wm.dimensionID == "theme" {
@@ -64,7 +64,37 @@ func archetypeHeroCopy(
     case "the_outsider":
         return "\(You) keep dark songs more than almost any other mood. \(You) smile, sometimes."
 
+    case "the_pophead":
+        if let wm = winningModifier, wm.dimensionID == "decade" {
+            return "\(wm.categoryName) pop owns \(your) keep rate. The charts and \(you) have an understanding."
+        }
+        return "Pop songs barely have to ask. \(Your) keep rate there clears everything else. The charts and \(you) have an understanding."
+
     default: // the_shapeshifter + any future archetypes
         return "\(You) don't have one defining taste. \(You) have all of them. \(Your) keep rate spreads pretty evenly across every mood, and that says a lot about \(you). A lot of good things."
     }
+}
+
+/// Receipts: the evidence line under the archetype claim — real numbers from
+/// the scorer, so the identity reads as earned, not oracular. nil when there
+/// is no positive evidence (e.g. The Shapeshifter), letting callers fall back.
+func archetypeReceiptsCopy(evidence: ArchetypeEvidence, isCurrentUser: Bool) -> String? {
+    guard let fact = evidence.facts.first, fact.total > 0, fact.likes > 0 else { return nil }
+    let You  = isCurrentUser ? "You"  : "They"
+    let your = isCurrentUser ? "your" : "their"
+
+    let noun: String
+    switch fact.dimensionID {
+    case "mood":   noun = "\(fact.category) drops"
+    case "theme":  noun = "songs about \(fact.category.lowercased())"
+    case "genre":  noun = "\(fact.category) tracks"
+    case "energy": noun = "\(fact.category.lowercased())-energy picks"
+    default:       noun = "\(fact.category) songs"
+    }
+
+    var line = "\(You) liked \(fact.likes) of \(your) \(fact.total) \(noun)"
+    if fact.hearts > 0 {
+        line += " — and hearted \(fact.hearts) of them"
+    }
+    return line + "."
 }

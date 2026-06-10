@@ -117,7 +117,7 @@ final class ArchetypeCopyTests: XCTestCase {
     func test_hippie_friend() {
         let copy = archetypeHeroCopy(profile: .theHippie, winningModifier: nil, isCurrentUser: false)
         XCTAssertEqual(copy,
-            "They keep serene songs more than almost any other mood. Everything else is just noise.")
+            "They keep serene songs more than almost any other mood. Golden-hour pace, every day of the week.")
     }
 
     func test_hopelessRomantic_genreModifier_friend() {
@@ -167,5 +167,50 @@ final class ArchetypeCopyTests: XCTestCase {
         XCTAssertEqual(TasteProfile.thePophead.title, "The Pophead")
         XCTAssertTrue(TasteProfile.allCases.contains(TasteProfile.thePophead))
         XCTAssertEqual(TasteProfile.profile(id: "the_pophead")?.title, "The Pophead")
+    }
+
+    // MARK: - Receipts
+
+    private func fact(_ dim: String, _ cat: String, likes: Int, total: Int, hearts: Int) -> ArchetypeEvidence.Fact {
+        ArchetypeEvidence.Fact(dimensionID: dim, category: cat,
+                               likes: likes, total: total, hearts: hearts, contribution: 1)
+    }
+
+    func test_receipts_moodFact_withHearts() {
+        let e = ArchetypeEvidence(facts: [fact("mood", "Melancholy", likes: 6, total: 7, hearts: 3)])
+        XCTAssertEqual(archetypeReceiptsCopy(evidence: e, isCurrentUser: true),
+                       "You liked 6 of your 7 Melancholy drops — and hearted 3 of them.")
+    }
+
+    func test_receipts_genreFact_thirdPerson_noHearts() {
+        let e = ArchetypeEvidence(facts: [fact("genre", "Pop", likes: 9, total: 11, hearts: 0)])
+        XCTAssertEqual(archetypeReceiptsCopy(evidence: e, isCurrentUser: false),
+                       "They liked 9 of their 11 Pop tracks.")
+    }
+
+    func test_receipts_themeFact_lowercasesCategory() {
+        let e = ArchetypeEvidence(facts: [fact("theme", "Heartbreak", likes: 5, total: 6, hearts: 0)])
+        XCTAssertEqual(archetypeReceiptsCopy(evidence: e, isCurrentUser: true),
+                       "You liked 5 of your 6 songs about heartbreak.")
+    }
+
+    func test_receipts_emptyEvidence_returnsNil() {
+        XCTAssertNil(archetypeReceiptsCopy(evidence: ArchetypeEvidence(facts: []), isCurrentUser: true))
+    }
+
+    // MARK: - Voiced copy covers the new cast
+
+    func test_pophead_hasDedicatedVoice() {
+        let pop = archetypeHeroCopy(profile: .thePophead, winningModifier: nil, isCurrentUser: true)
+        let fallback = archetypeHeroCopy(profile: .theShapeshifter, winningModifier: nil, isCurrentUser: true)
+        XCTAssertNotEqual(pop, fallback)
+        XCTAssertFalse(pop.isEmpty)
+    }
+
+    func test_everyArchetypeHasNonEmptyHeroCopy() {
+        for profile in TasteProfile.allCases {
+            XCTAssertFalse(archetypeHeroCopy(profile: profile, winningModifier: nil,
+                                             isCurrentUser: true).isEmpty, profile.id)
+        }
     }
 }
