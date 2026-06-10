@@ -15,4 +15,11 @@ enum ListeningCeremony {
     static func shouldAutoOpen(todayEntryID: UUID, heardEntryID: String?) -> Bool {
         heardEntryID != todayEntryID.uuidString
     }
+
+    /// How long Today settles on screen before the ceremony rises. Day one —
+    /// arriving straight from the onboarding reveal — skips the beat so the
+    /// arc (rate songs → archetype → first song) is unbroken.
+    static func autoOpenDelay(launchingFromOnboarding: Bool) -> Duration {
+        launchingFromOnboarding ? .zero : .seconds(0.6)
+    }
 }

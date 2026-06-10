@@ -115,4 +115,9 @@ struct PlaybackTests {
         #expect(player.state == .playing)
         #expect(player.nowPlayingEntryID == entry.id)
     }
+
+    @Test func ceremonyDelayIsZeroWhenLaunchingFromOnboarding() {
+        #expect(ListeningCeremony.autoOpenDelay(launchingFromOnboarding: true) == .zero)
+        #expect(ListeningCeremony.autoOpenDelay(launchingFromOnboarding: false) == .seconds(0.6))
+    }
 }
