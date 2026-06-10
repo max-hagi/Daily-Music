@@ -25,7 +25,7 @@ enum StarterPack {
         )
     }
 
-    /// 12 recognizable songs spanning all 9 moods, 7 genres, and eras 1976–2026.
+    /// 13 recognizable songs spanning all 9 moods, 7 genres, and eras 1976–2026.
     /// Rated one-by-one in onboarding to seed the taste mirror; swap any to taste.
     static let songs: [DailyEntry] = [
         song("Dancing Queen", "ABBA", "1422648513",
@@ -64,5 +64,8 @@ enum StarterPack {
         song("Run Away with Me", "Carly Rae Jepsen", "1442810074",
              "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/8e/b9/9b/8eb99b2a-f730-0df5-3c2c-4175d57cd84d/15UMGIM31527.rgb.jpg/600x600bb.jpg",
              genre: "Pop", year: 2015, mood: "Euphoric", energy: 5, theme: "Love & Romance"),
+        song("Blackberry Marmalade", "Vince Staples", "1887627837",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/27/fe/3c/27fe3ccb-9f3c-1472-a2af-ddabe248699b/26CRGIM53564.rgb.jpg/600x600bb.jpg",
+             genre: "Hip-Hop/Rap", year: 2026, mood: "Dark", energy: 3, theme: "Memory & Nostalgia"),
     ]
 }
