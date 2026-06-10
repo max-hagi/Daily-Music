@@ -35,6 +35,11 @@ struct TasteSeedView: View {
         ZStack {
             Theme.Brand.gradient.first.map { $0.opacity(0.12) }?.ignoresSafeArea()
             Color(.systemGroupedBackground).opacity(0.6).ignoresSafeArea()
+            // While rating, the current cover blooms across the whole screen —
+            // same visual language as the listening ceremony's backdrop.
+            if phase == .rating, let song = deck.current {
+                ratingBackdrop(song)
+            }
             switch phase {
             case .intro:  intro
             case .rating: ratingView
@@ -45,7 +50,7 @@ struct TasteSeedView: View {
             if phase != .reveal {
                 Button("Skip") { stopAndExit(onSkip) }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(phase == .rating ? AnyShapeStyle(.white.opacity(0.7)) : AnyShapeStyle(.secondary))
                     .padding()
             }
         }
@@ -123,12 +128,32 @@ struct TasteSeedView: View {
         }
     }
 
+    /// The current cover blurred across the full screen, crossfading per card.
+    private func ratingBackdrop(_ song: DailyEntry) -> some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            AlbumArtView(url: song.albumArtURL, cornerRadius: 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .blur(radius: 80)
+                .saturation(1.3)
+                .opacity(0.6)
+                .ignoresSafeArea()
+            LinearGradient(
+                colors: [.black.opacity(0.25), .clear, .black.opacity(0.55)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
+        .transition(.opacity)
+        .id(song.id)   // animate the bloom from cover to cover
+    }
+
     /// Deck progress: one dot per starter song — filled when judged, big when current.
     private var deckDots: some View {
         HStack(spacing: 5) {
             ForEach(0..<deck.songs.count, id: \.self) { i in
                 Circle()
-                    .fill(i <= deck.index ? Theme.Brand.gradient[0] : Color.secondary.opacity(0.25))
+                    .fill(i <= deck.index ? Color.white : Color.white.opacity(0.28))
                     .frame(width: i == deck.index ? 9 : 6, height: i == deck.index ? 9 : 6)
             }
         }
@@ -142,15 +167,16 @@ struct TasteSeedView: View {
         VStack(spacing: 8) {
             Text(song.title)
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.8)
             Text(song.artist)
                 .font(.headline)
-                .foregroundStyle(.secondary).lineLimit(1)
+                .foregroundStyle(.white.opacity(0.75)).lineLimit(1)
 
             // Live preview bar — shows the clip moving (tap the art to pause).
             ZStack(alignment: .leading) {
-                Capsule().fill(.quaternary)
-                Capsule().fill(Theme.Brand.gradient[0])
+                Capsule().fill(.white.opacity(0.22))
+                Capsule().fill(.white)
                     .frame(width: 200 * player.progress)
             }
             .frame(width: 200, height: 4)
@@ -162,8 +188,8 @@ struct TasteSeedView: View {
                     Text(tag)
                         .font(.caption2.weight(.semibold))
                         .padding(.horizontal, 9).padding(.vertical, 4)
-                        .background(.thinMaterial, in: Capsule())
-                        .foregroundStyle(.secondary)
+                        .background(.white.opacity(0.14), in: Capsule())
+                        .foregroundStyle(.white.opacity(0.85))
                 }
             }
         }
@@ -177,13 +203,13 @@ struct TasteSeedView: View {
                 Image(systemName: "arrow.left")
                 Text("Nah")
             }
-            .foregroundStyle(.red.opacity(0.75))
+            .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.45))
             Spacer()
             HStack(spacing: 6) {
                 Text("Into it")
                 Image(systemName: "arrow.right")
             }
-            .foregroundStyle(.green)
+            .foregroundStyle(Color(red: 0.4, green: 0.9, blue: 0.55))
         }
         .font(.subheadline.weight(.bold))
         .padding(.horizontal, 56)
@@ -221,14 +247,14 @@ struct TasteSeedView: View {
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.Spacing.xl)
-            Text("Your taste mirror starts here and sharpens every day you rate a song.")
+            Text("Your taste mirror starts here and sharpens every day you rate a song. Today's song is waiting once you finish setup.")
                 .font(.callout.weight(.medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.Spacing.xl)
             Spacer()
             Button { stopAndExit { onComplete(read) } } label: {
-                Text("Hear today's song").frame(maxWidth: .infinity)
+                Text("Continue").frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryActionButtonStyle(tint: profile.colors.first ?? Theme.Brand.gradient[0]))
             .padding(.horizontal, 28)
