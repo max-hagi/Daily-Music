@@ -267,3 +267,126 @@ struct TasteComparisonTests {
         #expect(c.clashed.isEmpty)
     }
 }
+
+struct ArchetypeScorerTests {
+
+    /// Entry with controllable tags; date pinned to a fixed base + day offset so
+    /// recency tests are deterministic (scorer decays relative to the newest date).
+    static func entry(
+        _ i: Int, day: Int = 0,
+        mood: String? = nil, theme: String? = nil,
+        energy: Int? = nil, genre: String? = nil
+    ) -> DailyEntry {
+        DailyEntry(
+            id: UUID(uuidString: String(format: "00000000-0000-0000-0001-%012d", i))!,
+            date: Date(timeIntervalSince1970: 1_000_000 + TimeInterval(day) * 86_400),
+            title: "T\(i)", artist: "A\(i)",
+            albumArtURL: nil, journalMarkdown: "",
+            appleMusicID: "\(i)", spotifyURI: "spotify:track:\(i)",
+            genre: genre, year: nil, mood: mood, energy: energy,
+            theme: theme, language: nil
+        )
+    }
+
+    static func songs(
+        _ count: Int, value: Int, mood: String? = nil, theme: String? = nil,
+        energy: Int? = nil, genre: String? = nil, day: Int = 0,
+        hearts: Int = 0, idBase: Int = 0
+    ) -> [RatedSong] {
+        (0..<count).map { i in
+            RatedSong(entry: entry(idBase + i, day: day, mood: mood, theme: theme,
+                                   energy: energy, genre: genre),
+                      value: value, isFavorite: i < hearts)
+        }
+    }
+
+    @Test func exposureBiasRegression() {
+        // Curator-heavy Joyful catalog; user keeps only the Melancholy drops.
+        // Raw counts said Flower Child; like-rates must say The Poet.
+        let data = Self.songs(4, value: 1, mood: "Joyful", idBase: 0)
+            + Self.songs(10, value: -1, mood: "Joyful", idBase: 100)
+            + Self.songs(6, value: 1, mood: "Melancholy", idBase: 200)
+            + Self.songs(1, value: -1, mood: "Melancholy", idBase: 300)
+        let result = ArchetypeScorer.score(data)
+        #expect(result?.profile.id == "the_melancholic")
+    }
+
+    @Test func flatRaterIsShapeshifter() {
+        // Equal like-rate in every mood → no signature → earned Shapeshifter.
+        var data: [RatedSong] = []
+        for (i, mood) in ["Joyful", "Melancholy", "Defiant", "Dreamy"].enumerated() {
+            data += Self.songs(3, value: 1, mood: mood, idBase: i * 100)
+            data += Self.songs(3, value: -1, mood: mood, idBase: i * 100 + 50)
+        }
+        #expect(ArchetypeScorer.score(data)?.profile.id == "the_shapeshifter")
+    }
+
+    @Test func favoritesTipANearTie() {
+        // Equal Joyful/Euphoric keeps → symmetric scores → list-order tie-break
+        // (Party Animal first). Hearts on the Joyful keeps must flip it to Flower Child.
+        func base(joyfulHearts: Int) -> [RatedSong] {
+            Self.songs(6, value: 1, mood: "Joyful", hearts: joyfulHearts, idBase: 0)
+            + Self.songs(2, value: -1, mood: "Joyful", idBase: 50)
+            + Self.songs(6, value: 1, mood: "Euphoric", idBase: 100)
+            + Self.songs(2, value: -1, mood: "Euphoric", idBase: 150)
+            + Self.songs(6, value: -1, mood: "Dark", idBase: 200)
+        }
+        #expect(ArchetypeScorer.score(base(joyfulHearts: 0))?.profile.id == "party_animal")
+        #expect(ArchetypeScorer.score(base(joyfulHearts: 3))?.profile.id == "flower_child")
+    }
+
+    @Test func heartOnlySongsCountAsLikes() {
+        // A favorited-but-unrated song (value 0, isFavorite) is still signal.
+        let data = Self.songs(5, value: 1, mood: "Tender", theme: "Love & Romance", idBase: 0)
+            + Self.songs(4, value: -1, mood: "Defiant", idBase: 100)
+            + Self.songs(3, value: 0, mood: "Tender", theme: "Love & Romance",
+                         hearts: 3, idBase: 200)
+        #expect(ArchetypeScorer.score(data)?.profile.id == "hopeless_romantic")
+    }
+
+    @Test func recentRatingsOutweighOldSeed() {
+        // Day 0: a Joyful-heavy seed (with contrast). Day ~200: months of
+        // contrary judgments must win via recency decay.
+        let seed = Self.songs(8, value: 1, mood: "Joyful", day: 0, idBase: 0)
+            + Self.songs(4, value: -1, mood: "Dark", day: 0, idBase: 50)
+        let recent = Self.songs(10, value: 1, mood: "Melancholy", day: 200, idBase: 100)
+            + Self.songs(6, value: -1, mood: "Joyful", day: 205, idBase: 200)
+        #expect(ArchetypeScorer.score(seed + recent)?.profile.id == "the_melancholic")
+        #expect(ArchetypeScorer.score(seed)?.profile.id == "flower_child")
+    }
+
+    @Test func popheadRequiresGenreOverIndexNotJustJoy() {
+        // Same moods, different genres: joyful folk → Flower Child;
+        // joyful Pop → The Pophead (genre weight tips it).
+        let folk = Self.songs(8, value: 1, mood: "Joyful", genre: "Folk", idBase: 0)
+            + Self.songs(4, value: -1, mood: "Dark", genre: "Rock", idBase: 100)
+        let pop = Self.songs(8, value: 1, mood: "Joyful", genre: "Pop", idBase: 0)
+            + Self.songs(4, value: -1, mood: "Dark", genre: "Rock", idBase: 100)
+        #expect(ArchetypeScorer.score(folk)?.profile.id == "flower_child")
+        #expect(ArchetypeScorer.score(pop)?.profile.id == "the_pophead")
+    }
+
+    @Test func evidenceCarriesRawCountsForTheWinner() {
+        let data = Self.songs(6, value: 1, mood: "Melancholy", hearts: 2, idBase: 0)
+            + Self.songs(1, value: -1, mood: "Melancholy", idBase: 50)
+            + Self.songs(4, value: 1, mood: "Joyful", idBase: 100)
+            + Self.songs(10, value: -1, mood: "Joyful", idBase: 200)
+        let result = ArchetypeScorer.score(data)
+        let top = result?.evidence.facts.first
+        #expect(top?.dimensionID == "mood")
+        #expect(top?.category == "Melancholy")
+        #expect(top?.likes == 6)
+        #expect(top?.total == 7)
+        #expect(top?.hearts == 2)
+    }
+
+    @Test func everyNonShapeshifterArchetypeHasAnAffinityVector() {
+        let covered = Set(ArchetypeAffinity.all.map { $0.profile.id })
+        let expected = Set(TasteProfile.allCases.map(\.id)).subtracting(["the_shapeshifter"])
+        #expect(covered == expected)
+    }
+
+    @Test func emptyInputScoresNil() {
+        #expect(ArchetypeScorer.score([]) == nil)
+    }
+}
