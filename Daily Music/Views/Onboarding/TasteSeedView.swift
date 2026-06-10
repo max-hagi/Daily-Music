@@ -24,6 +24,22 @@ struct TasteSeedView: View {
     @State private var phase: Phase = .intro
     @State private var deck = TasteSeedDeck(songs: StarterPack.songs)
     @State private var read = StartingRead()
+    @State private var artPalette = ArtworkPalette()
+
+    /// Bloom colors per phase: brand violet for the intro, the current card's
+    /// artwork color while rating, the archetype's colors at reveal.
+    private var bloomPalette: [Color] {
+        switch phase {
+        case .intro:
+            return [.purple, .pink, .indigo]
+        case .rating:
+            let a = artPalette.accent
+            return [a, a, .indigo]
+        case .reveal:
+            let profile = TasteMirror.build(from: deck.picks).archetype ?? .theShapeshifter
+            return profile.colors.isEmpty ? [.purple, .pink, .indigo] : profile.colors
+        }
+    }
 
     private var player: MusicPlayer { env.musicPlayer }
     private var firstName: String {
@@ -33,13 +49,11 @@ struct TasteSeedView: View {
 
     var body: some View {
         ZStack {
-            Theme.Brand.gradient.first.map { $0.opacity(0.12) }?.ignoresSafeArea()
-            Color(.systemGroupedBackground).opacity(0.6).ignoresSafeArea()
-            // While rating, the current cover blooms across the whole screen —
-            // same visual language as the listening ceremony's backdrop.
-            if phase == .rating, let song = deck.current {
-                ratingBackdrop(song)
-            }
+            // One bloom backdrop across all phases; while rating it tints from
+            // the current card's artwork and forces the dark base so the white
+            // chrome stays legible.
+            OnboardingBloomBackground(palette: bloomPalette, forceDark: phase == .rating)
+                .ignoresSafeArea()
             switch phase {
             case .intro:  intro
             case .rating: ratingView
@@ -61,6 +75,12 @@ struct TasteSeedView: View {
             // tap is the consenting user gesture for audio.
             guard newPhase == .rating, let song = deck.current else { return }
             Task { await player.toggle(song) }
+            Task { await artPalette.load(from: song.albumArtURL) }
+        }
+        .onChange(of: deck.index) { _, _ in
+            // Each swipe re-tints the bloom from the next card's artwork.
+            guard phase == .rating, let song = deck.current else { return }
+            Task { await artPalette.load(from: song.albumArtURL) }
         }
         .onChange(of: player.state) { _, newState in
             // Loop: a finished preview restarts until the user swipes.
@@ -122,30 +142,10 @@ struct TasteSeedView: View {
             // stay for one-handed reach, VoiceOver, and Reduce Motion users.
             HStack(spacing: Theme.Spacing.xl) {
                 judgmentButton(value: -1, symbol: "hand.thumbsdown.fill", tint: .secondary)
-                judgmentButton(value: 1, symbol: "hand.thumbsup.fill", tint: Theme.Brand.gradient[0])
+                judgmentButton(value: 1, symbol: "hand.thumbsup.fill", tint: artPalette.accent)
             }
             .padding(.bottom, 32)
         }
-    }
-
-    /// The current cover blurred across the full screen, crossfading per card.
-    private func ratingBackdrop(_ song: DailyEntry) -> some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            AlbumArtView(url: song.albumArtURL, cornerRadius: 0)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .blur(radius: 80)
-                .saturation(1.3)
-                .opacity(0.6)
-                .ignoresSafeArea()
-            LinearGradient(
-                colors: [.black.opacity(0.25), .clear, .black.opacity(0.55)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        }
-        .transition(.opacity)
-        .id(song.id)   // animate the bloom from cover to cover
     }
 
     /// Deck progress: one dot per starter song — filled when judged, big when current.
@@ -153,7 +153,8 @@ struct TasteSeedView: View {
         HStack(spacing: 5) {
             ForEach(0..<deck.songs.count, id: \.self) { i in
                 Circle()
-                    .fill(i <= deck.index ? Color.white : Color.white.opacity(0.28))
+                    .fill(i == deck.index ? artPalette.accent
+                          : i < deck.index ? Color.white : Color.white.opacity(0.28))
                     .frame(width: i == deck.index ? 9 : 6, height: i == deck.index ? 9 : 6)
             }
         }
@@ -188,7 +189,8 @@ struct TasteSeedView: View {
                     Text(tag)
                         .font(.caption2.weight(.semibold))
                         .padding(.horizontal, 9).padding(.vertical, 4)
-                        .background(.white.opacity(0.14), in: Capsule())
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 1))
                         .foregroundStyle(.white.opacity(0.85))
                 }
             }
@@ -237,21 +239,24 @@ struct TasteSeedView: View {
         let profile = TasteMirror.build(from: deck.picks).archetype ?? .theShapeshifter
         return VStack(spacing: Theme.Spacing.lg) {
             Spacer()
-            Image(systemName: profile.symbol)
-                .font(.system(size: 56))
-                .foregroundStyle(profile.colors.first ?? Theme.Brand.gradient[0])
-            Text("Your starting frequency")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
-            Text(readHeadline)
-                .font(.system(size: 30, weight: .heavy, design: .rounded))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Theme.Spacing.xl)
-            Text("Your taste mirror starts here and sharpens every day you rate a song. Today's song is waiting once you finish setup.")
-                .font(.callout.weight(.medium))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Theme.Spacing.xl)
+            VStack(spacing: Theme.Spacing.md) {
+                Image(systemName: profile.symbol)
+                    .font(.system(size: 56))
+                    .foregroundStyle(profile.colors.first ?? Theme.Brand.gradient[0])
+                Text("Your starting frequency")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                Text(readHeadline)
+                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .multilineTextAlignment(.center)
+                Text("Your taste mirror starts here and sharpens every day you rate a song. Today's song is waiting once you finish setup.")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(Theme.Spacing.lg)
+            .glassCard(cornerRadius: 24)
+            .padding(.horizontal, Theme.Spacing.lg)
             Spacer()
             Button { stopAndExit { onComplete(read) } } label: {
                 Text("Continue").frame(maxWidth: .infinity)
