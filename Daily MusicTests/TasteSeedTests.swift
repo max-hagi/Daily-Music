@@ -6,9 +6,11 @@ import Foundation
 // avoid cross-test state pollution. @Suite(.serialized) enforces this.
 @Suite(.serialized)
 struct TasteSeedTests {
-    @Test func starterPackHasTenUniqueSongs() {
-        #expect(StarterPack.songs.count == 10)
-        #expect(Set(StarterPack.songs.map(\.id)).count == 10)
+    @Test func starterPackSongsAreUniqueAndPlentiful() {
+        // Enough songs to clear the taste-mirror unlock threshold (10), all unique.
+        #expect(StarterPack.songs.count >= 10)
+        #expect(Set(StarterPack.songs.map(\.id)).count == StarterPack.songs.count)
+        #expect(Set(StarterPack.songs.map(\.appleMusicID)).count == StarterPack.songs.count)
     }
 
     private func entry(mood: String, genre: String, year: Int) -> DailyEntry {
