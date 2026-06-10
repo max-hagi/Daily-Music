@@ -19,6 +19,7 @@ struct OnboardingView: View {
     @State private var avatarURL: String?
     @State private var settings: SettingsViewModel?
     @State private var isSaving = false
+    @State private var showingSendOff = false
     @State private var isApplyingReminder = false
     @State private var saveError: String?
     /// Drives the slide direction of the step transition (forward vs. back).
@@ -44,13 +45,17 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header.padding(.top, 16)
-            Spacer(minLength: 0)
-            stepContent
-                .id(step)
-                .transition(stepTransition)
-            Spacer(minLength: 0)
-            buttons.padding(.horizontal, 28).padding(.bottom, 32)
+            if showingSendOff {
+                sendOff
+            } else {
+                header.padding(.top, 16)
+                Spacer(minLength: 0)
+                stepContent
+                    .id(step)
+                    .transition(stepTransition)
+                Spacer(minLength: 0)
+                buttons.padding(.horizontal, 28).padding(.bottom, 32)
+            }
         }
         .clipped()   // keep the sliding step content from bleeding past the edges
         .background(OnboardingBloomBackground(palette: stepPalette).ignoresSafeArea())
@@ -86,6 +91,40 @@ struct OnboardingView: View {
                 advance()
             }
         }
+    }
+
+    private var firstName: String {
+        let n = displayName.split(separator: " ").first.map(String.init) ?? displayName
+        return n.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Shown after a successful Finish: one celebratory beat, then straight
+    /// into today's listening ceremony.
+    private var sendOff: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            Spacer()
+            Text("🎧")
+                .font(.system(size: 64))
+            Text("You're all set\(firstName.isEmpty ? "" : ", \(firstName)")")
+                .font(.system(size: 30, weight: .heavy, design: .rounded))
+                .multilineTextAlignment(.center)
+            Text("Your first song is waiting.")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button {
+                env.launchIntoCeremony = true
+                completedOnboardingVersion = OnboardingConfig.currentVersion
+                hasCompletedOnboarding = true   // flips RootView into the app
+            } label: {
+                Text("Hear today's song").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(PrimaryActionButtonStyle(tint: stepAccent))
+            .padding(.horizontal, 28)
+            .padding(.bottom, 32)
+        }
+        .padding(.horizontal, 28)
+        .transition(.opacity.combined(with: .scale(scale: 1.05)))
     }
 
     private var nameFilled: Bool {
@@ -291,9 +330,12 @@ struct OnboardingView: View {
                     avatarURL: avatarURL
                 )
                 try await env.profileStore.markOnboarded()   // server source of truth
-                hasCompletedOnboarding = true                // local cache of the above
-                completedOnboardingVersion = OnboardingConfig.currentVersion   // this device saw the current wizard
                 Haptics.success()   // welcome in
+                // The local flags flip on the send-off button so RootView holds
+                // here for one last beat before the ceremony.
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                    showingSendOff = true
+                }
             } catch {
                 saveError = "Couldn't save your profile. Check your connection and try again."
                 #if DEBUG
