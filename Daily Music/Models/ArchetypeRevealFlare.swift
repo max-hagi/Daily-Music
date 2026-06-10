@@ -226,6 +226,7 @@ struct ArchetypeRevealFlare: Equatable {
             f(.theMelancholic,              .rainSpecks,        .cloudMoon,     .rain,          .drift,   .shadowPulse),
             f(.loudAndProud,                .ampSparks,         .stageFlash,    .flame,         .strike,  .stageHit),
             f(.theOutsider,                 .lowMist,           .halfMoon,      .mist,          .drift,   .shadowPulse),
+            f(.thePophead,                  .popBubbles,        .glossyPop,     .glossyDots,    .bounce,  .sparkle),
             f(.theShapeshifter,             .mosaicTiles,       .colorRibbons,  .mosaic,        .pulse,   .sparkle),
         ]
         return Dictionary(uniqueKeysWithValues: list.map { ($0.id, $0) })

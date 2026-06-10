@@ -24,6 +24,7 @@ struct ArchetypeHeroBackground: View {
         case "the_melancholic":              MelancholicBg()
         case "loud_and_proud":               LoudBg()
         case "the_outsider":                 OutsiderBg()
+        case "the_pophead":                  PopheadBg()
         default:                             ShapeshifterBg()
         }
     }
@@ -323,6 +324,57 @@ private struct OutsiderBg: View {
                     .fill(.white.opacity(0.06))
                     .frame(width: r * 2, height: r * 2)
                     .position(x: geo.size.width + r * 0.42, y: geo.size.height * 0.52)
+            }
+        }
+    }
+}
+
+// MARK: - The Pophead (hot-pink/purple gradient + animated spotlight sweep)
+
+private struct PopheadBg: View {
+    var body: some View {
+        TimelineView(.animation) { ctx in
+            let t = ctx.date.timeIntervalSinceReferenceDate / 5.0
+            let phase = (t - t.rounded(.down))
+            ZStack {
+                LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.36, blue: 0.62),
+                             Color(red: 0.82, green: 0.14, blue: 0.70),
+                             Color(red: 0.62, green: 0.12, blue: 0.78)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+                // Rotating spotlight sweep
+                GeometryReader { geo in
+                    let cx = geo.size.width * 0.75
+                    let cy = -geo.size.height * 0.1
+                    let deg = phase * 30 - 15
+                    RadialGradient(
+                        colors: [.white.opacity(0.28), .clear],
+                        center: .init(x: cx / geo.size.width,
+                                      y: cy / geo.size.height),
+                        startRadius: 0,
+                        endRadius: geo.size.height * 0.9
+                    )
+                    .rotationEffect(.degrees(deg), anchor: .init(
+                        x: cx / geo.size.width,
+                        y: cy / geo.size.height
+                    ))
+                    .blendMode(.overlay)
+                }
+                // Concentric glow rings bottom-left (mic stand motif)
+                Canvas { ctx2, size in
+                    let cx = size.width * 0.12
+                    let cy = size.height * 0.92
+                    for i in 1 ... 4 {
+                        let r = CGFloat(i) * 30.0
+                        ctx2.stroke(
+                            Circle().path(in: CGRect(x: cx - r, y: cy - r,
+                                                     width: r * 2, height: r * 2)),
+                            with: .color(.white.opacity(0.10)),
+                            lineWidth: 1.2
+                        )
+                    }
+                }
             }
         }
     }
