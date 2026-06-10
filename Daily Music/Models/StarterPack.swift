@@ -25,7 +25,7 @@ enum StarterPack {
         )
     }
 
-    /// 10 recognizable songs spanning 8 of 9 moods, 6 genres, and eras 1976–2020.
+    /// 12 recognizable songs spanning all 9 moods, 7 genres, and eras 1976–2026.
     /// Rated one-by-one in onboarding to seed the taste mirror; swap any to taste.
     static let songs: [DailyEntry] = [
         song("Dancing Queen", "ABBA", "1422648513",
@@ -37,9 +37,9 @@ enum StarterPack {
         song("Hurt", "Johnny Cash", "1452875626",
              "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/9f/b0/3c/9fb03c5a-28f5-9609-a5fa-8471b6b32fc1/00602498613351.rgb.jpg/600x600bb.jpg",
              genre: "Country", year: 2002, mood: "Melancholy", energy: 2, theme: "Memory & Nostalgia"),
-        song("Levitating", "Dua Lipa", "1538003843",
-             "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/6c/11/d6/6c11d681-aa3a-d59e-4c2e-f77e181026ab/190295092665.jpg/600x600bb.jpg",
-             genre: "Pop", year: 2020, mood: "Euphoric", energy: 4, theme: "Love & Romance"),
+        song("Banana Pancakes", "Jack Johnson", "1440857795",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/44/06/fd/4406fdc0-aab5-e300-82ba-3e5fe81a68a7/00602537868858.rgb.jpg/600x600bb.jpg",
+             genre: "Singer-Songwriter", year: 2005, mood: "Serene", energy: 2, theme: "Love & Romance"),
         song("Space Song", "Beach House", "997914096",
              "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/09/e0/d5/09e0d559-0682-f0f0-5e0c-3cd11e3114fd/beachhouse_depressioncherry_2400_300.jpg/600x600bb.jpg",
              genre: "Alternative", year: 2015, mood: "Dreamy", energy: 2, theme: "Longing & Desire"),
@@ -58,5 +58,11 @@ enum StarterPack {
         song("Vienna", "Billy Joel", "158618071",
              "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/37/68/4c/37684c52-dbdf-9bfe-0d87-07492f43dc4c/dj.gmcbwich.jpg/600x600bb.jpg",
              genre: "Rock", year: 1977, mood: "Nostalgic", energy: 2, theme: "Coming of Age"),
+        song("2SIDED", "Arlo Parks", "1862571197",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/86/10/2a/86102a67-2d84-24f7-dd60-4c7a6846ed05/5400863205140_cover.jpg/600x600bb.jpg",
+             genre: "Alternative", year: 2026, mood: "Melancholy", energy: 2, theme: "Heartbreak"),
+        song("Run Away with Me", "Carly Rae Jepsen", "1442810074",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/8e/b9/9b/8eb99b2a-f730-0df5-3c2c-4175d57cd84d/15UMGIM31527.rgb.jpg/600x600bb.jpg",
+             genre: "Pop", year: 2015, mood: "Euphoric", energy: 5, theme: "Love & Romance"),
     ]
 }
