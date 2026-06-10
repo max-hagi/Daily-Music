@@ -15,8 +15,12 @@ struct InsightsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: InsightsViewModel?
     @State private var showingWrapped = false
+    /// Which month the Wrapped sheet shows; the new-month moment passes last month.
+    @State private var wrappedMonth = Date()
     @AppStorage("startingMood") private var startingMood = ""
     @AppStorage("startingGenre") private var startingGenre = ""
+    /// Set by MainTabView when the 1st-of-month notification is tapped.
+    @AppStorage("pendingWrappedOpen") private var pendingWrappedOpen = false
 
     var body: some View {
         NavigationStack {
@@ -26,7 +30,7 @@ struct InsightsView: View {
                         state: model.state,
                         emptyTitle: "No ratings yet",
                         emptyMessage: "Rate songs 👍 / 👎 to start your taste mirror.",
-                        onRetry: { await model.load() }
+                        onRetry: { await model.load(favoriteIDs: env.favoritesStore.ids) }
                     ) { mirror in
                         content(mirror)
                     }
@@ -39,8 +43,10 @@ struct InsightsView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .background(wash)
             .fullScreenCover(isPresented: $showingWrapped) {
-                WrappedView(favoriteIDs: env.favoritesStore.ids)
+                WrappedView(favoriteIDs: env.favoritesStore.ids, targetMonth: wrappedMonth)
             }
+            .onAppear { consumePendingWrappedOpenIfNeeded() }
+            .onChange(of: pendingWrappedOpen) { _, _ in consumePendingWrappedOpenIfNeeded() }
             .fullScreenCover(item: revealBinding) { request in
                 ArchetypeRevealView(request: request) {
                     model?.acknowledgeReveal()
@@ -51,7 +57,7 @@ struct InsightsView: View {
             if model == nil {
                 model = InsightsViewModel(entries: env.entries, ratings: env.ratings)
             }
-            await model?.load()
+            await model?.load(favoriteIDs: env.favoritesStore.ids)
         }
     }
 
@@ -94,11 +100,12 @@ struct InsightsView: View {
         let accent = (mirror.archetype ?? .theShapeshifter).colors[0]
         return ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
+                recapMomentBanner
                 startedHereCard
                 TasteMirrorBoard(
                     mirror: mirror,
                     displayArchetype: mirror.archetype,
-                    onRatingChanged: { Task { await model?.load() } }
+                    onRatingChanged: { Task { await model?.load(favoriteIDs: env.favoritesStore.ids) } }
                 )
                 replayButton(mirror)
                 revealCountdown(for: mirror)
@@ -109,7 +116,7 @@ struct InsightsView: View {
         }
         .scrollContentBackground(.hidden)
         .refreshable {
-            await model?.load()
+            await model?.load(favoriteIDs: env.favoritesStore.ids)
             Haptics.tap()
         }
     }
@@ -150,7 +157,7 @@ struct InsightsView: View {
                         HistoryEntryRow(
                             item: item,
                             accent: accent,
-                            onRatingChanged: { Task { await model?.load() } }
+                            onRatingChanged: { Task { await model?.load(favoriteIDs: env.favoritesStore.ids) } }
                         )
                     }
                 }
@@ -159,7 +166,7 @@ struct InsightsView: View {
     }
 
     private func wrappedButton(_ accent: Color) -> some View {
-        Button { showingWrapped = true } label: {
+        Button { openWrapped(for: Date()) } label: {
             Label("See your month", systemImage: "sparkles").frame(maxWidth: .infinity)
         }
         .buttonStyle(PrimaryActionButtonStyle(tint: accent))
@@ -177,6 +184,81 @@ struct InsightsView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
             }
         }
+    }
+
+    // MARK: monthly recap moment
+
+    /// The month a recap moment refers to right now: during the first 4 days of
+    /// a month the finished PREVIOUS month is the story; during the last 2 days
+    /// the closing current month is. Otherwise there's no moment (nil).
+    private var recapMoment: (month: Date, title: String)? {
+        let calendar = Calendar.current
+        let now = Date()
+        let day = calendar.component(.day, from: now)
+
+        if day <= 4, let previous = calendar.date(byAdding: .month, value: -1, to: now) {
+            let name = previous.formatted(.dateTime.month(.wide))
+            return (previous, "Your \(name) recap is ready")
+        }
+        if let range = calendar.range(of: .day, in: .month, for: now), day >= range.count - 1 {
+            let name = now.formatted(.dateTime.month(.wide))
+            return (now, "\(name) is a wrap — see your month")
+        }
+        return nil
+    }
+
+    /// A short-lived banner that makes the recap an event instead of a buried
+    /// button (peak-end: the month's story lands while it's still fresh).
+    @ViewBuilder private var recapMomentBanner: some View {
+        if let moment = recapMoment {
+            Button {
+                openWrapped(for: moment.month)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "gift.fill")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(.white.opacity(0.22), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(moment.title)
+                            .font(.subheadline.weight(.heavy))
+                            .foregroundStyle(.white)
+                        Text("Songs, artists, and streaks — wrapped up.")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                .padding(Theme.Spacing.md)
+                .background(
+                    LinearGradient(colors: [.pink, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                )
+                .shadow(color: .purple.opacity(0.25), radius: 12, y: 6)
+            }
+            .buttonStyle(PressableCardButtonStyle())
+        }
+    }
+
+    private func openWrapped(for month: Date) {
+        wrappedMonth = month
+        showingWrapped = true
+        Haptics.tap()
+    }
+
+    private func consumePendingWrappedOpenIfNeeded() {
+        guard pendingWrappedOpen else { return }
+        pendingWrappedOpen = false
+        // Tapped from the 1st-of-month notification → last month's story.
+        let month = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+        openWrapped(for: month)
     }
 
     @ViewBuilder private var startedHereCard: some View {

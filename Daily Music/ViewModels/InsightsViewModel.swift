@@ -43,17 +43,26 @@ final class InsightsViewModel {
         stableArchetype = TasteProfile.profile(id: snapshot.stableArchetypeID)
     }
 
-    func load() async {
+    func load(favoriteIDs: Set<UUID> = []) async {
         if case .loaded = state {} else { state = .loading }
 
         let history = (try? await entries.publishedHistory()) ?? []
         let myRatings = (try? await ratings.myRatings()) ?? [:]
-        let rated = history.compactMap { entry in
-            myRatings[entry.id].map { RatedSong(entry: entry, value: $0) }
+        // Thumbed songs carry their heart; favorited-but-unrated songs join as
+        // heart-only signal (value 0) — the scorer hears them, the tiles don't.
+        let rated = history.compactMap { entry -> RatedSong? in
+            let value = myRatings[entry.id]
+            let fav = favoriteIDs.contains(entry.id)
+            guard value != nil || fav else { return nil }
+            return RatedSong(entry: entry, value: value ?? 0, isFavorite: fav)
         }
         // Merge the onboarding taste-seed so the profile is established at onboarding
-        // and evolves as real daily ratings accumulate.
-        let mirror = TasteMirror.build(from: rated + SeedRatings.load())
+        // and evolves as real daily ratings accumulate. The stable (displayed)
+        // archetype is the hysteresis incumbent — siblings must beat it clearly.
+        let mirror = TasteMirror.build(
+            from: rated + SeedRatings.load(),
+            incumbentID: snapshotStore.load().stableArchetypeID
+        )
         historyEntries = history
             .sorted { $0.date > $1.date }
             .map { HistoryEntry(entry: $0, rating: myRatings[$0.id]) }
@@ -98,6 +107,10 @@ final class InsightsViewModel {
     }
 
     private func revealReason(for mirror: TasteMirror, fallback: TasteProfile) -> String {
+        if let evidence = mirror.evidence,
+           let receipts = archetypeReceiptsCopy(evidence: evidence, isCurrentUser: true) {
+            return receipts
+        }
         guard let modifier = mirror.winningModifier else {
             if let mood = mirror.mood.topStandout?.name.lowercased() {
                 return "Your \(mood) picks are shaping the center of your taste."

@@ -15,7 +15,11 @@ enum SeedRatings {
     private static let key = "tasteSeedRatings"
 
     static func save(_ ratings: [RatedSong]) {
-        guard let data = try? JSONEncoder().encode(ratings) else { return }
+        let now = Date()
+        let stamped = ratings.map {
+            RatedSong(entry: $0.entry, value: $0.value, isFavorite: $0.isFavorite, ratedAt: $0.ratedAt ?? now)
+        }
+        guard let data = try? JSONEncoder().encode(stamped) else { return }
         UserDefaults.standard.set(data, forKey: key)
     }
 

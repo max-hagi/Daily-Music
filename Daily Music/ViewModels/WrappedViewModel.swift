@@ -20,6 +20,7 @@ final class WrappedViewModel {
         var topArtist: String?
         var topArtistPlays: Int
         var profile: TasteProfile
+        var streak: Streak
     }
 
     private(set) var state: LoadState<Recap> = .loading
@@ -34,7 +35,10 @@ final class WrappedViewModel {
         self.ratings = ratings
     }
 
-    func load(favoriteIDs: Set<UUID>) async {
+    /// `month` picks WHICH month to recap (any date inside it) — defaults to the
+    /// current one. The 1st-of-month announcement opens last month's recap, since
+    /// a brand-new month has nothing to show yet.
+    func load(favoriteIDs: Set<UUID>, month: Date = Date()) async {
         if case .loaded = state {} else { state = .loading }
 
         do {
@@ -43,8 +47,8 @@ final class WrappedViewModel {
             let dates = (try? await checkIns.checkInDates()) ?? []
 
             let calendar = Calendar.current
-            let now = Date()
-            // Local helper: is this date in the current month/year? `toGranularity:
+            let now = month
+            // Local helper: is this date in the target month/year? `toGranularity:
             // .month` means "same month AND year", ignoring the day.
             func thisMonth(_ date: Date) -> Bool {
                 calendar.isDate(date, equalTo: now, toGranularity: .month)
@@ -63,8 +67,11 @@ final class WrappedViewModel {
             // Archetype comes from the same rating-based taste mirror as Insights:
             // join the user's 👍/👎 ratings with the tagged catalog, then resolve.
             let myRatings = (try? await ratings.myRatings()) ?? [:]
-            let rated = history.compactMap { entry in
-                myRatings[entry.id].map { RatedSong(entry: entry, value: $0) }
+            let rated = history.compactMap { entry -> RatedSong? in
+                let value = myRatings[entry.id]
+                let fav = favoriteIDs.contains(entry.id)
+                guard value != nil || fav else { return nil }
+                return RatedSong(entry: entry, value: value ?? 0, isFavorite: fav)
             }
             let mirror = TasteMirror.build(from: rated + SeedRatings.load())
 
@@ -78,7 +85,9 @@ final class WrappedViewModel {
                 topArtist: top?.artist,
                 topArtistPlays: top?.count ?? 0,
                 // `?? .theShapeshifter` covers the "not enough ratings yet" case.
-                profile: mirror.archetype ?? .theShapeshifter
+                profile: mirror.archetype ?? .theShapeshifter,
+                // Streak is all-time (not month-bounded): the ritual itself.
+                streak: Streak.compute(from: dates)
             ))
         } catch {
             state = .failed(error)
