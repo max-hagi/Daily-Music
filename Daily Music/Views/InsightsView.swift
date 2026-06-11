@@ -19,6 +19,7 @@ struct InsightsView: View {
     @State private var wrappedMonth = Date()
     @AppStorage("startingMood") private var startingMood = ""
     @AppStorage("startingGenre") private var startingGenre = ""
+    @AppStorage("startingDecade") private var startingDecade = ""
     /// Set by MainTabView when the 1st-of-month notification is tapped.
     @AppStorage("pendingWrappedOpen") private var pendingWrappedOpen = false
 
@@ -30,7 +31,7 @@ struct InsightsView: View {
                         state: model.state,
                         emptyTitle: "No ratings yet",
                         emptyMessage: "Rate songs 👍 / 👎 to start your taste mirror.",
-                        onRetry: { await model.load(favoriteIDs: env.favoritesStore.ids) }
+                        onRetry: { await model.load(favoriteIDs: env.favoritesStore.ids, startingRead: startingRead) }
                     ) { mirror in
                         content(mirror)
                     }
@@ -57,7 +58,7 @@ struct InsightsView: View {
             if model == nil {
                 model = InsightsViewModel(entries: env.entries, ratings: env.ratings)
             }
-            await model?.load(favoriteIDs: env.favoritesStore.ids)
+            await model?.load(favoriteIDs: env.favoritesStore.ids, startingRead: startingRead)
         }
     }
 
@@ -104,19 +105,19 @@ struct InsightsView: View {
                 TasteMirrorBoard(
                     mirror: mirror,
                     displayArchetype: mirror.archetype,
-                    onRatingChanged: { Task { await model?.load(favoriteIDs: env.favoritesStore.ids) } },
+                    onRatingChanged: { Task { await model?.load(favoriteIDs: env.favoritesStore.ids, startingRead: startingRead) } },
                     onReplay: mirror.isArchetypeUnlocked ? { model?.replayReveal() } : nil,
                     revealCountdownText: countdownText(for: mirror)
                 )
-                historySection(accent: accent)
-                startedHereCard
+                historySummaryCard(accent: accent)
+                tasteArcCard(accent: accent)
                 wrappedButton(accent)
             }
             .padding()
         }
         .scrollContentBackground(.hidden)
         .refreshable {
-            await model?.load(favoriteIDs: env.favoritesStore.ids)
+            await model?.load(favoriteIDs: env.favoritesStore.ids, startingRead: startingRead)
             Haptics.tap()
         }
     }
@@ -130,32 +131,128 @@ struct InsightsView: View {
     }
 
     @ViewBuilder
-    private func historySection(accent: Color) -> some View {
+    private func historySummaryCard(accent: Color) -> some View {
         let entries = model?.historyEntries ?? []
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("YOUR HISTORY")
-                .font(.caption2.weight(.heavy))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        NavigationLink {
+            HistoryView(
+                entries: entries,
+                accent: accent,
+                onRatingChanged: { Task { await model?.load(favoriteIDs: env.favoritesStore.ids, startingRead: startingRead) } }
+            )
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 42, height: 42)
+                    .glassEffect(.regular.tint(accent.opacity(0.14)), in: Circle())
 
-            if entries.isEmpty {
-                Text("Your daily songs will appear here once you start listening.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, Theme.Spacing.lg)
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(entries) { item in
-                        HistoryEntryRow(
-                            item: item,
-                            accent: accent,
-                            onRatingChanged: { Task { await model?.load(favoriteIDs: env.favoritesStore.ids) } }
-                        )
-                    }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("YOUR HISTORY")
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(.secondary)
+                    Text(entries.isEmpty ? "No songs yet" : "\(entries.count) songs in your history")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(.primary)
+                    Text(historySummaryDetail(entries))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(Theme.Spacing.md)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+        }
+        .buttonStyle(PressableCardButtonStyle())
+    }
+
+    private func historySummaryDetail(_ entries: [HistoryEntry]) -> String {
+        guard let latest = entries.first?.entry else {
+            return "Your daily songs will appear here once you start listening."
+        }
+        return "\(latest.title) · \(latest.date.formatted(.dateTime.month(.abbreviated).day()))"
+    }
+
+    private var startingRead: StartingRead {
+        StartingRead(
+            mood: startingMood.nilIfEmpty,
+            genre: startingGenre.nilIfEmpty,
+            decade: startingDecade.nilIfEmpty
+        )
+    }
+
+    @ViewBuilder
+    private func tasteArcCard(accent: Color) -> some View {
+        if let summary = model?.tasteArcSummary,
+           let eras = model?.tasteEras,
+           eras.count >= 2 {
+            NavigationLink {
+                TasteArcTimelineView(eras: eras, accent: accent)
+            } label: {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    HStack(spacing: 10) {
+                        Text("YOUR TASTE ARC")
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack(alignment: .center, spacing: 10) {
+                        arcCapsule(summary.origin, icon: "flag.checkered", tint: .secondary)
+                        arcDots(eras: eras, accent: accent)
+                        arcCapsule(summary.current, icon: "sparkles", tint: accent)
+                    }
+
+                    Text(summary.feedback)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                }
+                .padding(Theme.Spacing.md)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+            }
+            .buttonStyle(PressableCardButtonStyle())
+        }
+    }
+
+    private func arcCapsule(_ text: String, icon: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+            Text(text)
+                .font(.caption.weight(.heavy))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .foregroundStyle(tint)
+        .frame(maxWidth: 112)
+        .glassPillStyle(tint: tint.opacity(0.12), horizontalInset: 9, verticalInset: 7)
+    }
+
+    private func arcDots(eras: [TasteEra], accent: Color) -> some View {
+        let preview = Array(eras.prefix(5))
+        return HStack(spacing: 4) {
+            ForEach(preview) { era in
+                Circle()
+                    .fill(era.profile?.colors.first ?? accent.opacity(0.72))
+                    .frame(width: era.kind == .current ? 12 : 9, height: era.kind == .current ? 12 : 9)
+                    .overlay {
+                        Circle().stroke(.white.opacity(0.55), lineWidth: 1)
+                    }
             }
         }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 4)
     }
 
     private func wrappedButton(_ accent: Color) -> some View {
@@ -241,24 +338,173 @@ struct InsightsView: View {
         openWrapped(for: month)
     }
 
-    @ViewBuilder private var startedHereCard: some View {
-        let parts = [startingMood, startingGenre].filter { !$0.isEmpty }
-        if !parts.isEmpty {
+}
+
+private struct HistoryView: View {
+    let entries: [HistoryEntry]
+    let accent: Color
+    let onRatingChanged: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                if entries.isEmpty {
+                    Text("Your daily songs will appear here once you start listening.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.xl)
+                } else {
+                    ForEach(entries) { item in
+                        HistoryEntryRow(item: item, accent: accent, onRatingChanged: onRatingChanged)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("History")
+        .background(Color(.systemBackground).ignoresSafeArea())
+    }
+}
+
+private struct TasteArcTimelineView: View {
+    let eras: [TasteEra]
+    let accent: Color
+    @State private var expandedID: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                ForEach(eras) { era in
+                    Button {
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) {
+                            expandedID = expandedID == era.id ? nil : era.id
+                        }
+                        Haptics.tap()
+                    } label: {
+                        TasteEraRow(
+                            era: era,
+                            accent: accent,
+                            isExpanded: expandedID == era.id
+                        )
+                    }
+                    .buttonStyle(PressableCardButtonStyle())
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Taste Arc")
+        .background(Color(.systemBackground).ignoresSafeArea())
+    }
+}
+
+private struct TasteEraRow: View {
+    let era: TasteEra
+    let accent: Color
+    let isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack(spacing: 12) {
-                Image(systemName: "flag.checkered")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("YOU STARTED HERE")
+                marker
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(kindLabel)
                         .font(.caption2.weight(.heavy))
                         .foregroundStyle(.secondary)
-                    Text(parts.joined(separator: " · "))
-                        .font(.subheadline.weight(.bold))
+                    Text(era.title)
+                        .font(.headline.weight(.heavy))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(era.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
                 }
-                Spacer()
+
+                Spacer(minLength: 8)
+
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
             }
-            .padding(Theme.Spacing.md)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 10) {
+                    if let driverLine = era.driverLine {
+                        Text(driverLine)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+
+                    ForEach(era.songs.prefix(3)) { song in
+                        HStack(spacing: 10) {
+                            AlbumArtView(url: song.albumArtURL, cornerRadius: Theme.Radius.chip)
+                                .frame(width: 34, height: 34)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(song.title)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                Text(song.artist)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                    }
+                }
+                .padding(.leading, 50)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
+        .padding(Theme.Spacing.md)
+        .background(rowMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .stroke(era.kind == .current ? accent.opacity(0.45) : .white.opacity(0.16), lineWidth: 1)
+        }
+    }
+
+    private var marker: some View {
+        Image(systemName: symbol)
+            .font(.headline.weight(.bold))
+            .foregroundStyle(markerTint)
+            .frame(width: 38, height: 38)
+            .glassEffect(.regular.tint(markerTint.opacity(0.14)), in: Circle())
+    }
+
+    private var rowMaterial: Material {
+        era.kind == .current ? .regularMaterial : .ultraThinMaterial
+    }
+
+    private var markerTint: Color {
+        era.profile?.colors.first ?? (era.kind == .onboarding ? .secondary : accent)
+    }
+
+    private var symbol: String {
+        switch era.kind {
+        case .onboarding: "flag.checkered"
+        case .monthly: "circle.hexagongrid.fill"
+        case .reveal: "sparkles"
+        case .current: "location.fill"
+        }
+    }
+
+    private var kindLabel: String {
+        switch era.kind {
+        case .onboarding: "ORIGIN"
+        case .monthly: era.date.formatted(.dateTime.month(.wide).year())
+        case .reveal: "REVEAL"
+        case .current: "NOW"
+        }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }

@@ -12,6 +12,7 @@ struct HistoryEntryRow: View {
     let item: HistoryEntry
     var accent: Color = Theme.Brand.gradient[0]
     var onRatingChanged: (() -> Void)? = nil
+    @Environment(AppEnvironment.self) private var env
 
     var body: some View {
         HStack(spacing: 12) {
@@ -42,5 +43,8 @@ struct HistoryEntryRow: View {
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, 10)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+        .onChange(of: env.ratingsStore.rating(for: item.entry.id)) { _, _ in
+            onRatingChanged?()
+        }
     }
 }

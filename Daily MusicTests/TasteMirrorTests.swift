@@ -219,6 +219,74 @@ struct TasteMirrorTests {
         #expect(!m.ratedSongs.contains { $0.value == 0 }) // drill-downs unchanged
     }
 
+    @Test func tasteErasBuildOnboardingMonthlyAndCurrentNodes() {
+        let calendar = Calendar(identifier: .gregorian)
+        let january = calendar.date(from: DateComponents(year: 2026, month: 1, day: 12))!
+        let february = calendar.date(from: DateComponents(year: 2026, month: 2, day: 12))!
+        let march = calendar.date(from: DateComponents(year: 2026, month: 3, day: 12))!
+        let januaryEntries = (0..<3).map {
+            Self.entry(id: 10 + $0, mood: "Serene", year: 2010, energy: 2, genre: "Indie")
+                .withDate(january.addingTimeInterval(Double($0) * 86_400))
+        }
+        let februaryEntries = (0..<3).map {
+            Self.entry(id: 20 + $0, mood: "Euphoric", year: 2020, energy: 5, genre: "Pop")
+                .withDate(february.addingTimeInterval(Double($0) * 86_400))
+        }
+        let currentEntries = (0..<10).map {
+            Self.entry(id: 100 + $0, mood: "Euphoric", year: 2020, energy: 5, genre: "Pop")
+                .withDate(march.addingTimeInterval(Double($0) * 86_400))
+        }
+        let all = januaryEntries + februaryEntries + currentEntries
+        let ratings = Dictionary(uniqueKeysWithValues: all.map { ($0.id, 1) })
+        let mirror = TasteMirror.build(from: currentEntries.map { RatedSong(entry: $0, value: 1) })
+
+        let eras = InsightsViewModel.buildTasteEras(
+            history: all,
+            ratings: ratings,
+            favoriteIDs: [],
+            startingRead: StartingRead(mood: "Serene", genre: "Indie", decade: "2010s"),
+            currentMirror: mirror,
+            snapshot: .empty,
+            calendar: calendar
+        )
+
+        #expect(eras.first?.kind == .current)
+        #expect(eras.contains { $0.kind == .onboarding })
+        #expect(eras.contains { $0.kind == .monthly && $0.title.contains("January") })
+        #expect(eras.contains { $0.kind == .monthly && $0.title.contains("February") })
+    }
+
+    @Test func tasteErasExcludeWeakMonthsAndFavoritesCountAsSignal() {
+        let calendar = Calendar(identifier: .gregorian)
+        let april = calendar.date(from: DateComponents(year: 2026, month: 4, day: 5))!
+        let may = calendar.date(from: DateComponents(year: 2026, month: 5, day: 5))!
+        let june = calendar.date(from: DateComponents(year: 2026, month: 6, day: 5))!
+        let weak = (0..<2).map {
+            Self.entry(id: 300 + $0, mood: "Dark", genre: "Post-Punk")
+                .withDate(april.addingTimeInterval(Double($0) * 86_400))
+        }
+        let heartOnly = (0..<3).map {
+            Self.entry(id: 400 + $0, mood: "Dreamy", genre: "Ambient")
+                .withDate(may.addingTimeInterval(Double($0) * 86_400))
+        }
+        let current = (0..<3).map {
+            Self.entry(id: 500 + $0, mood: "Euphoric", genre: "Pop")
+                .withDate(june.addingTimeInterval(Double($0) * 86_400))
+        }
+        let eras = InsightsViewModel.buildTasteEras(
+            history: weak + heartOnly + current,
+            ratings: Dictionary(uniqueKeysWithValues: (weak + current).map { ($0.id, 1) }),
+            favoriteIDs: Set(heartOnly.map(\.id)),
+            startingRead: StartingRead(),
+            currentMirror: TasteMirror.build(from: []),
+            snapshot: .empty,
+            calendar: calendar
+        )
+
+        #expect(!eras.contains { $0.title.contains("April") })
+        #expect(eras.contains { $0.title.contains("May") })
+    }
+
     @Test func mirrorPassesIncumbentThrough() {
         let data = ArchetypeScorerTests.songs(6, value: 1, mood: "Joyful", idBase: 0)
             + ArchetypeScorerTests.songs(2, value: -1, mood: "Joyful", idBase: 50)
@@ -525,5 +593,26 @@ struct BoardEntranceFlavorTests {
     @Test func unmappedStylesGetStandard() {
         #expect(BoardEntranceFlavor.flavor(for: .colorRibbons) == .standard)
         #expect(BoardEntranceFlavor.flavor(for: .none) == .standard)
+    }
+}
+
+private extension DailyEntry {
+    func withDate(_ date: Date) -> DailyEntry {
+        DailyEntry(
+            id: id,
+            date: date,
+            title: title,
+            artist: artist,
+            albumArtURL: albumArtURL,
+            journalMarkdown: journalMarkdown,
+            appleMusicID: appleMusicID,
+            spotifyURI: spotifyURI,
+            genre: genre,
+            year: year,
+            mood: mood,
+            energy: energy,
+            theme: theme,
+            language: language
+        )
     }
 }
