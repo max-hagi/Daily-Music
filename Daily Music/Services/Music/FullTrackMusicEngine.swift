@@ -1,85 +1,76 @@
 //
-//  MusicKitMusicEngine.swift
+//  FullTrackMusicEngine.swift
 //  Daily Music
 //
-//  The REAL Apple Music engine, implementing the same MusicEngine protocol as
-//  the mock. It plays 30-second previews (works without an Apple Music
-//  subscription — only a developer token is needed) and adds tracks to a
-//  "Daily Music" library playlist.
+//  The real Apple Music engine: full-track playback via ApplicationMusicPlayer
+//  (which gives lock-screen + Control Center transport for free) and saving
+//  tracks to a "Daily Music" library playlist. Both require the user to hold
+//  an active Apple Music subscription — AppleMusicSession gates that via
+//  capabilities, and MusicPlayer falls back to previews on any throw here.
 //
 //  ──────────────────────────────────────────────────────────────────────────
-//  NOT ACTIVE YET. To turn it on once you have a paid Apple Developer account:
-//
-//   1. Xcode → target "Daily Music" → Signing & Capabilities → + Capability →
-//      "MusicKit". (This requires the paid membership; it provisions the
-//      developer token Xcode injects at build time.)
-//   2. Add a privacy string so iOS can show the permission prompt. Target →
-//      Info → add key  "Privacy - Media Library Usage Description"
-//      (NSAppleMusicUsageDescription), value e.g.
-//      "Daily Music plays song previews and saves tracks to your playlist."
-//   3. In AppEnvironment.live(), change  MockMusicEngine()  →  MusicKitMusicEngine().
-//   4. Run on a REAL iPhone signed into your Apple ID (the Simulator can't play
-//      Apple Music). A subscription is only needed for full-track playback;
-//      previews work without one.
+//  ACTIVATION CHECKLIST (needs the paid Apple Developer account):
+//   1. Xcode → target "Daily Music" → Signing & Capabilities → + MusicKit.
+//   2. FeatureFlags.appleMusicConnect = true.
+//   3. Verify NSAppleMusicUsageDescription is in Daily Music/Info.plist.
+//   4. Test on a REAL iPhone signed into an Apple ID with a subscription
+//      (Simulator can't play Apple Music): connect flow, full playback,
+//      pause/resume/seek, playlist add, lock-screen controls.
 //  ──────────────────────────────────────────────────────────────────────────
 //
 
 import Foundation
-import MusicKit        // Apple Music catalog + library APIs
-import AVFoundation    // AVPlayer, used to play the preview audio file
+import MusicKit
 
-final class MusicKitMusicEngine: MusicEngine {
+final class FullTrackMusicEngine: MusicEngine {
     var onProgress: ((TimeInterval, TimeInterval) -> Void)?
     var onFinish: (() -> Void)?
 
     private static let playlistName = "Daily Music"
-    // Held as a property so the player isn't deallocated mid-playback (a local
-    // var would be freed the instant play() returns, cutting off the audio).
-    private var previewPlayer: AVPlayer?
+    private var progressTask: Task<Void, Never>?
+    private var trackDuration: TimeInterval = 0
+    private var reportedFinish = false
+
+    private var player: ApplicationMusicPlayer { .shared }
 
     // MARK: MusicEngine
 
     func play(appleMusicID: String) async throws {
         try await ensureAuthorized()
         let song = try await fetchSong(id: appleMusicID)
-        // previewAssets are the free 30-sec clips (no subscription needed). Optional
-        // chain + guard: if there's no preview URL, surface a clear error.
-        guard let previewURL = song.previewAssets?.first?.url else {
-            throw MusicEngineError.noPreviewAvailable
-        }
-        // AVPlayer streams the preview file directly.
-        let player = AVPlayer(url: previewURL)
-        previewPlayer = player
-        player.play()
+        trackDuration = song.duration ?? 0
+        player.queue = ApplicationMusicPlayer.Queue(for: [song])
+        try await player.play()
+        startProgressTask()
     }
 
-    // `?.` no-ops safely if nothing is loaded yet.
     func pause() async {
-        previewPlayer?.pause()
+        player.pause()
+        progressTask?.cancel()
     }
 
     func resume() async {
-        previewPlayer?.play()
+        try? await player.play()   // resumes the queued item from its position
+        startProgressTask()
     }
 
     func stop() async {
-        previewPlayer?.pause()
-        previewPlayer = nil   // release the player so it can be torn down
+        progressTask?.cancel()
+        progressTask = nil
+        player.stop()
+        trackDuration = 0
     }
 
     func seek(to seconds: TimeInterval) async {
-        await MainActor.run {
-            previewPlayer?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
-        }
+        player.playbackTime = seconds
     }
 
     func addToDailyPlaylist(appleMusicID: String) async throws {
         try await ensureAuthorized()
         let song = try await fetchSong(id: appleMusicID)
 
-        // Find-or-create: fetch the user's library playlists, reuse ours if present,
-        // otherwise create it seeded with this song. `_ =` discards the returned
-        // playlist since we don't need it here.
+        // Find-or-create: reuse our playlist if present, otherwise create it
+        // seeded with this song.
         let existing = try await MusicLibraryRequest<Playlist>().response().items
         if let playlist = existing.first(where: { $0.name == Self.playlistName }) {
             try await MusicLibrary.shared.add(song, to: playlist)
@@ -90,6 +81,30 @@ final class MusicKitMusicEngine: MusicEngine {
 
     // MARK: Helpers
 
+    /// ApplicationMusicPlayer exposes no progress callback — poll playbackTime
+    /// ~5×/sec (same cadence the preview engine reports at) and synthesize the
+    /// finish event when we reach the end of the track.
+    private func startProgressTask() {
+        progressTask?.cancel()
+        reportedFinish = false
+        progressTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                let elapsed = self.player.playbackTime
+                let duration = self.trackDuration
+                if duration > 0 {
+                    self.onProgress?(elapsed, duration)
+                    if elapsed >= duration - 0.25, !self.reportedFinish {
+                        self.reportedFinish = true
+                        self.onFinish?()
+                        return
+                    }
+                }
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+        }
+    }
+
     // Gate every operation on permission. If already authorized, return early;
     // otherwise show the system prompt and throw if the user declines.
     private func ensureAuthorized() async throws {
@@ -98,8 +113,7 @@ final class MusicKitMusicEngine: MusicEngine {
         guard status == .authorized else { throw MusicEngineError.notAuthorized }
     }
 
-    // Look the song up in the Apple Music catalog by its ID. `matching: \.id` is a
-    // KEY PATH — a type-safe reference to the Song.id property the request filters on.
+    // Look the song up in the Apple Music catalog by its ID.
     private func fetchSong(id: String) async throws -> Song {
         let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(id))
         let response = try await request.response()
@@ -116,8 +130,6 @@ enum MusicEngineError: LocalizedError {
     case noPreviewAvailable
     case addToPlaylistUnavailable
 
-    // Note the bodies have no `return` — single-expression switch cases in Swift
-    // return implicitly.
     var errorDescription: String? {
         switch self {
         case .notAuthorized:    "Apple Music access wasn't granted."
