@@ -44,6 +44,8 @@ final class AppEnvironment {
     let friendsStore: FriendsStore
     let friendNudgeStore: FriendNudgeStore
     let catchUpLog: CatchUpLog
+    let appleMusic: AppleMusicSession
+    let savedTracks: SavedTracksLog
     /// Day-one handoff: set when the taste-seed reveal completes so TodayView
     /// raises the first ceremony immediately (no settle beat). One-shot —
     /// TodayView clears it after consuming.
@@ -64,7 +66,9 @@ final class AppEnvironment {
         friendNudges: FriendNudgeService,
         notifications: NotificationService,
         pushRegistration: PushRegistrationService,
-        musicEngine: MusicEngine
+        musicEngine: MusicEngine,
+        fullMusicEngine: MusicEngine? = nil,
+        appleMusicAuthorizer: AppleMusicAuthorizing
     ) {
         self.auth = auth
         self.entries = entries
@@ -73,7 +77,15 @@ final class AppEnvironment {
         self.sharedStats = sharedStats
         self.reactions = reactions
         self.ratings = ratings
-        self.catalogInfo = catalogInfo
+        // The Apple Music session must exist before the player (routing) and
+        // the enriched catalog (capability gating) — both read it.
+        self.appleMusic = AppleMusicSession(authorizer: appleMusicAuthorizer)
+        self.savedTracks = SavedTracksLog()
+        // Enriched lookup decorates the base when the flag is on; the session's
+        // capabilities gate it per-call, so non-connected users hit the base path.
+        self.catalogInfo = FeatureFlags.appleMusicConnect
+            ? EnrichedCatalogInfoService(base: catalogInfo, session: appleMusic)
+            : catalogInfo
         self.settings = settings
         self.profiles = profiles
         self.friends = friends
@@ -84,7 +96,11 @@ final class AppEnvironment {
         // MusicPlayer wraps whichever engine (mock vs MusicKit) it's given, and the
         // stores wrap a service to add view-facing state. The container owns
         // them so they live as long as the app does.
-        self.musicPlayer = MusicPlayer(engine: musicEngine)
+        self.musicPlayer = MusicPlayer(
+            engine: musicEngine,
+            fullEngine: fullMusicEngine,
+            appleMusic: appleMusic
+        )
         self.session = SessionStore(auth: auth)
         self.favoritesStore = FavoritesStore(service: favorites)
         self.ratingsStore = RatingsStore(service: ratings)
@@ -116,7 +132,12 @@ final class AppEnvironment {
             friendNudges: MockFriendNudgeService(),
             notifications: LocalNotificationService(),
             pushRegistration: MockPushRegistrationService(),
-            musicEngine: MockMusicEngine()
+            musicEngine: MockMusicEngine(),
+            // A second mock engine + auto-authorizing mock authorizer make every
+            // connected state (full playback, saves, rich metadata) explorable
+            // in the simulator without the MusicKit entitlement.
+            fullMusicEngine: MockMusicEngine(),
+            appleMusicAuthorizer: MockAppleMusicAuthorizer()
         )
     }
 
@@ -139,9 +160,12 @@ final class AppEnvironment {
             friendNudges: SupabaseFriendNudgeService(),
             notifications: LocalNotificationService(),
             pushRegistration: SupabasePushRegistrationService(),
-            // Free 30-sec previews via the iTunes lookup — no paid account.
-            // At launch, swap to MusicKitMusicEngine() once MusicKit is enabled.
-            musicEngine: PreviewMusicEngine(catalog: catalog)
+            // Free 30-sec previews via the iTunes lookup — the universal floor.
+            musicEngine: PreviewMusicEngine(catalog: catalog),
+            // Dormant until FeatureFlags.appleMusicConnect: no full engine means
+            // routing can never leave the preview path.
+            fullMusicEngine: FeatureFlags.appleMusicConnect ? FullTrackMusicEngine() : nil,
+            appleMusicAuthorizer: MusicKitAuthorizer()
         )
     }
 }

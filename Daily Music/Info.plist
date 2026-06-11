@@ -5,6 +5,10 @@
 	<!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE = YES).
 	     Registers the dailymusic:// scheme so shared friend-invite links and
 	     QR codes actually open the app — RootView handles the routing. -->
+	<!-- Shown on the MusicKit permission prompt once Apple Music connect ships
+	     (FeatureFlags.appleMusicConnect). Harmless to declare early. -->
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Daily Music plays your daily song and can save tracks to an Apple Music playlist for you.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
