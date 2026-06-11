@@ -63,6 +63,22 @@ enum Haptics {
         }
     }
 
+    /// One immediate, archetype-flavored beat for the driver card landing.
+    /// `crispReward`'s schedule is built for the reveal's multi-second arc;
+    /// the board entrance needs its hit right when the #1 card settles.
+    @MainActor static func driverReward(pattern: ArchetypeRevealFlare.HapticPattern) {
+        switch pattern {
+        case .none:          break
+        case .sparkle:       impact(.light)
+        case .softBloom:     impact(.soft)
+        case .electric:      impact(.rigid)
+        case .stageHit:      impact(.heavy)
+        case .shadowPulse:   impact(.medium)
+        case .triumph:       success()
+        case .textureRumble: impact(.heavy)
+        }
+    }
+
     @MainActor private static func playArchetypeBeat(_ kind: ArchetypeHapticSchedule.Beat.Kind) {
         switch kind {
         case .anticipation:
