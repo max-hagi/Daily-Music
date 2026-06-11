@@ -499,3 +499,31 @@ struct DriverHighlightsTests {
             evidence: evidence, displayedArchetypeID: nil, liveArchetypeID: "outsider").isEmpty)
     }
 }
+
+// MARK: - BoardEntranceFlavor
+
+struct BoardEntranceFlavorTests {
+
+    @Test func moodyLightStylesBloomSlowAndDim() {
+        let f = BoardEntranceFlavor.flavor(for: .halfMoon)   // The Outsider
+        #expect(f.bloomDuration > BoardEntranceFlavor.standard.bloomDuration)
+        #expect(f.bloomOpacity < BoardEntranceFlavor.standard.bloomOpacity)
+    }
+
+    @Test func popLightStylesBloomFastAndBright() {
+        let f = BoardEntranceFlavor.flavor(for: .glossyPop)  // The Pophead
+        #expect(f.bloomDuration < BoardEntranceFlavor.standard.bloomDuration)
+        #expect(f.bloomRadius > BoardEntranceFlavor.standard.bloomRadius)
+    }
+
+    @Test func warmLightStylesGetWarmBloom() {
+        let f = BoardEntranceFlavor.flavor(for: .softBloom)  // Hopeless Romantic
+        #expect(f.bloomDuration >= BoardEntranceFlavor.standard.bloomDuration)
+        #expect(f.bloomRadius >= BoardEntranceFlavor.standard.bloomRadius)
+    }
+
+    @Test func unmappedStylesGetStandard() {
+        #expect(BoardEntranceFlavor.flavor(for: .colorRibbons) == .standard)
+        #expect(BoardEntranceFlavor.flavor(for: .none) == .standard)
+    }
+}
