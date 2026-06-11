@@ -98,3 +98,25 @@ func archetypeReceiptsCopy(evidence: ArchetypeEvidence, isCurrentUser: Bool) -> 
     }
     return line + "."
 }
+
+/// One driver card's receipt line: real counts for the category that pushed
+/// the archetype. Unlike `archetypeReceiptsCopy`, this is per-fact and never
+/// nil — driver cards always have something honest to say.
+func driverReceiptCopy(fact: ArchetypeEvidence.Fact, isCurrentUser: Bool) -> String {
+    let You = isCurrentUser ? "You" : "They"
+    let noun: String
+    switch fact.dimensionID {
+    case "theme":  noun = "songs about \(fact.category.lowercased())"
+    case "energy": noun = "\(fact.category) energy picks"
+    default:       noun = "\(fact.category) picks"
+    }
+    if fact.total > 0 {
+        var line = "\(You) liked \(fact.likes) of \(fact.total) \(noun)"
+        if fact.hearts > 0 { line += " — \(fact.hearts) hearted" }
+        return line
+    }
+    if fact.hearts > 0 {
+        return "\(fact.hearts) heart\(fact.hearts == 1 ? "" : "s") on \(noun)"
+    }
+    return "\(fact.category) picks shaped this"
+}

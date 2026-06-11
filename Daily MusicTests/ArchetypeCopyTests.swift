@@ -4,6 +4,7 @@
 //
 
 import XCTest
+import Testing
 @testable import Daily_Music
 
 final class ArchetypeCopyTests: XCTestCase {
@@ -212,5 +213,56 @@ final class ArchetypeCopyTests: XCTestCase {
             XCTAssertFalse(archetypeHeroCopy(profile: profile, winningModifier: nil,
                                              isCurrentUser: true).isEmpty, profile.id)
         }
+    }
+}
+
+// MARK: - Driver receipt copy
+
+struct DriverReceiptCopyTests {
+
+    private func fact(dim: String = "mood", cat: String = "Dark",
+                      likes: Int, total: Int, hearts: Int) -> ArchetypeEvidence.Fact {
+        .init(dimensionID: dim, category: cat, likes: likes, total: total,
+              hearts: hearts, contribution: 0.2)
+    }
+
+    @Test func thumbedCounts() {
+        #expect(driverReceiptCopy(fact: fact(likes: 8, total: 10, hearts: 0), isCurrentUser: true)
+                == "You liked 8 of 10 Dark picks")
+    }
+
+    @Test func heartsSuffix() {
+        #expect(driverReceiptCopy(fact: fact(likes: 8, total: 10, hearts: 3), isCurrentUser: true)
+                == "You liked 8 of 10 Dark picks — 3 hearted")
+    }
+
+    @Test func heartOnly() {
+        #expect(driverReceiptCopy(fact: fact(likes: 0, total: 0, hearts: 3), isCurrentUser: true)
+                == "3 hearts on Dark picks")
+    }
+
+    @Test func singleHeartOnly() {
+        #expect(driverReceiptCopy(fact: fact(likes: 0, total: 0, hearts: 1), isCurrentUser: true)
+                == "1 heart on Dark picks")
+    }
+
+    @Test func degenerateFallback() {
+        #expect(driverReceiptCopy(fact: fact(likes: 0, total: 0, hearts: 0), isCurrentUser: true)
+                == "Dark picks shaped this")
+    }
+
+    @Test func friendVariant() {
+        #expect(driverReceiptCopy(fact: fact(likes: 8, total: 10, hearts: 0), isCurrentUser: false)
+                == "They liked 8 of 10 Dark picks")
+    }
+
+    @Test func themePhrasing() {
+        #expect(driverReceiptCopy(fact: fact(dim: "theme", cat: "Loneliness", likes: 5, total: 6, hearts: 0), isCurrentUser: true)
+                == "You liked 5 of 6 songs about loneliness")
+    }
+
+    @Test func energyPhrasing() {
+        #expect(driverReceiptCopy(fact: fact(dim: "energy", cat: "High", likes: 5, total: 6, hearts: 0), isCurrentUser: true)
+                == "You liked 5 of 6 High energy picks")
     }
 }
