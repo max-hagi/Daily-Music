@@ -285,13 +285,16 @@ card and as the archetype reveal reason. `TasteProfile` has 11 identities (10
 affinity-scored + The Shapeshifter fallback) including the new **The Pophead**
 (`the_pophead`, genre-anchored).
 
-**Driver highlights** ([DriverHighlights](Daily%20Music/Models/DriverHighlights.swift)):
-a pure helper maps the evidence facts to `[dimensionID: DriverHighlight]`
-(rank + fact). `TasteMirrorBoard` uses it to badge the tiles/rows that decided
-the archetype (★ pill, stronger tint, accent ring, headline swapped to the
-driving category) while non-drivers recede; suppressed whenever the displayed
-(weekly-stable) archetype differs from the live winner, so badges never explain
-an archetype the user isn't seeing.
+**Driver-first board** ([DriverHighlights](Daily%20Music/Models/DriverHighlights.swift) ·
+[BoardEntranceFlavor](Daily%20Music/Models/BoardEntranceFlavor.swift)):
+`DriverHighlights.compute` maps the evidence facts to `[dimensionID: DriverHighlight]`
+(rank + fact), suppressed when the displayed (weekly-stable) archetype differs from the
+live winner. `TasteMirrorBoard` renders hierarchy by size: a full-width #1 driver card
+(receipt line via `driverReceiptCopy` in `ArchetypeCopy.swift`) + half-width #2/#3 cards,
+with all non-driver dimensions demoted to quiet one-line rows. The entrance is
+archetype-flavored: `BoardEntranceFlavor` maps the reveal `LightStyle` to a one-shot hero
+bloom, the #1 card gets a shimmer sweep + `Haptics.driverReward` beat — played once per
+archetype per app session. The hero absorbs Insights' replay button and reveal countdown.
 
 `InsightsViewModel` also manages **archetype stability**: `ArchetypeSnapshotStore.evaluate()` stabilizes the displayed archetype (updates at most weekly) and gates a fullscreen reveal animation (`ArchetypeRevealView`) for first-unlock and weekly-change events. `ArchetypeRevealFlare` maps every `TasteProfile` to its own particle/light/haptic flavor. Persisted to `UserDefaults`; no backend round-trip.
 
