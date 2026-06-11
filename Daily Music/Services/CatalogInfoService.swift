@@ -68,7 +68,9 @@ struct MockCatalogInfoService: CatalogInfoService {
             durationSeconds: 257,
             genre: "Alternative",
             albumURL: URL(string: "https://music.apple.com/us/album/automatic-for-the-people/1440947547"),
-            previewURL: URL(string: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/92/36/e7/9236e7aa-cf4e-0010-483d-41601131043e/mzaf_10003196158059738086.plus.aac.p.m4a")
+            previewURL: URL(string: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/92/36/e7/9236e7aa-cf4e-0010-483d-41601131043e/mzaf_10003196158059738086.plus.aac.p.m4a"),
+            // Lets the "From Apple Music" section render in mock-mode demos.
+            editorialNotes: "A stately, string-laced meditation on memory and letting go — the band at their most tender and most sure of themselves."
         )
     }
 }

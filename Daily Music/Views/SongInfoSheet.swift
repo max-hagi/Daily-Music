@@ -28,6 +28,7 @@ struct SongInfoSheet: View {
                 VStack(spacing: Theme.Spacing.md) {
                     hero
                     quickFacts
+                    if let notes = info?.editorialNotes { editorialNotes(notes) }
                     if hasTags { curatedTags }
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
@@ -115,6 +116,24 @@ struct SongInfoSheet: View {
                 }
             }
             .glassCardStyle(tint: palette.accent.opacity(0.10))
+        }
+    }
+
+    /// Apple Music editorial copy — only present when the user's connection
+    /// grants rich metadata (EnrichedCatalogInfoService), so everyone else
+    /// sees the sheet exactly as before.
+    private func editorialNotes(_ notes: String) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            SectionHeader(title: "From Apple Music", symbol: "applelogo", accent: palette.accent)
+
+            Text(notes)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .multilineTextAlignment(.leading)
+                .padding(Theme.Spacing.md)
+                .glassCardStyle(tint: palette.accent.opacity(0.10))
         }
     }
 
