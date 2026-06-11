@@ -83,8 +83,6 @@ final class SettingsViewModel {
     }
 
     private(set) var permissionDenied = false
-    private(set) var appleMusicConnected = false
-    private(set) var connectingAppleMusic = false
 
     var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -234,13 +232,6 @@ final class SettingsViewModel {
     }
 
     /// Stand-in for the MusicKit authorization flow we'll add later.
-    func connectAppleMusic() async {
-        connectingAppleMusic = true
-        defer { connectingAppleMusic = false }
-        try? await Task.sleep(for: .milliseconds(500))
-        appleMusicConnected = true
-    }
-
     func resetLocalPreferences() async {
         reminderEnabled = false
         reminderTime = Self.defaultReminderTime

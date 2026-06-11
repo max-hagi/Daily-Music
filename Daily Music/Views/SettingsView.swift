@@ -254,33 +254,51 @@ private struct SettingsForm: View {
 
     private var musicSection: some View {
         Section {
-            if model.appleMusicConnected {
-                Label("Apple Music connected", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            } else {
-                Button {
-                    Task { await model.connectAppleMusic() }
-                } label: {
-                    HStack {
-                        Label("Connect Apple Music", systemImage: "applelogo")
-                        if model.connectingAppleMusic {
-                            Spacer()
-                            ProgressView()
-                        }
-                    }
-                }
-                .disabled(model.connectingAppleMusic)
+            if FeatureFlags.appleMusicConnect {
+                appleMusicRow
             }
-
             Picker("Default streaming service", selection: $model.preferredStreamingService) {
                 ForEach(StreamingService.allCases) { service in
                     Text(service.displayName).tag(service)
                 }
             }
         } header: {
-            Text("Music")
-        } footer: {
-            Text("MusicKit will unlock library saves and richer playback once the Apple Music entitlement is enabled.")
+            Text(FeatureFlags.appleMusicConnect ? "Connected services" : "Music")
+        }
+    }
+
+    /// The Apple Music entry in "Connected services" — status + connect /
+    /// disconnect, driven by the real session (not the settings model).
+    @ViewBuilder
+    private var appleMusicRow: some View {
+        let session = env.appleMusic
+        switch session.status {
+        case .connected(let capabilities):
+            VStack(alignment: .leading, spacing: 4) {
+                Label("Apple Music connected", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text(capabilities.contains(.fullPlayback)
+                     ? "Full songs, playlist saves, and richer song info."
+                     : "Richer song info. Full playback needs an active subscription.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Button("Disconnect", role: .destructive) {
+                session.disconnect()
+            }
+        case .notConnected:
+            Button {
+                Task { await session.connect() }
+            } label: {
+                HStack {
+                    Label("Connect Apple Music", systemImage: "applelogo")
+                    if session.isConnecting {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(session.isConnecting)
         }
     }
 
