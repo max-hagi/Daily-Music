@@ -285,6 +285,14 @@ card and as the archetype reveal reason. `TasteProfile` has 11 identities (10
 affinity-scored + The Shapeshifter fallback) including the new **The Pophead**
 (`the_pophead`, genre-anchored).
 
+**Driver highlights** ([DriverHighlights](Daily%20Music/Models/DriverHighlights.swift)):
+a pure helper maps the evidence facts to `[dimensionID: DriverHighlight]`
+(rank + fact). `TasteMirrorBoard` uses it to badge the tiles/rows that decided
+the archetype (★ pill, stronger tint, accent ring, headline swapped to the
+driving category) while non-drivers recede; suppressed whenever the displayed
+(weekly-stable) archetype differs from the live winner, so badges never explain
+an archetype the user isn't seeing.
+
 `InsightsViewModel` also manages **archetype stability**: `ArchetypeSnapshotStore.evaluate()` stabilizes the displayed archetype (updates at most weekly) and gates a fullscreen reveal animation (`ArchetypeRevealView`) for first-unlock and weekly-change events. `ArchetypeRevealFlare` maps every `TasteProfile` to its own particle/light/haptic flavor. Persisted to `UserDefaults`; no backend round-trip.
 
 `InsightsViewModel` produces a `TasteMirror`; `WrappedViewModel` produces a
