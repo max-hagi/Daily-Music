@@ -112,6 +112,10 @@ struct RootView: View {
                 if !code.isEmpty { UserDefaults.standard.set(code, forKey: "pendingFriendCode") }
             } else if url.host == "today" {
                 UserDefaults.standard.set(true, forKey: "pendingTodayRoute")
+            } else if url.host == "wrapped" {
+                // From the 1st-of-month recap notification → Insights tab, which
+                // presents last month's Wrapped (see MainTabView/InsightsView).
+                UserDefaults.standard.set(true, forKey: "pendingWrappedRoute")
             }
         }
     }

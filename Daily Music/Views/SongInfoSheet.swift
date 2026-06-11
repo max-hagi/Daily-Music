@@ -352,3 +352,22 @@ private struct EnergyDots: View {
         }
     }
 }
+
+
+#Preview {
+    let mockEntry = DailyEntry(
+        id: UUID(),
+        date: Date(),
+        title: "Sample Song",
+        artist: "Sample Artist",
+        albumArtURL: nil, // If you have a real URL, drop it here to see the artwork!
+        journalMarkdown: "Sample",
+        appleMusicID: "123",
+        spotifyURI: ""
+    )
+    
+    // 1. Return the View
+    SongInfoSheet(entry: mockEntry)
+        // 2. Inject the mock environment so MockMusicEngine is used
+        .environment(AppEnvironment.mock())
+}

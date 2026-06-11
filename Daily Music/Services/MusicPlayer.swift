@@ -29,6 +29,8 @@ enum PlaybackState: Equatable {
 protocol MusicEngine: AnyObject {
     func play(appleMusicID: String) async throws
     func pause() async
+    /// Continue the CURRENT clip from where pause left it (play(_:) starts over).
+    func resume() async
     func stop() async
     /// Find-or-create the "Daily Music" library playlist and add the track.
     func addToDailyPlaylist(appleMusicID: String) async throws
@@ -87,21 +89,38 @@ final class MusicPlayer {
                 await engine.pause()
                 state = .paused
             case .paused:
-                await resume(entry)
+                // Continue from where we left off — NOT a fresh play(), which
+                // would restart the clip at 0:00.
+                await engine.resume()
+                state = .playing
             case .finished:
-                await resume(entry)   // replay from the start
+                await startFresh(entry)   // replay from the start
             case .idle, .buffering:
                 break   // ignore taps mid-transition
             }
         } else {
             // A different track was tapped → start it fresh.
-            await resume(entry)
+            await startFresh(entry)
+        }
+    }
+
+    /// Restart the current clip from the top (the player's "back to start" button).
+    func restart(_ entry: DailyEntry) async {
+        switch state {
+        case .playing:
+            await seek(to: 0)
+        case .paused:
+            await seek(to: 0)
+            await engine.resume()
+            state = .playing
+        default:
+            await startFresh(entry)
         }
     }
 
     // Note we update `state` BEFORE/AFTER awaiting the engine so the UI reflects
     // buffering → playing live. On error we roll back to idle so nothing looks stuck.
-    private func resume(_ entry: DailyEntry) async {
+    private func startFresh(_ entry: DailyEntry) async {
         nowPlayingEntryID = entry.id
         elapsed = 0
         state = .buffering
@@ -153,6 +172,12 @@ final class MockMusicEngine: MusicEngine {
     func play(appleMusicID: String) async throws {
         try? await Task.sleep(for: .milliseconds(500)) // mimic buffering
         elapsed = 0
+        startTicker()
+    }
+    func pause() async { ticker?.cancel() }
+    func resume() async { startTicker() }   // continue from the held `elapsed`
+
+    private func startTicker() {
         ticker?.cancel()
         ticker = Task { [weak self] in
             guard let self else { return }
@@ -166,7 +191,6 @@ final class MockMusicEngine: MusicEngine {
             await MainActor.run { self.onFinish?() }
         }
     }
-    func pause() async { ticker?.cancel() }
     func stop() async { ticker?.cancel(); elapsed = 0 }
     func seek(to seconds: TimeInterval) async {
         elapsed = min(max(0, seconds), simulatedDuration)

@@ -179,17 +179,16 @@ struct EntryDetailView: View {
         .padding(.top, 0)
     }
 
+    // The tip stacks ABOVE the Open In buttons — never covering them — so the
+    // primary action (actually playing the song) stays tappable on first run.
     private var openInSectionWithRatingNudge: some View {
-        ZStack {
-            OpenInSection(entry: entry, accent: palette.accent)
-                .opacity(shouldShowRatingNudge ? 0.22 : 1)
-                .allowsHitTesting(!shouldShowRatingNudge)
-
+        VStack(spacing: Theme.Spacing.sm) {
             if shouldShowRatingNudge {
                 ratingNudge
                     .padding(.horizontal)
-                    .zIndex(1)
             }
+
+            OpenInSection(entry: entry, accent: palette.accent)
         }
         .padding(.top, Theme.Spacing.lg)
         .animation(ratingNudgeAnimation, value: shouldShowRatingNudge)

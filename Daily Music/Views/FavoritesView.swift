@@ -291,6 +291,8 @@ private struct FavoriteEntryDetail: View {
 
     @Environment(AppEnvironment.self) private var env
     @State private var showingListen = false
+    /// Real cross-user check-in count for the entry's day; badge hidden until loaded.
+    @State private var listenerCount: Int?
 
     var body: some View {
         NavigationStack {
@@ -319,10 +321,15 @@ private struct FavoriteEntryDetail: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    VaultToolbarListenedBadge(count: listenerCount)
+                    if let listenerCount, listenerCount > 0 {
+                        VaultToolbarListenedBadge(count: listenerCount)
+                    }
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
+            .task(id: entry.id) {
+                listenerCount = try? await env.sharedStats.listenerCount(on: entry.date)
+            }
             // Manual listen for a favorited song — the immersive player, opened on tap.
             .fullScreenCover(isPresented: $showingListen) {
                 ListeningView(
@@ -345,11 +352,6 @@ private struct FavoriteEntryDetail: View {
 
     private var releaseDateLabel: String {
         entry.date.formatted(.dateTime.weekday(.wide).month().day())
-    }
-
-    private var listenerCount: Int {
-        let day = Calendar.current.ordinality(of: .day, in: .era, for: entry.date) ?? 0
-        return 1_900 + (day * 173 % 6_400)
     }
 
     private var closeSwipeGesture: some Gesture {

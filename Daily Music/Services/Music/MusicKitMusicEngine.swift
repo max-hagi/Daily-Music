@@ -58,6 +58,10 @@ final class MusicKitMusicEngine: MusicEngine {
         previewPlayer?.pause()
     }
 
+    func resume() async {
+        previewPlayer?.play()
+    }
+
     func stop() async {
         previewPlayer?.pause()
         previewPlayer = nil   // release the player so it can be torn down

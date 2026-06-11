@@ -8,7 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		08F041F74042C7B42FE29DCB /* PlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD93DFCBD69276F616E276C /* PlaybackTests.swift */; };
+		1A2B3C4D5E6F708192A3B4C6 /* StreakTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */; };
 		1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */; };
+		2B3C4D5E6F708192A3B4C5D7 /* ReminderCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */; };
+		3C4D5E6F708192A3B4C5D6E8 /* CatchUpTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */; };
 		757406A9EE882CBC5E185CA4 /* ArchetypeSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D413F7473F6C57E546C1EA /* ArchetypeSnapshotTests.swift */; };
 		78F3EE0454C3E5EB3825C97D /* TasteSeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9081430FDF0723184251C1F3 /* TasteSeedTests.swift */; };
 		89D4107636FC55A192B171A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1C88CA3CCE154F540A6D0EE /* Foundation.framework */; };
@@ -17,15 +20,16 @@
 		A1B2C3D4E5F6A1B2C3D4E5F6 /* StreamingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */; };
 		A7B8C9D0E1F2A7B8C9D0E1F2 /* FriendsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B8C9D0E1F2A7B8C9D0E1F3 /* FriendsStoreTests.swift */; };
 		AA11BB22CC33DD44EE55FF67 /* ArchetypeCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* ArchetypeCopyTests.swift */; };
+		AB01CD23EF45AB01CD23EF0D /* DailyMusicWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AB01CD23EF45AB01CD23EF01 /* DailyMusicWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		ABCD00112233445566778899 /* FriendNudgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD0011223344556677889A /* FriendNudgeTests.swift */; };
 		B2C3D4E5F6A1B2C3D4E5F6A1 /* CatalogInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */; };
 		B6F8A1D4C5E7401FA6B8D912 /* LiquidGlassStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F8A1D4C5E7401FA6B8D913 /* LiquidGlassStyleTests.swift */; };
+		BB22CC33DD44EE55FF6611AA /* StatsCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF6610AA /* StatsCopyTests.swift */; };
 		C3D4E5F6A1B2C3D4E5F6A1B2 /* AvatarStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A1B2C3D4E5F6A1B3 /* AvatarStyleTests.swift */; };
 		C7F0B6A12E7D4C11A9E0A001 /* SessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F0B6A12E7D4C11A9E0A002 /* SessionStoreTests.swift */; };
 		D4E5F6A1B2C3D4E5F6A1B2C3 /* AvatarImageProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A1B2C3D4E5F6A1B2C4 /* AvatarImageProcessorTests.swift */; };
 		E5F6A1B2C3D4E5F6A1B2C3D4 /* ProfileStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A1B2C3D4E5F6A1B2C3D5 /* ProfileStoreTests.swift */; };
 		F6A1B2C3D4E5F6A1B2C3D4E5 /* FriendCodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A1B2C3D4E5F6A1B2C3D4E6 /* FriendCodeTests.swift */; };
-		BB22CC33DD44EE55FF6611AA /* StatsCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF6610AA /* StatsCopyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,10 +40,34 @@
 			remoteGlobalIDString = 94B1382E2FCB6F1100752257;
 			remoteInfo = "Daily Music";
 		};
+		AB01CD23EF45AB01CD23EF0A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 94B138272FCB6F1100752257 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB01CD23EF45AB01CD23EF03;
+			remoteInfo = DailyMusicWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AB01CD23EF45AB01CD23EF0C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AB01CD23EF45AB01CD23EF0D /* DailyMusicWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Daily MusicTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreakTests.swift; sourceTree = "<group>"; };
+		2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReminderCopyTests.swift; sourceTree = "<group>"; };
+		3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatchUpTests.swift; sourceTree = "<group>"; };
 		57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteMirrorTests.swift; sourceTree = "<group>"; };
 		5BD93DFCBD69276F616E276C /* PlaybackTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackTests.swift; sourceTree = "<group>"; };
 		9081430FDF0723184251C1F3 /* TasteSeedTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteSeedTests.swift; sourceTree = "<group>"; };
@@ -47,11 +75,12 @@
 		A1B2C3D4E5F6A1B2C3D4E5F7 /* StreamingServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreamingServiceTests.swift; sourceTree = "<group>"; };
 		A7B8C9D0E1F2A7B8C9D0E1F3 /* FriendsStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsStoreTests.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF66 /* ArchetypeCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArchetypeCopyTests.swift; sourceTree = "<group>"; };
-		BB22CC33DD44EE55FF6610AA /* StatsCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsCopyTests.swift; sourceTree = "<group>"; };
+		AB01CD23EF45AB01CD23EF01 /* DailyMusicWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DailyMusicWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		ABCD0011223344556677889A /* FriendNudgeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendNudgeTests.swift; sourceTree = "<group>"; };
 		B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogInfoTests.swift; sourceTree = "<group>"; };
 		B6F8A1D4C5E7401FA6B8D913 /* LiquidGlassStyleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiquidGlassStyleTests.swift; sourceTree = "<group>"; };
 		B7B501C622830FDCCDFA988E /* ArchetypeRevealTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArchetypeRevealTests.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF6610AA /* StatsCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsCopyTests.swift; sourceTree = "<group>"; };
 		C3D4E5F6A1B2C3D4E5F6A1B3 /* AvatarStyleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AvatarStyleTests.swift; sourceTree = "<group>"; };
 		C7F0B6A12E7D4C11A9E0A002 /* SessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionStoreTests.swift; sourceTree = "<group>"; };
 		D1C88CA3CCE154F540A6D0EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
@@ -61,10 +90,38 @@
 		F6A1B2C3D4E5F6A1B2C3D4E6 /* FriendCodeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendCodeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AB01CD23EF45AB01CD23EF0E /* Exceptions for "DailyMusicWidget" folder in "DailyMusicWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AB01CD23EF45AB01CD23EF03 /* DailyMusicWidgetExtension */;
+		};
+		AB01CD23EF45AB01CD23EF0F /* Exceptions for "Daily Music" folder in "Daily Music" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 94B1382E2FCB6F1100752257 /* Daily Music */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		94B138312FCB6F1100752257 /* Daily Music */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AB01CD23EF45AB01CD23EF0F /* Exceptions for "Daily Music" folder in "Daily Music" target */,
+			);
 			path = "Daily Music";
+			sourceTree = "<group>";
+		};
+		AB01CD23EF45AB01CD23EF02 /* DailyMusicWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AB01CD23EF45AB01CD23EF0E /* Exceptions for "DailyMusicWidget" folder in "DailyMusicWidgetExtension" target */,
+			);
+			path = DailyMusicWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +132,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				94B1387E2FCB7CB200752257 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB01CD23EF45AB01CD23EF05 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,6 +173,9 @@
 				B6F8A1D4C5E7401FA6B8D913 /* LiquidGlassStyleTests.swift */,
 				AA11BB22CC33DD44EE55FF66 /* ArchetypeCopyTests.swift */,
 				BB22CC33DD44EE55FF6610AA /* StatsCopyTests.swift */,
+				1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */,
+				2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */,
+				3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -125,6 +192,7 @@
 			isa = PBXGroup;
 			children = (
 				94B138312FCB6F1100752257 /* Daily Music */,
+				AB01CD23EF45AB01CD23EF02 /* DailyMusicWidget */,
 				94B138302FCB6F1100752257 /* Products */,
 				50956E9C0A92DD6B4BB9826E /* Frameworks */,
 				474DB509253B3672F8A852C1 /* Daily MusicTests */,
@@ -136,6 +204,7 @@
 			children = (
 				94B1382F2FCB6F1100752257 /* Daily Music.app */,
 				0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */,
+				AB01CD23EF45AB01CD23EF01 /* DailyMusicWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -158,10 +227,12 @@
 				94B1382B2FCB6F1100752257 /* Sources */,
 				94B1382C2FCB6F1100752257 /* Frameworks */,
 				94B1382D2FCB6F1100752257 /* Resources */,
+				AB01CD23EF45AB01CD23EF0C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AB01CD23EF45AB01CD23EF0B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				94B138312FCB6F1100752257 /* Daily Music */,
@@ -173,6 +244,26 @@
 			productName = "Daily Music";
 			productReference = 94B1382F2FCB6F1100752257 /* Daily Music.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AB01CD23EF45AB01CD23EF03 /* DailyMusicWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB01CD23EF45AB01CD23EF09 /* Build configuration list for PBXNativeTarget "DailyMusicWidgetExtension" */;
+			buildPhases = (
+				AB01CD23EF45AB01CD23EF04 /* Sources */,
+				AB01CD23EF45AB01CD23EF05 /* Frameworks */,
+				AB01CD23EF45AB01CD23EF06 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AB01CD23EF45AB01CD23EF02 /* DailyMusicWidget */,
+			);
+			name = DailyMusicWidgetExtension;
+			productName = DailyMusicWidgetExtension;
+			productReference = AB01CD23EF45AB01CD23EF01 /* DailyMusicWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		E3337D4BD109404AE5A22276 /* Daily MusicTests */ = {
 			isa = PBXNativeTarget;
@@ -226,6 +317,7 @@
 			targets = (
 				94B1382E2FCB6F1100752257 /* Daily Music */,
 				E3337D4BD109404AE5A22276 /* Daily MusicTests */,
+				AB01CD23EF45AB01CD23EF03 /* DailyMusicWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -239,6 +331,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		94B1382D2FCB6F1100752257 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB01CD23EF45AB01CD23EF06 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -269,10 +368,20 @@
 				B6F8A1D4C5E7401FA6B8D912 /* LiquidGlassStyleTests.swift in Sources */,
 				AA11BB22CC33DD44EE55FF67 /* ArchetypeCopyTests.swift in Sources */,
 				BB22CC33DD44EE55FF6611AA /* StatsCopyTests.swift in Sources */,
+				1A2B3C4D5E6F708192A3B4C6 /* StreakTests.swift in Sources */,
+				2B3C4D5E6F708192A3B4C5D7 /* ReminderCopyTests.swift in Sources */,
+				3C4D5E6F708192A3B4C5D6E8 /* CatchUpTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		94B1382B2FCB6F1100752257 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB01CD23EF45AB01CD23EF04 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -287,6 +396,12 @@
 			name = "Daily Music";
 			target = 94B1382E2FCB6F1100752257 /* Daily Music */;
 			targetProxy = 745F721C1DF77B483AA125B0 /* PBXContainerItemProxy */;
+		};
+		AB01CD23EF45AB01CD23EF0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DailyMusicWidgetExtension;
+			target = AB01CD23EF45AB01CD23EF03 /* DailyMusicWidgetExtension */;
+			targetProxy = AB01CD23EF45AB01CD23EF0A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -448,11 +563,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Daily Music/Daily Music.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RPW738HHCT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Daily Music/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -480,11 +597,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Daily Music/Daily Music.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RPW738HHCT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Daily Music/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -507,6 +626,56 @@
 			};
 			name = Release;
 		};
+		AB01CD23EF45AB01CD23EF07 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DailyMusicWidget/DailyMusicWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RPW738HHCT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DailyMusicWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Daily Music";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "maxhagi.Daily-Music.DailyMusicWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AB01CD23EF45AB01CD23EF08 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DailyMusicWidget/DailyMusicWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RPW738HHCT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DailyMusicWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Daily Music";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "maxhagi.Daily-Music.DailyMusicWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -524,6 +693,15 @@
 			buildConfigurations = (
 				94B1383B2FCB6F1300752257 /* Debug */,
 				94B1383C2FCB6F1300752257 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB01CD23EF45AB01CD23EF09 /* Build configuration list for PBXNativeTarget "DailyMusicWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB01CD23EF45AB01CD23EF07 /* Debug */,
+				AB01CD23EF45AB01CD23EF08 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

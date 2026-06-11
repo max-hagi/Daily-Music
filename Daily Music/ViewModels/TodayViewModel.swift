@@ -18,6 +18,7 @@ final class TodayViewModel {
     // The whole screen is driven by this one LoadState — the view switches over it.
     private(set) var state: LoadState<DailyEntry> = .loading
     private(set) var listenersToday: Int?   // optional → nil until/unless we get a count
+    private(set) var streak: Streak?        // nil until check-in history loads
 
     private let entries: EntryService
     private let checkIns: CheckInService
@@ -46,6 +47,12 @@ final class TodayViewModel {
                 // if recording the check-in fails, the song still shows.
                 try? await checkIns.recordToday()
                 listenersToday = try? await sharedStats.todaysListenerCount()
+                // Re-read the history AFTER recording so today counts immediately.
+                if let days = try? await checkIns.checkInDates() {
+                    let computed = Streak.compute(from: days)
+                    streak = computed
+                    SharedStreak.publish(computed)   // keep the widget's flame fresh
+                }
             } else {
                 state = .empty
             }

@@ -56,6 +56,8 @@ final class PreviewMusicEngine: MusicEngine {
             let remaining = duration - elapsed
             if remaining <= 2 {                       // fade, don't cut
                 player.volume = Float(max(0, remaining / 2))
+            } else if player.volume < 1 {
+                player.volume = 1                     // recover after scrubbing back out of the fade
             }
             self.onProgress?(elapsed, duration)
         }
@@ -73,6 +75,10 @@ final class PreviewMusicEngine: MusicEngine {
 
     func pause() async {
         await MainActor.run { player?.pause() }
+    }
+
+    func resume() async {
+        await MainActor.run { player?.play() }
     }
 
     func stop() async {

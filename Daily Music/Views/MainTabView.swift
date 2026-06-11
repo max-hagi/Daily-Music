@@ -13,7 +13,12 @@ struct MainTabView: View {
     @State private var selectedTab: MainTab = .today
     @State private var entryToOpenInVault: DailyEntry?
     @State private var tabToReturnToAfterOpeningEntry: MainTab?
+    // Cached inputs for the Vault "missed drops" badge, so catching up in the
+    // Vault recomputes the count instantly without refetching.
+    @State private var publishedEntries: [DailyEntry] = []
+    @State private var checkInDays: Set<Date> = []
     @AppStorage("pendingTodayRoute") private var pendingTodayRoute = false
+    @AppStorage("pendingWrappedRoute") private var pendingWrappedRoute = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -23,6 +28,8 @@ struct MainTabView: View {
             Tab("Vault", systemImage: "calendar", value: .vault) {
                 VaultView(entryToOpen: $entryToOpenInVault, onReturnFromOpenedEntry: returnToPreviousScreen)
             }
+            // Missed drops from the past week — clears live as they're caught up.
+            .badge(missedDropCount)
             Tab("Favorites", systemImage: "heart", value: .favorites) { FavoritesView() }
             Tab("Friends", systemImage: "person.2", value: .friends) {
                 FriendsView(onOpenEntry: openMatchedEntry)
@@ -32,8 +39,27 @@ struct MainTabView: View {
         }
         .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .task { await env.friendsStore.load() }   // so the badge is populated app-wide
-        .onAppear { consumePendingTodayRouteIfNeeded() }
+        .task { await refreshReminderWindow() }
+        .task {
+            publishedEntries = (try? await env.entries.publishedHistory()) ?? []
+            checkInDays = (try? await env.checkIns.checkInDates()) ?? []
+        }
+        .onAppear {
+            consumePendingTodayRouteIfNeeded()
+            consumePendingWrappedRouteIfNeeded()
+        }
         .onChange(of: pendingTodayRoute) { _, _ in consumePendingTodayRouteIfNeeded() }
+        .onChange(of: pendingWrappedRoute) { _, _ in consumePendingWrappedRouteIfNeeded() }
+    }
+
+    /// Recomputes on any state it reads (entries, check-ins, catch-up log), so
+    /// opening a missed song in the Vault decrements the badge immediately.
+    private var missedDropCount: Int {
+        CatchUp.missedEntries(
+            in: publishedEntries,
+            checkInDays: checkInDays,
+            heardEntryIDs: env.catchUpLog.heardEntryIDs
+        ).count
     }
 
     private func openMatchedEntry(_ entry: DailyEntry) {
@@ -54,10 +80,38 @@ struct MainTabView: View {
         Haptics.tap()
     }
 
+    /// Re-schedule the rolling reminder window on every app open: keeps the
+    /// two-week window topped up AND refreshes the streak count baked into
+    /// tomorrow's notification copy. Keys match SettingsViewModel.
+    private func refreshReminderWindow() async {
+        let defaults = UserDefaults.standard
+        guard await env.notifications.authorizationStatus() == .authorized else { return }
+
+        // The monthly recap announcement is independent of the daily reminder.
+        let recapEnabled = defaults.object(forKey: "settings.weeklyRecapEnabled") as? Bool ?? true
+        await env.notifications.setMonthlyRecapAnnouncement(enabled: recapEnabled)
+
+        guard defaults.bool(forKey: "reminderEnabled"),
+              let time = defaults.object(forKey: "reminderTime") as? Date else { return }
+
+        let streak = Streak.compute(from: (try? await env.checkIns.checkInDates()) ?? [])
+        SharedStreak.publish(streak)   // keep the widget's flame fresh
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: time)
+        await env.notifications.scheduleDailyReminder(at: comps, streak: streak.current)
+    }
+
     private func consumePendingTodayRouteIfNeeded() {
         guard pendingTodayRoute else { return }
         selectedTab = .today
         pendingTodayRoute = false
+    }
+
+    private func consumePendingWrappedRouteIfNeeded() {
+        guard pendingWrappedRoute else { return }
+        selectedTab = .insights
+        pendingWrappedRoute = false
+        // InsightsView watches this flag and presents last month's Wrapped.
+        UserDefaults.standard.set(true, forKey: "pendingWrappedOpen")
     }
 
     private enum MainTab: Hashable {

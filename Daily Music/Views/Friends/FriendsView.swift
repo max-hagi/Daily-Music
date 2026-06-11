@@ -61,13 +61,16 @@ struct FriendsView: View {
             .padding(.vertical, 4)
 
             HStack {
-                TextField("Enter a 6-digit code", text: $enteredCode)
-                    .keyboardType(.numberPad)
-                    .textContentType(.oneTimeCode)
+                TextField("Enter a 6-character code", text: $enteredCode)
+                    .keyboardType(.asciiCapable)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
                     .focused($isFriendCodeFocused)
                     .onChange(of: enteredCode) { _, newValue in
-                        let digits = String(newValue.filter { FriendCode.alphabet.contains($0) }.prefix(6))
-                        if digits != newValue { enteredCode = digits }
+                        // Normalize (uppercase + strip non-alphabet chars) so typed
+                        // lowercase and pasted codes both land as valid input.
+                        let cleaned = String(FriendCode.normalize(newValue).prefix(6))
+                        if cleaned != newValue { enteredCode = cleaned }
                     }
                 Button("Send") {
                     Task {

@@ -18,6 +18,9 @@ struct ShareCardView: View {
     let entry: DailyEntry
     let artwork: UIImage?
     let accent: Color
+    /// Honor the Settings → sharing toggles (they were previously ignored).
+    var includeJournalQuote = true
+    var includeWatermark = true
 
     var body: some View {
         VStack(spacing: 18) {
@@ -37,19 +40,23 @@ struct ShareCardView: View {
             }
             .multilineTextAlignment(.center)
 
-            Text("“\(pullQuote)”")
-                .font(.system(size: 17, design: .serif))
-                .italic()
-                .multilineTextAlignment(.center)
-                .opacity(0.95)
-                .padding(.horizontal, 28)
+            if includeJournalQuote {
+                Text("“\(pullQuote)”")
+                    .font(.system(size: 17, design: .serif))
+                    .italic()
+                    .multilineTextAlignment(.center)
+                    .opacity(0.95)
+                    .padding(.horizontal, 28)
+            }
 
             Spacer()
 
             VStack(spacing: 3) {
-                Text("DAILY MUSIC")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .tracking(2)
+                if includeWatermark {
+                    Text("DAILY MUSIC")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .tracking(2)
+                }
                 Text(entry.date.formatted(.dateTime.month().day().year()))
                     .font(.system(size: 12))
                     .opacity(0.8)
@@ -107,12 +114,15 @@ struct ShareCardSheet: View {
     @Environment(\.dismiss) private var dismiss
     // The rasterized card. nil until render() finishes → show a spinner meanwhile.
     @State private var rendered: Image?
+    // The user's sharing preferences (Settings → keys match SettingsViewModel).
+    @AppStorage("settings.includeJournalInShares") private var includeJournal = true
+    @AppStorage("settings.includeWatermarkInShares") private var includeWatermark = true
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
                 // A live, scaled-down preview of the card (the same view we render).
-                ShareCardView(entry: entry, artwork: artwork, accent: accent)
+                cardView
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .scaleEffect(0.82)
                     .frame(maxHeight: .infinity)
@@ -144,11 +154,21 @@ struct ShareCardSheet: View {
         .task(id: artwork == nil) { render() }
     }
 
+    private var cardView: ShareCardView {
+        ShareCardView(
+            entry: entry,
+            artwork: artwork,
+            accent: accent,
+            includeJournalQuote: includeJournal,
+            includeWatermark: includeWatermark
+        )
+    }
+
     // @MainActor because ImageRenderer + UI types must be touched on the main thread.
     @MainActor
     private func render() {
         // ImageRenderer rasterizes any SwiftUI view into a still image off-screen.
-        let renderer = ImageRenderer(content: ShareCardView(entry: entry, artwork: artwork, accent: accent))
+        let renderer = ImageRenderer(content: cardView)
         renderer.scale = 3   // render at 3× so it's crisp on Retina displays
         if let ui = renderer.uiImage {
             rendered = Image(uiImage: ui)

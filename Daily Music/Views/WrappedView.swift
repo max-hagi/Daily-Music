@@ -12,10 +12,14 @@ struct WrappedView: View {
     // Passed IN from Insights (which already knows the favorites) rather than read
     // here — the caller owns that data.
     let favoriteIDs: Set<UUID>
+    /// Which month to recap (any date inside it). Defaults to now; the
+    /// 1st-of-month moment passes last month.
+    var targetMonth: Date = Date()
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss   // to close itself (it's shown as a sheet)
     @State private var model: WrappedViewModel?
+    @State private var showingShare = false
 
     var body: some View {
         NavigationStack {
@@ -38,7 +42,21 @@ struct WrappedView: View {
             .background(recapBackground)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    if loadedRecap != nil {
+                        Button { showingShare = true } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .accessibilityLabel("Share your recap")
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showingShare) {
+                if let recap = loadedRecap {
+                    WrappedShareSheet(recap: recap)
                 }
             }
         }
@@ -47,7 +65,7 @@ struct WrappedView: View {
             if model == nil {
                 model = WrappedViewModel(entries: env.entries, checkIns: env.checkIns, ratings: env.ratings)
             }
-            await model?.load(favoriteIDs: favoriteIDs)
+            await model?.load(favoriteIDs: favoriteIDs, month: targetMonth)
         }
     }
 
@@ -77,12 +95,28 @@ struct WrappedView: View {
                     topArtistCard(top, plays: recap.topArtistPlays)
                 }
 
-                bigStat("\(recap.favourites)", "favourited this month")
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 16) {
+                    bigStat("\(recap.favourites)", "favourited this month")
+                    if recap.streak.best > 0 {
+                        bigStat("\(recap.streak.best)", "best streak (days)")
+                    }
+                }
+
+                Button { showingShare = true } label: {
+                    Label("Share your recap", systemImage: "square.and.arrow.up")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryActionButtonStyle(tint: recap.profile.colors[0]))
+                .padding(.top, 4)
             }
             .padding()
         }
         .background(recapBackground)
+    }
+
+    private var loadedRecap: WrappedViewModel.Recap? {
+        if case .loaded(let recap) = model?.state { return recap }
+        return nil
     }
 
     private var recapBackground: some View {

@@ -19,6 +19,8 @@ struct VaultView: View {
     @State private var selectedVaultEntryOpenedFromExternalSource = false
     // entryID → my reaction emoji, used to stamp the calendar days.
     @State private var reactions: [UUID: String] = [:]
+    // Days the user opened the app — drives the data-driven catch-up hero.
+    @State private var checkInDays: Set<Date> = []
 
     init(
         entryToOpen: Binding<DailyEntry?> = .constant(nil),
@@ -57,6 +59,7 @@ struct VaultView: View {
             await model?.load()
             // Stamp the calendar with this user's reactions (best-effort; empty on failure).
             reactions = (try? await env.reactions.myReactions()) ?? [:]
+            checkInDays = (try? await env.checkIns.checkInDates()) ?? []
             openPendingEntry()
         }
         .onChange(of: entryToOpen?.id) { _, _ in
@@ -80,6 +83,7 @@ struct VaultView: View {
         .refreshable {
             await model?.load()
             reactions = (try? await env.reactions.myReactions()) ?? [:]
+            checkInDays = (try? await env.checkIns.checkInDates()) ?? []
             Haptics.tap()
         }
         
@@ -100,10 +104,26 @@ struct VaultView: View {
         .ignoresSafeArea()
     }
 
+    /// Shared rule (also drives the Vault tab badge): last week's drops on
+    /// days with no check-in, minus the ones already caught up on here.
+    private func missedRecentEntries(_ entries: [DailyEntry]) -> [DailyEntry] {
+        CatchUp.missedEntries(
+            in: entries,
+            checkInDays: checkInDays,
+            heardEntryIDs: env.catchUpLog.heardEntryIDs,
+            calendar: calendar
+        )
+    }
+
+    // Data-driven hero: same gradient stage, but the copy reflects THIS user's
+    // week — N drops to catch up on, or a small win when they caught them all.
+    // Static marketing copy goes stale by visit three; a mirror never does.
     private func vaultHero(_ entries: [DailyEntry]) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+        let missed = missedRecentEntries(entries)
+
+        return VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             HStack(alignment: .top) {
-                Image(systemName: "archivebox.fill")
+                Image(systemName: missed.isEmpty ? "checkmark.seal.fill" : "archivebox.fill")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 58, height: 58)
@@ -111,28 +131,28 @@ struct VaultView: View {
 
                 Spacer()
 
-                Text("CATCH-UP MODE")
+                Text(missed.isEmpty ? "ALL CAUGHT UP" : "CATCH-UP MODE")
                     .font(.caption.weight(.heavy))
                     .foregroundStyle(.white.opacity(0.72))
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Missed the live drop?")
+                Text(heroTitle(missedCount: missed.count))
                     .font(.system(size: 36, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("The live moment belongs to Today. The Vault keeps every past pick ready for catching up, saving favorites, and finding the ones that got away.")
+                Text(heroSubtitle(missedCount: missed.count))
                     .font(.callout.weight(.medium))
                     .foregroundStyle(.white.opacity(0.86))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if let latest = entries.first {
+            if let featured = missed.first ?? entries.first {
                 Button {
-                    openVaultEntry(latest)
+                    openVaultEntry(featured)
                 } label: {
-                    VaultTintedEntryRow(entry: latest, eyebrow: "Latest archive pick")
+                    VaultTintedEntryRow(entry: featured, eyebrow: heroRowEyebrow(for: featured, isMissed: !missed.isEmpty))
                 }
                 .buttonStyle(PressableCardButtonStyle())
             }
@@ -152,6 +172,26 @@ struct VaultView: View {
         )
         .shadow(color: Color(red: 0.9, green: 0.38, blue: 0.26).opacity(0.2), radius: 18, y: 10)
 
+    }
+
+    private func heroTitle(missedCount: Int) -> String {
+        switch missedCount {
+        case 0: "You caught every drop this week"
+        case 1: "One drop slipped past you"
+        default: "\(missedCount) drops slipped past you"
+        }
+    }
+
+    private func heroSubtitle(missedCount: Int) -> String {
+        missedCount == 0
+            ? "Every pick from the past week, heard. The Vault keeps the older ones ready whenever you want to dig."
+            : "The live moment belongs to Today — but this week's missed picks are still right here, waiting."
+    }
+
+    private func heroRowEyebrow(for entry: DailyEntry, isMissed: Bool) -> String {
+        guard isMissed else { return "Latest archive pick" }
+        let weekday = entry.date.formatted(.dateTime.weekday(.wide))
+        return "\(weekday)'s pick — tap to catch up"
     }
 
     private func archiveStats(_ entries: [DailyEntry]) -> some View {
@@ -207,8 +247,27 @@ struct VaultView: View {
 
     private func recentSection(_ entries: [DailyEntry]) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("Recent picks")
-                .font(.dmTitle())
+            HStack(alignment: .firstTextBaseline) {
+                Text("Recent picks")
+                    .font(.dmTitle())
+
+                Spacer()
+
+                // The archive's browse/search entry point — without it, anything
+                // older than the five rows below is only reachable date-by-date
+                // through the calendar.
+                NavigationLink {
+                    VaultAllSongsView(entries: entries)
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("See all")
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.bold))
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.teal)
+                }
+            }
 
             VStack(spacing: 10) {
                 // `.prefix(5)` takes at most the first five; ForEach needs an Array,
@@ -233,6 +292,8 @@ struct VaultView: View {
     private func openVaultEntry(_ entry: DailyEntry, openedFromExternalSource: Bool = false) {
         selectedVaultEntryOpenedFromExternalSource = openedFromExternalSource
         selectedVaultEntry = entry
+        // Opening counts as catching up — the hero and tab badge clear live.
+        env.catchUpLog.markHeard(entry)
     }
 
     private func openPendingEntry() {
@@ -253,6 +314,62 @@ struct VaultView: View {
     }
 }
 
+/// Every published entry, searchable by title, artist, genre, or mood — the
+/// "where's that song from a while ago?" screen. Pushed from Recent picks.
+struct VaultAllSongsView: View {
+    let entries: [DailyEntry]
+
+    @Environment(AppEnvironment.self) private var env
+    @State private var query = ""
+    @State private var selectedEntry: DailyEntry?
+
+    private var filtered: [DailyEntry] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return entries }
+        return entries.filter { entry in
+            entry.title.localizedCaseInsensitiveContains(trimmed)
+                || entry.artist.localizedCaseInsensitiveContains(trimmed)
+                || (entry.genre?.localizedCaseInsensitiveContains(trimmed) ?? false)
+                || (entry.mood?.localizedCaseInsensitiveContains(trimmed) ?? false)
+        }
+    }
+
+    var body: some View {
+        Group {
+            if filtered.isEmpty {
+                ContentUnavailableView.search(text: query)
+            } else {
+                List(filtered) { entry in
+                    Button {
+                        selectedEntry = entry
+                        env.catchUpLog.markHeard(entry)   // counts as catching up
+                    } label: {
+                        EntryRow(entry: entry)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Color.clear)
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+            }
+        }
+        .background(
+            LinearGradient(
+                colors: Theme.Surface.vaultBackground,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+        )
+        .searchable(text: $query, prompt: "Song, artist, genre, or mood")
+        .navigationTitle("All songs")
+        .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(item: $selectedEntry) { entry in
+            VaultEntryDetail(entry: entry) { selectedEntry = nil }
+        }
+    }
+}
+
 // Fullscreen presentation for a single archived song.
 //
 // Earlier versions used a swipeable pager with its own floating chrome/backdrop.
@@ -265,6 +382,8 @@ private struct VaultEntryDetail: View {
 
     @Environment(AppEnvironment.self) private var env
     @State private var showingListen = false
+    /// Real cross-user check-in count for the entry's day; badge hidden until loaded.
+    @State private var listenerCount: Int?
 
     var body: some View {
         NavigationStack {
@@ -298,10 +417,15 @@ private struct VaultEntryDetail: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    VaultToolbarListenedBadge(count: listenerCount)
+                    if let listenerCount, listenerCount > 0 {
+                        VaultToolbarListenedBadge(count: listenerCount)
+                    }
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
+            .task(id: entry.id) {
+                listenerCount = try? await env.sharedStats.listenerCount(on: entry.date)
+            }
             // Manual listen for archived songs — the immersive player, opened on
             // tap (never auto, unlike Today's first-open ceremony).
             .fullScreenCover(isPresented: $showingListen) {
@@ -325,11 +449,6 @@ private struct VaultEntryDetail: View {
 
     private var releaseDateLabel: String {
         "Released \(entry.date.formatted(.dateTime.month(.wide).day().year()))"
-    }
-
-    private var listenerCount: Int {
-        let day = Calendar.current.ordinality(of: .day, in: .era, for: entry.date) ?? 0
-        return 1_900 + (day * 173 % 6_400)   // TODO: Wire this to Supabase check_ins for entry.date.
     }
 
     private var closeSwipeGesture: some Gesture {

@@ -68,7 +68,14 @@ final class SettingsViewModel {
     }
 
     var weeklyRecapEnabled = true {
-        didSet { defaults.set(weeklyRecapEnabled, forKey: Keys.weeklyRecapEnabled); scheduleSync() }
+        didSet {
+            defaults.set(weeklyRecapEnabled, forKey: Keys.weeklyRecapEnabled)
+            scheduleSync()
+            // Apply immediately — the 1st-of-month announcement follows the toggle.
+            Task { [notifications, weeklyRecapEnabled] in
+                await notifications.setMonthlyRecapAnnouncement(enabled: weeklyRecapEnabled)
+            }
+        }
     }
 
     var preferredStreamingService: StreamingService = .appleMusic {

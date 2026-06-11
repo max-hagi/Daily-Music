@@ -22,4 +22,17 @@ final class SupabaseSharedStatsService: SharedStatsService {
             .execute()
             .value
     }
+
+    func listenerCount(on date: Date) async throws -> Int {
+        // Same SECURITY DEFINER pattern, parameterized by day. SQL lives in
+        // docs/superpowers/specs/archive-listener-counts.sql (applied by hand
+        // in the Supabase dashboard).
+        try await client
+            .rpc(
+                "listener_count_on",
+                params: ["p_day": SupabaseCheckInService.dayFormatter.string(from: date)]
+            )
+            .execute()
+            .value
+    }
 }
