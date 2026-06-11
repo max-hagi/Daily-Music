@@ -27,9 +27,8 @@ struct UndoBanner: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 13)
-        .glassPillStyle(tint: Theme.Brand.gradient[0].opacity(0.08))
+        .glassPillStyle(tint: Theme.Brand.gradient[0].opacity(0.08),
+                        horizontalInset: 18, verticalInset: 13)
         .shadow(color: .black.opacity(0.22), radius: 14, y: 6)
         .padding(.horizontal, 20)
     }

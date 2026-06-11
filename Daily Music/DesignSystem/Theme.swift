@@ -28,10 +28,29 @@ enum Theme {
         static let xl: CGFloat = 32
     }
 
-    // Corner radii for rounded rectangles (cards vs. small chips).
+    // Corner radius scale, smallest to largest. Pick by the element's role, not
+    // by eye — rows are always `row`, cards always `card` — so rounding reads
+    // consistently across screens.
     enum Radius {
-        static let card: CGFloat = 22
-        static let small: CGFloat = 12
+        static let chip: CGFloat = 8      // album-art thumbs, small chips
+        static let control: CGFloat = 13  // icon-badge squares inside cards
+        static let row: CGFloat = 18      // list rows, quiet rows, pills' kin
+        static let card: CGFloat = 22     // standard cards
+        static let hero: CGFloat = 28     // gradient hero cards
+        static let small: CGFloat = 12    // legacy alias, keep until migrated
+    }
+
+    // The two shadow roles: a soft resting shadow for floating cards (more
+    // blur, less opacity) and an accent glow under gradient heroes.
+    enum Shadow {
+        /// Soft resting shadow for floating cards. More blur, less opacity.
+        static let cardRadius: CGFloat = 14
+        static let cardY: CGFloat = 6
+        static let cardOpacity: Double = 0.10
+        /// Accent glow under gradient heroes.
+        static let glowRadius: CGFloat = 18
+        static let glowY: CGFloat = 10
+        static let glowOpacity: Double = 0.25
     }
 
     enum Brand {
@@ -83,6 +102,14 @@ enum Theme {
             )
         ]
 
+        /// Teal-into-sunset gradient for the Vault hero card. Index 1 doubles
+        /// as the hero's glow tint.
+        static let vaultHero = [
+            Color(red: 0.11, green: 0.33, blue: 0.42),
+            Color(red: 0.9, green: 0.38, blue: 0.26),
+            Color(red: 0.98, green: 0.66, blue: 0.22)
+        ]
+
         static let vaultBackground = [
             adaptiveColor(
                 light: UIColor(red: 0.98, green: 0.96, blue: 0.92, alpha: 1),
@@ -117,4 +144,10 @@ extension Font {
     static func dmTitle() -> Font { .system(size: 26, weight: .bold, design: .rounded) }
     static func dmHeadline() -> Font { .system(.headline, design: .rounded) }
     static func dmNumber() -> Font { .system(size: 34, weight: .bold, design: .rounded) }
+    /// Screen-defining hero titles (gradient hero cards).
+    static func dmHero() -> Font { .system(size: 36, weight: .heavy, design: .rounded) }
+    /// Big stat numbers (counts, metrics).
+    static func dmStat() -> Font { .system(size: 32, weight: .heavy, design: .rounded) }
+    /// Card-level titles (driver cards, tiles).
+    static func dmCardTitle() -> Font { .system(size: 20, weight: .heavy, design: .rounded) }
 }

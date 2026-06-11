@@ -199,7 +199,7 @@ struct ListeningView: View {
 
     // MARK: hero art
     private var artwork: some View {
-        AlbumArtView(url: entry.albumArtURL, cornerRadius: 22)
+        AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.card)
             .frame(maxWidth: contentMaxWidth)
             .padding(.horizontal, 4)
             .scaleEffect(player.state == .playing ? (animate ? 1.0 : 0.965) : 0.95)
@@ -406,13 +406,13 @@ struct ListeningView: View {
                 .frame(minWidth: 136)
                 .padding(.vertical, 14)
                 .padding(.horizontal, 22)
-                .contentShape(.rect(cornerRadius: 20))
+                .contentShape(.rect(cornerRadius: Theme.Radius.row))
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
-        .glassEffect(.regular.tint(.white.opacity(0.20)).interactive(), in: .rect(cornerRadius: 20))
+        .glassEffect(.regular.tint(.white.opacity(0.20)).interactive(), in: .rect(cornerRadius: Theme.Radius.row))
         .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .stroke(.white.opacity(0.30), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.22), radius: 18, y: 8)

@@ -127,7 +127,7 @@ struct VaultView: View {
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 58, height: 58)
-                    .background(.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(.black.opacity(0.22), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
 
                 Spacer()
 
@@ -138,7 +138,7 @@ struct VaultView: View {
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text(heroTitle(missedCount: missed.count))
-                    .font(.system(size: 36, weight: .heavy, design: .rounded))
+                    .font(.dmHero())
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -160,17 +160,13 @@ struct VaultView: View {
         .padding(Theme.Spacing.lg)
         .background(
             LinearGradient(
-                colors: [
-                    Color(red: 0.11, green: 0.33, blue: 0.42),
-                    Color(red: 0.9, green: 0.38, blue: 0.26),
-                    Color(red: 0.98, green: 0.66, blue: 0.22)
-                ],
+                colors: Theme.Surface.vaultHero,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+            in: RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous)
         )
-        .shadow(color: Color(red: 0.9, green: 0.38, blue: 0.26).opacity(0.2), radius: 18, y: 10)
+        .heroGlow(Theme.Surface.vaultHero[1])
 
     }
 
@@ -207,11 +203,11 @@ struct VaultView: View {
                 .font(.title3.weight(.bold))
                 .foregroundStyle(tint)
                 .frame(width: 42, height: 42)
-                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 32, weight: .heavy, design: .rounded))
+                    .font(.dmStat())
                 Text(label)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -219,7 +215,7 @@ struct VaultView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Spacing.md)
-        .glassCardStyle(tint: tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassCardStyle(tint: tint.opacity(0.10), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
     }
 
     private func calendarSection(_ entries: [DailyEntry]) -> some View {
@@ -486,8 +482,6 @@ struct VaultToolbarListenedBadge: View {
                 .foregroundStyle(.primary)
                 .contentTransition(.numericText())
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 7)
         .glassPillStyle(tint: .red.opacity(0.08))
         .accessibilityLabel("\(count) people opened the app that day")
         .onAppear { isPulsing = !reduceMotion }
@@ -507,7 +501,7 @@ private struct VaultTintedEntryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AlbumArtView(url: entry.albumArtURL, cornerRadius: 8)
+            AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.chip)
                 .frame(width: 56, height: 56)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -547,7 +541,7 @@ private struct VaultTintedEntryRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCardStyle(
             tint: palette.accent.opacity(palette.isLoaded ? 0.16 : 0.06),
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
         )
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2, style: .continuous)
@@ -567,7 +561,7 @@ struct EntryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AlbumArtView(url: entry.albumArtURL, cornerRadius: 8)
+            AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.chip)
                 .frame(width: 56, height: 56)
 
             VStack(alignment: .leading, spacing: 2) {

@@ -66,7 +66,7 @@ struct CategorySongsSheet: View {
 
     private func songRow(_ rated: RatedSong) -> some View {
         HStack(spacing: Theme.Spacing.md) {
-            AlbumArtView(url: rated.entry.albumArtURL, cornerRadius: 8)
+            AlbumArtView(url: rated.entry.albumArtURL, cornerRadius: Theme.Radius.chip)
                 .frame(width: 44, height: 44)
 
             VStack(alignment: .leading, spacing: 2) {

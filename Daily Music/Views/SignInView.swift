@@ -167,13 +167,13 @@ struct AlbumArtGridBackdrop: View {
                                 .resizable()
                                 .scaledToFill()
                         } placeholder: {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
                                 .fill(.white.opacity(0.14))
                         }
                         .frame(width: tile, height: tile)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
                                 .stroke(.white.opacity(0.16), lineWidth: 1)
                         }
                         .shadow(color: .black.opacity(0.24), radius: 10, y: 6)

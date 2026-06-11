@@ -60,7 +60,7 @@ struct SongInfoSheet: View {
             if let albumDestinationURL { openURL(albumDestinationURL) }
         } label: {
             HStack(alignment: .center, spacing: Theme.Spacing.md) {
-                AlbumArtView(url: entry.albumArtURL, cornerRadius: 16)
+                AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.row)
                     .frame(width: 96, height: 96)
                     .shadow(color: palette.accent.opacity(0.24), radius: 14, y: 8)
 

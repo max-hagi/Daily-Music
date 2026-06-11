@@ -311,8 +311,6 @@ private struct TodayToolbarStreakBadge: View {
                     .foregroundStyle(.primary)
                     .contentTransition(.numericText())
             }
-            .padding(.horizontal, 11)
-            .padding(.vertical, 7)
             .glassPillStyle(tint: .orange.opacity(streak.isMilestoneToday ? 0.22 : 0.08))
         }
         .buttonStyle(.plain)
@@ -407,8 +405,6 @@ private struct TodayToolbarLiveBadge: View {
                 .foregroundStyle(.primary)
                 .contentTransition(.numericText())   // animates digit changes like a counter
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 7)
         .glassPillStyle(tint: .red.opacity(0.08))
         .onAppear { isPulsing = !reduceMotion }
     }

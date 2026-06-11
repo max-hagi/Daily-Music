@@ -188,8 +188,8 @@ struct TasteMirrorBoard: View {
         .padding(Theme.Spacing.lg)
         .background(ArchetypeHeroBackground(profile: profile))
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: profile.colors[0].opacity(bloom ? flavor.bloomOpacity : 0.35),
-                radius: bloom ? flavor.bloomRadius : 20, y: 10)
+        .shadow(color: profile.colors[0].opacity(bloom ? flavor.bloomOpacity : Theme.Shadow.glowOpacity),
+                radius: bloom ? flavor.bloomRadius : 20, y: Theme.Shadow.glowY)
     }
 
     // MARK: section label

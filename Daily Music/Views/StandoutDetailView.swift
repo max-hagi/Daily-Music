@@ -123,7 +123,7 @@ struct StandoutDetailView: View {
             LinearGradient(colors: [detail.accent, detail.accent.opacity(0.72)],
                            startPoint: .topLeading, endPoint: .bottomTrailing)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous))
         .shadow(color: detail.accent.opacity(0.3), radius: 16, y: 8)
     }
 
@@ -160,10 +160,10 @@ struct StandoutDetailView: View {
         .background(
             // Tint scales with like-rate: a soft wash, never a bar/axis.
             detail.accent.opacity(0.06 + 0.20 * row.likeRate),
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .stroke(isStandout ? detail.accent.opacity(0.6) : .clear, lineWidth: 1.5)
         }
     }

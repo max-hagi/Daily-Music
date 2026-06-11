@@ -15,7 +15,7 @@ struct HistoryEntryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AlbumArtView(url: item.entry.albumArtURL, cornerRadius: 10)
+            AlbumArtView(url: item.entry.albumArtURL, cornerRadius: Theme.Radius.chip)
                 .frame(width: 44, height: 44)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -41,6 +41,6 @@ struct HistoryEntryRow: View {
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, 10)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
     }
 }

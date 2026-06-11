@@ -223,10 +223,10 @@ struct FriendInsightsView: View {
         return HStack(spacing: 10) {
             HStack(spacing: -size * 0.34) {
                 ForEach(Array(shown.enumerated()), id: \.element.id) { idx, entry in
-                    AlbumArtView(url: entry.albumArtURL, cornerRadius: 10)
+                    AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.chip)
                         .frame(width: size, height: size)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
                                 .stroke(Color(.systemBackground), lineWidth: 2)
                         )
                         .zIndex(Double(shown.count - idx))
@@ -276,9 +276,9 @@ struct FriendInsightsView: View {
         }
         .frame(width: 108, alignment: .leading)
         .padding(8)
-        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .stroke(tint.opacity(0.18), lineWidth: 1)
         }
     }

@@ -92,10 +92,10 @@ struct FavoritesView: View {
                     Button { selectedEntry = entry } label: {
                         EntryRow(entry: entry)
                             .padding(Theme.Spacing.md)
-                            .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
                     .contextMenu {
                         Button { selectedEntry = entry } label: {
                             Label("Open Entry", systemImage: "arrow.up.forward.app")
@@ -134,7 +134,7 @@ struct FavoritesView: View {
                     .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 58, height: 58)
-                    .background(.white.opacity(0.22), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(.white.opacity(0.22), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
                 Spacer()
                 Text("YOUR COLLECTION")
                     .font(.caption.weight(.heavy))
@@ -142,7 +142,7 @@ struct FavoritesView: View {
             }
             // Inline ternary handles singular/plural ("1 favorite" vs "3 favorites").
             Text("\(count) \(count == 1 ? "favorite" : "favorites")")
-                .font(.system(size: 36, weight: .heavy, design: .rounded))
+                .font(.dmHero())
                 .foregroundStyle(.white)
             Text("The songs that stopped you in your tracks.")
                 .font(.callout.weight(.medium))
@@ -155,7 +155,7 @@ struct FavoritesView: View {
                 colors: [Color(red: 0.96, green: 0.27, blue: 0.45), Color(red: 0.79, green: 0.16, blue: 0.55)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             ),
-            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+            in: RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous)
         )
         .shadow(color: Color(red: 0.96, green: 0.27, blue: 0.45).opacity(0.25), radius: 18, y: 10)
     }
@@ -216,7 +216,7 @@ private struct FavoriteEntryPeek: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                AlbumArtView(url: entry.albumArtURL, cornerRadius: 14)
+                AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.control)
                     .frame(width: 96, height: 96)
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -261,7 +261,7 @@ private struct FavoriteEntryPeek: View {
         }
         .padding(Theme.Spacing.md)
         .frame(width: 340, alignment: .leading)
-        .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
     }
 
     private var metadataChips: [String] {

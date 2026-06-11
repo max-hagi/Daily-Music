@@ -175,7 +175,7 @@ private struct SettingsForm: View {
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .padding(.bottom, 10)
-        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.hero))
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
     }

@@ -42,9 +42,13 @@ struct GlassCardModifier<S: Shape>: ViewModifier {
 
 struct GlassPillModifier: ViewModifier {
     var tint: Color?
+    var horizontalInset: CGFloat = 11
+    var verticalInset: CGFloat = 7
 
     func body(content: Content) -> some View {
         content
+            .padding(.horizontal, horizontalInset)
+            .padding(.vertical, verticalInset)
             .glassEffect(.regular.tint(tint), in: .capsule)
             .overlay {
                 Capsule().stroke(.white.opacity(0.2), lineWidth: 1)
@@ -86,8 +90,16 @@ extension View {
         )
     }
 
-    func glassPillStyle(tint: Color? = nil) -> some View {
-        modifier(GlassPillModifier(tint: tint))
+    func glassPillStyle(
+        tint: Color? = nil,
+        horizontalInset: CGFloat = 11,
+        verticalInset: CGFloat = 7
+    ) -> some View {
+        modifier(GlassPillModifier(
+            tint: tint,
+            horizontalInset: horizontalInset,
+            verticalInset: verticalInset
+        ))
     }
 
     func glassIconButtonStyle(tint: Color = Theme.Brand.gradient[0], size: CGFloat = 48) -> some View {
@@ -159,5 +171,12 @@ struct GlassCard: ViewModifier {
 extension View {
     func glassCard(cornerRadius: CGFloat = 14) -> some View {
         modifier(GlassCard(cornerRadius: cornerRadius))
+    }
+
+    /// Accent glow under gradient hero cards — tinted by the hero's own color
+    /// so the card appears to light its surroundings.
+    func heroGlow(_ tint: Color) -> some View {
+        shadow(color: tint.opacity(Theme.Shadow.glowOpacity),
+               radius: Theme.Shadow.glowRadius, y: Theme.Shadow.glowY)
     }
 }

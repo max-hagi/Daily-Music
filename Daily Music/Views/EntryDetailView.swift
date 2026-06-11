@@ -93,7 +93,7 @@ struct EntryDetailView: View {
                         .foregroundStyle(.secondary)
                         .padding(.top, 8)
                 }
-                AlbumArtView(url: entry.albumArtURL, cornerRadius: 16)
+                AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.row)
                     .padding(.horizontal, albumArtHorizontalPadding)
                 header
                 actionCluster
@@ -134,7 +134,7 @@ struct EntryDetailView: View {
                     .frame(height: 16)
                     .padding(.top, Theme.Spacing.sm)
             }
-            AlbumArtView(url: entry.albumArtURL, cornerRadius: 24)
+            AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.card)
                 .padding(.horizontal, albumArtHorizontalPadding)
             entryIdentityWithInlineControls(dateLabel: dateLabel)
             ratingExperience
@@ -172,9 +172,7 @@ struct EntryDetailView: View {
             horizontalPadding: 8,
             verticalPadding: 5
         )
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-        .glassPillStyle(tint: palette.accent.opacity(0.12))
+        .glassPillStyle(tint: palette.accent.opacity(0.12), horizontalInset: 9)
         .opacity(0.86)
         .padding(.top, 0)
     }
@@ -252,7 +250,7 @@ struct EntryDetailView: View {
         .padding(.leading, 12)
         .padding(.trailing, 8)
         .padding(.vertical, 11)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 18, y: 10)
         .transition(
             .asymmetric(
@@ -279,7 +277,7 @@ struct EntryDetailView: View {
         .padding(.bottom, 60)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemBackground))   // opaque reading surface rises over the art
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous))
         .scrollTransition { content, phase in
             content
                 .opacity(shouldReduceMotion || phase.isIdentity ? 1 : 0)
@@ -653,10 +651,10 @@ private struct ArtworkLoadingScreen: View {
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
             ZStack {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous)
                     .fill(.white.opacity(0.14))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous)
                             .stroke(.white.opacity(0.28), lineWidth: 1)
                     }
                     .shadow(color: .black.opacity(0.18), radius: 26, y: 14)
