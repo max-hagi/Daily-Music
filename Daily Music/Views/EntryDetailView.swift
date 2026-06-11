@@ -35,6 +35,8 @@ struct EntryDetailView: View {
     @State var showingReactions = false
     @State var selectedReactionEmoji: String?
     @State var didDismissAnonymousRatingNudge = false
+    // 1 → fully visible on the song zone; fades to 0 as the journal scrolls up.
+    @State var journalDockFade: CGFloat = 1
     // One-time tip explaining that 👍/👎 shapes Insights (Today only).
     @AppStorage("hasSeenRatingNudgeLiquidGlass") var hasSeenRatingNudge = false
 

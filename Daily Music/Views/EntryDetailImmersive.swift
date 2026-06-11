@@ -29,6 +29,15 @@ extension EntryDetailView {
                 .scrollTargetLayout()
             }
             .scrollTargetBehavior(StorySnapScrollTargetBehavior())
+            // Drive the dock's opacity from scroll position so it reads as part
+            // of the journal: gone while reading, back when the song zone returns.
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                let offset = geometry.contentOffset.y + geometry.contentInsets.top
+                let fadeDistance = max(1, geometry.containerSize.height * 0.25)
+                return (1 - offset / fadeDistance).clamped(to: 0...1)
+            } action: { _, fade in
+                journalDockFade = fade
+            }
         }
     }
 
@@ -58,6 +67,8 @@ extension EntryDetailView {
             )
             .padding(.horizontal, Theme.Spacing.md)
             .padding(.bottom, Theme.Spacing.sm)
+            .opacity(journalDockFade)
+            .allowsHitTesting(journalDockFade > 0.5)
         }
         // Clamp accessibility text sizes so the one-screen song zone stays intact;
         // the journal (reading) text below is left fully scalable.
