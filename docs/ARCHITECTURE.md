@@ -329,6 +329,10 @@ flowchart TD
 `RatingBar` and `ReactionsBar` each own a small inline model (`RatingModel`,
 `ReactionsModel`) created from the env service — so they're self-contained and
 reusable. Guest sessions are read-only; the gating reads `SessionStore`.
+The action cluster also holds a save-to-Apple-Music button, shown only when
+`AppleMusicSession` grants `.librarySave` (connected + subscribed); a
+successful save is remembered in `SavedTracksLog` so the button shows
+"Added ✓" and never double-adds to the playlist.
 
 The view is split across three files (all extensions of one `EntryDetailView`
 type): the main file holds the public view, standard layout, and shared
@@ -351,17 +355,38 @@ flowchart TD
     TasteSeedView --> TasteSeedCardStack["TasteSeedCardStack<br/>(swipe deck view)"]
     TasteSeedView --> MusicPlayer
     MusicPlayer --> MusicEngine{{"MusicEngine (protocol)"}}
-    MusicEngine -.live.-> PreviewMusicEngine["PreviewMusicEngine<br/>iTunes 30s previews"]
-    MusicEngine -.future.-> MusicKitMusicEngine["MusicKitMusicEngine<br/>full Apple Music"]
+    MusicEngine -.universal floor.-> PreviewMusicEngine["PreviewMusicEngine<br/>iTunes 30s previews"]
+    MusicEngine -.flag-gated.-> FullTrackMusicEngine["FullTrackMusicEngine<br/>ApplicationMusicPlayer (full songs)"]
+    MusicPlayer --> AppleMusicSession["AppleMusicSession<br/>(connection + capabilities)"]
     PreviewMusicEngine --> CatalogInfoService
 ```
 
-`MusicPlayer` is a thin state wrapper around a swappable `MusicEngine`. Today
-`live()` uses `PreviewMusicEngine` (free 30-sec iTunes previews, no paid
-account); the MusicKit engine is wired but not enabled. The engine protocol
+`MusicPlayer` is a thin state wrapper holding **two** engines: the universal
+`PreviewMusicEngine` (free 30-sec iTunes previews) and an optional
+`FullTrackMusicEngine` (full songs via `ApplicationMusicPlayer`; only wired in
+`live()` when `FeatureFlags.appleMusicConnect` is on). Every play call carries
+a `PlaybackContext`: `.standard` (ceremony, entry detail, vault) routes to the
+full engine **iff** [`AppleMusicSession`](Daily%20Music/Services/Music/AppleMusicSession.swift)
+reports the `.fullPlayback` capability (connected + subscribed); `.sample`
+(taste-seed deck) always plays previews. Any full-engine failure falls back to
+the preview engine in the same call — previews are the floor, never an error.
+`isPlayingFullTrack` tells the UI which it got. The engine protocol
 distinguishes `play()` (fresh start) from `resume()` (continue after pause) —
 pause/play must NOT restart the clip — and `MusicPlayer.restart()` backs the
 player's back-to-start button.
+
+**Apple Music connection** (`AppleMusicSession`, on `AppEnvironment`): an
+explicit user "Connect" (Settings → Connected services, or the optional
+onboarding nudge) runs MusicKit authorization + a subscription check and maps
+the result to capabilities — subscribed → `.fullPlayback + .librarySave +
+.richMetadata`; authorized-but-unsubscribed → `.richMetadata` only. The
+connected flag persists in UserDefaults; `RootView` calls `restore()` on launch
+(silent, never prompts) and a `subscriptionUpdates` watcher downgrades
+capabilities live if the subscription lapses. MusicKit statics sit behind the
+`AppleMusicAuthorizing` seam (`MusicKitAuthorizer` live /
+`MockAppleMusicAuthorizer` in `mock()` + tests). **Everything is dormant until
+`FeatureFlags.appleMusicConnect` flips** — activation checklist in
+[FullTrackMusicEngine](Daily%20Music/Services/Music/FullTrackMusicEngine.swift).
 
 `ListeningView` doubles as the **first-listen ceremony**: when opened with
 `showsRevealIntro` (auto-open from Today only), it holds on an intro beat
@@ -449,7 +474,9 @@ table is the fastest way to go from "this data is wrong" to "this table/RPC".
 | [SharedStatsService](Daily%20Music/Services/SharedStatsService.swift) | [SupabaseSharedStatsService](Daily%20Music/Services/Supabase/SupabaseSharedStatsService.swift) | rpc `todays_listener_count` · rpc `listener_count_on` (archive days; SQL in `docs/superpowers/specs/archive-listener-counts.sql`) |
 | [ReactionsService](Daily%20Music/Services/ReactionsService.swift) | [SupabaseReactionsService](Daily%20Music/Services/Supabase/SupabaseReactionsService.swift) | table `reactions` |
 | [RatingService](Daily%20Music/Services/RatingService.swift) | [SupabaseRatingService](Daily%20Music/Services/Supabase/SupabaseRatingService.swift) | table `song_ratings` |
-| [CatalogInfoService](Daily%20Music/Services/CatalogInfoService.swift) | `LiveCatalogInfoService` | iTunes lookup API (external) |
+| [CatalogInfoService](Daily%20Music/Services/CatalogInfoService.swift) | `LiveCatalogInfoService` (wrapped by `EnrichedCatalogInfoService` when `FeatureFlags.appleMusicConnect`) | iTunes lookup API (external) · MusicKit catalog extras (editorial notes, hi-res art) when connected |
+| [MusicServiceConnection](Daily%20Music/Services/Music/MusicServiceConnection.swift) | [AppleMusicSession](Daily%20Music/Services/Music/AppleMusicSession.swift) | MusicKit auth + subscription via `AppleMusicAuthorizing` seam · UserDefaults `appleMusic.userConnected` |
+| — ([SavedTracksLog](Daily%20Music/Models/SavedTracksLog.swift), store) | — | UserDefaults `appleMusic.savedEntryIDs` (playlist-save state) |
 | [SettingsService](Daily%20Music/Services/SettingsService.swift) | [SupabaseSettingsService](Daily%20Music/Services/Supabase/SupabaseSettingsService.swift) | table `profiles` |
 | [ProfileService](Daily%20Music/Services/ProfileService.swift) | [SupabaseProfileService](Daily%20Music/Services/Supabase/SupabaseProfileService.swift) | table `profiles` · storage `avatars` |
 | [FriendService](Daily%20Music/Services/FriendService.swift) | [SupabaseFriendService](Daily%20Music/Services/Supabase/SupabaseFriendService.swift) | `my_friends`, `incoming_requests`, rpc `claim_friend_code` |
@@ -552,3 +579,6 @@ visual/haptic data for the reveal animation. See [Models/](Daily%20Music/Models)
 | Reminders fire with stale/identical copy | [ReminderCopy](Daily%20Music/Models/ReminderCopy.swift) + `LocalNotificationService` rolling window + `MainTabView.refreshReminderWindow()` |
 | Archive "N listened" badge missing | rpc `listener_count_on` not applied — run `docs/superpowers/specs/archive-listener-counts.sql` in the dashboard |
 | Widget empty / never updates | [TodayDropWidget](DailyMusicWidget/TodayDropWidget.swift) provider — REST fetch with widget's own `SupabaseConfig.swift` (gitignored; recreate if missing) |
+| Full tracks not playing for a subscriber | `MusicPlayer.startFresh` routing + [AppleMusicSession](Daily%20Music/Services/Music/AppleMusicSession.swift) capabilities + `FeatureFlags.appleMusicConnect` (engine isn't even constructed when off) |
+| Save button missing on entry detail | `.librarySave` capability — needs connected **and** subscribed, plus the feature flag |
+| Editorial notes missing in info sheet | `EnrichedCatalogInfoService` gating (`.richMetadata`) — falls back to plain iTunes lookup on any MusicKit failure |
