@@ -438,3 +438,64 @@ struct ArchetypeScorerTests {
         #expect(ArchetypeScorer.score(decisive, incumbentID: "flower_child")?.profile.id == "party_animal")
     }
 }
+
+// MARK: - DriverHighlights
+
+struct DriverHighlightsTests {
+
+    private func fact(_ dim: String, _ cat: String, contribution: Double) -> ArchetypeEvidence.Fact {
+        .init(dimensionID: dim, category: cat, likes: 5, total: 6, hearts: 1, contribution: contribution)
+    }
+
+    @Test func mapsFactsToDimensionsWithContributionRanks() {
+        let evidence = ArchetypeEvidence(facts: [
+            fact("mood", "Dark", contribution: 0.30),
+            fact("theme", "Loneliness", contribution: 0.20),
+            fact("genre", "Rock", contribution: 0.10),
+        ])
+        let h = DriverHighlights.compute(
+            evidence: evidence, displayedArchetypeID: "outsider", liveArchetypeID: "outsider")
+        #expect(h.count == 3)
+        #expect(h["mood"]?.rank == 1)
+        #expect(h["mood"]?.fact.category == "Dark")
+        #expect(h["theme"]?.rank == 2)
+        #expect(h["genre"]?.rank == 3)
+        #expect(h["energy"] == nil)
+    }
+
+    @Test func firstFactPerDimensionWins() {
+        // Two moods in evidence: the higher-contribution one (sorted first) keeps the slot.
+        let evidence = ArchetypeEvidence(facts: [
+            fact("mood", "Dark", contribution: 0.30),
+            fact("mood", "Melancholy", contribution: 0.20),
+        ])
+        let h = DriverHighlights.compute(
+            evidence: evidence, displayedArchetypeID: "outsider", liveArchetypeID: "outsider")
+        #expect(h.count == 1)
+        #expect(h["mood"]?.fact.category == "Dark")
+        #expect(h["mood"]?.rank == 1)
+    }
+
+    @Test func emptyOrNilEvidenceYieldsNoHighlights() {
+        #expect(DriverHighlights.compute(
+            evidence: nil, displayedArchetypeID: "outsider", liveArchetypeID: "outsider").isEmpty)
+        #expect(DriverHighlights.compute(
+            evidence: ArchetypeEvidence(facts: []),
+            displayedArchetypeID: "outsider", liveArchetypeID: "outsider").isEmpty)
+    }
+
+    @Test func suppressedWhenDisplayedArchetypeDiffersFromLiveWinner() {
+        // The weekly-stable archetype lags the live winner → badges would explain
+        // an archetype the user isn't seeing. Suppress.
+        let evidence = ArchetypeEvidence(facts: [fact("mood", "Dark", contribution: 0.30)])
+        let h = DriverHighlights.compute(
+            evidence: evidence, displayedArchetypeID: "pophead", liveArchetypeID: "outsider")
+        #expect(h.isEmpty)
+    }
+
+    @Test func suppressedWhenNoDisplayedArchetype() {
+        let evidence = ArchetypeEvidence(facts: [fact("mood", "Dark", contribution: 0.30)])
+        #expect(DriverHighlights.compute(
+            evidence: evidence, displayedArchetypeID: nil, liveArchetypeID: "outsider").isEmpty)
+    }
+}
