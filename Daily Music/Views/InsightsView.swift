@@ -101,15 +101,15 @@ struct InsightsView: View {
         return ScrollView {
             VStack(spacing: Theme.Spacing.lg) {
                 recapMomentBanner
-                startedHereCard
                 TasteMirrorBoard(
                     mirror: mirror,
                     displayArchetype: mirror.archetype,
-                    onRatingChanged: { Task { await model?.load(favoriteIDs: env.favoritesStore.ids) } }
+                    onRatingChanged: { Task { await model?.load(favoriteIDs: env.favoritesStore.ids) } },
+                    onReplay: mirror.isArchetypeUnlocked ? { model?.replayReveal() } : nil,
+                    revealCountdownText: countdownText(for: mirror)
                 )
-                replayButton(mirror)
-                revealCountdown(for: mirror)
                 historySection(accent: accent)
+                startedHereCard
                 wrappedButton(accent)
             }
             .padding()
@@ -121,19 +121,12 @@ struct InsightsView: View {
         }
     }
 
-    @ViewBuilder
-    private func replayButton(_ mirror: TasteMirror) -> some View {
-        if mirror.isArchetypeUnlocked {
-            Button {
-                model?.replayReveal()
-            } label: {
-                Label("Replay reveal", systemImage: "arrow.counterclockwise")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .center)
-        }
+    /// The hero's quiet countdown line; nil while locked or when a reveal is due.
+    private func countdownText(for mirror: TasteMirror) -> String? {
+        guard mirror.isArchetypeUnlocked, let next = model?.nextRevealDate else { return nil }
+        let days = max(0, Calendar.current.dateComponents([.day], from: .now, to: next).day ?? 0)
+        guard days > 0 else { return nil }
+        return "Next reveal in \(days) day\(days == 1 ? "" : "s")"
     }
 
     @ViewBuilder
@@ -171,19 +164,6 @@ struct InsightsView: View {
         }
         .buttonStyle(PrimaryActionButtonStyle(tint: accent))
         .padding(.top, Theme.Spacing.xs)
-    }
-
-    @ViewBuilder
-    private func revealCountdown(for mirror: TasteMirror) -> some View {
-        if mirror.isArchetypeUnlocked, let next = model?.nextRevealDate {
-            let days = max(0, Calendar.current.dateComponents([.day], from: .now, to: next).day ?? 0)
-            if days > 0 {
-                Text("Next reveal in \(days) day\(days == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-        }
     }
 
     // MARK: monthly recap moment
