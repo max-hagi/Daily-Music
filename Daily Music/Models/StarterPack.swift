@@ -14,18 +14,20 @@ import Foundation
 enum StarterPack {
     private static func song(
         _ title: String, _ artist: String, _ appleMusicID: String, _ art: String,
-        genre: String, year: Int, mood: String, energy: Int, theme: String
+        genre: String, year: Int, mood: String, energy: Int, theme: String,
+        language: String = "English"
     ) -> DailyEntry {
         DailyEntry(
             id: UUID(), date: .distantPast, title: title, artist: artist,
             albumArtURL: URL(string: art), journalMarkdown: "",
             appleMusicID: appleMusicID, spotifyURI: "",
             genre: genre, year: year, mood: mood, energy: energy,
-            theme: theme, language: "English"
+            theme: theme, language: language
         )
     }
 
-    /// 13 recognizable songs spanning all 9 moods, 7 genres, and eras 1976–2026.
+    /// 20 recognizable songs spanning all 9 moods, 9 genres (incl. R&B/Soul,
+    /// Electronic/Dance, Latin), Spanish + English, and eras 1976–2026.
     /// Rated one-by-one in onboarding to seed the taste mirror; swap any to taste.
     static let songs: [DailyEntry] = [
         song("Dancing Queen", "ABBA", "1422648513",
@@ -67,5 +69,27 @@ enum StarterPack {
         song("Blackberry Marmalade", "Vince Staples", "1887627837",
              "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/27/fe/3c/27fe3ccb-9f3c-1472-a2af-ddabe248699b/26CRGIM53564.rgb.jpg/600x600bb.jpg",
              genre: "Hip-Hop/Rap", year: 2026, mood: "Dark", energy: 3, theme: "Memory & Nostalgia"),
+        song("Take On Me", "a-ha", "380907765",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music/c6/e1/c8/mzi.ixgzfcmc.jpg/600x600bb.jpg",
+             genre: "Pop", year: 1985, mood: "Euphoric", energy: 5, theme: "Love & Romance"),
+        song("Billie Jean", "Michael Jackson", "269573364",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/32/4f/fd/324ffda2-9e51-8f6a-0c2d-c6fd2b41ac55/074643811224.jpg/600x600bb.jpg",
+             genre: "R&B/Soul", year: 1982, mood: "Dark", energy: 4, theme: "Longing & Desire"),
+        song("September", "Earth, Wind & Fire", "1456623340",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/5c/8e/19/5c8e191d-b458-fc29-54ef-bd9367835044/886447618547.jpg/600x600bb.jpg",
+             genre: "R&B/Soul", year: 1978, mood: "Joyful", energy: 5, theme: "Memory & Nostalgia"),
+        song("Midnight City", "M83", "828259377",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/cb/7b/a9/cb7ba903-b5f1-cc21-90db-7a81b7aa0997/724596951057.jpg/600x600bb.jpg",
+             genre: "Electronic/Dance", year: 2011, mood: "Dreamy", energy: 4, theme: "Freedom & Escape"),
+        song("Redbone", "Childish Gambino", "1771719595",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/f1/3c/d7/f13cd7ab-7319-028a-8807-5991d0b308d4/0044003187658_Cover.jpg/600x600bb.jpg",
+             genre: "R&B/Soul", year: 2016, mood: "Serene", energy: 2, theme: "Longing & Desire"),
+        song("Von dutch", "Charli xcx", "1739080354",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/88/4e/63/884e6321-ad41-aab1-f6f0-20efcafcfd55/075679666130.jpg/600x600bb.jpg",
+             genre: "Electronic/Dance", year: 2024, mood: "Defiant", energy: 5, theme: "Empowerment & Self-Worth"),
+        song("PERFuMITO NUEVO", "Bad Bunny & RaiNao", "1787022980",
+             "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/90/5e/7e/905e7ed5-a8fa-a8f3-cd06-0028fdf3afaa/199066342442.jpg/600x600bb.jpg",
+             genre: "Latin", year: 2025, mood: "Tender", energy: 3, theme: "Love & Romance",
+             language: "Spanish"),
     ]
 }
