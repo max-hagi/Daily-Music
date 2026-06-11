@@ -8,6 +8,7 @@
 //
 
 import Foundation
+import MusicKit
 
 struct CatalogInfo: Equatable {
     var album: String?
@@ -16,6 +17,11 @@ struct CatalogInfo: Equatable {
     var genre: String?
     var albumURL: URL?
     var previewURL: URL?
+    // MusicKit-only extras — nil on the universal iTunes path, so the info
+    // sheet renders identically for non-connected users. The `= nil` defaults
+    // keep every existing memberwise-init call site compiling unchanged.
+    var editorialNotes: String? = nil
+    var hiResArtworkURL: URL? = nil
 
     /// Parse the iTunes lookup JSON (`https://itunes.apple.com/lookup?id=…`).
     static func parse(_ data: Data) -> CatalogInfo? {
@@ -73,5 +79,40 @@ struct LiveCatalogInfoService: CatalogInfoService {
         let (data, _) = try await URLSession.shared.data(from: url)
         guard let info = CatalogInfo.parse(data) else { throw URLError(.cannotParseResponse) }
         return info
+    }
+}
+
+/// The MusicKit-only facts layered onto the free iTunes lookup.
+struct CatalogExtras {
+    var editorialNotes: String?
+    var hiResArtworkURL: URL?
+}
+
+/// Decorates the universal iTunes lookup with MusicKit extras when the user's
+/// Apple Music connection grants .richMetadata. The MusicKit call is injected
+/// so the gating/merge logic is testable without the entitlement.
+struct EnrichedCatalogInfoService: CatalogInfoService {
+    let base: CatalogInfoService
+    let session: AppleMusicSession
+    var fetchExtras: (String) async -> CatalogExtras? = EnrichedCatalogInfoService.musicKitExtras
+
+    func info(appleMusicID: String) async throws -> CatalogInfo {
+        var info = try await base.info(appleMusicID: appleMusicID)
+        guard await session.status.capabilities.contains(.richMetadata) else { return info }
+        if let extras = await fetchExtras(appleMusicID) {
+            info.editorialNotes = extras.editorialNotes
+            info.hiResArtworkURL = extras.hiResArtworkURL
+        }
+        return info
+    }
+
+    /// Live MusicKit fetch. Any failure returns nil — the base info stands alone.
+    static func musicKitExtras(appleMusicID: String) async -> CatalogExtras? {
+        let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(appleMusicID))
+        guard let song = try? await request.response().items.first else { return nil }
+        return CatalogExtras(
+            editorialNotes: song.editorialNotes?.standard ?? song.editorialNotes?.short,
+            hiResArtworkURL: song.artwork?.url(width: 1200, height: 1200)
+        )
     }
 }
