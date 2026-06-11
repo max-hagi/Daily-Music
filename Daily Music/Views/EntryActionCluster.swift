@@ -19,9 +19,53 @@ extension EntryDetailView {
         }
     }
 
+    /// Save is only offered when the connected service can write to the
+    /// library (Apple Music + active subscription).
+    private var canSaveToLibrary: Bool {
+        env.appleMusic.status.capabilities.contains(.librarySave)
+    }
+
+    private func saveToAppleMusic() {
+        guard !env.savedTracks.isSaved(entry) else { return }
+        Haptics.tap()
+        Task {
+            do {
+                try await env.musicPlayer.addToDailyPlaylist(entry)
+                env.savedTracks.markSaved(entry)
+            } catch {
+                saveToAppleMusicFailed = true
+            }
+        }
+    }
+
+    private func saveButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
+        let saved = env.savedTracks.isSaved(entry)
+        return Button {
+            saveToAppleMusic()
+        } label: {
+            Image(systemName: saved ? "checkmark.circle.fill" : "plus.circle")
+                .font(.system(size: symbolSize, weight: .bold))
+                .foregroundStyle(saved ? .green : palette.accent)
+                .frame(width: controlSize, height: controlSize)
+                .symbolEffect(.bounce, value: saved)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .disabled(saved)
+        .accessibilityLabel(saved ? "Added to your Daily Music playlist" : "Add to your Daily Music playlist")
+        .alert("Couldn't save to Apple Music", isPresented: $saveToAppleMusicFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Check your Apple Music connection in Settings and try again.")
+        }
+    }
+
     var actionCluster: some View {
         HStack(spacing: Theme.Spacing.md) {
             heartButton
+            if canSaveToLibrary {
+                saveButton(controlSize: 52, symbolSize: 20)
+            }
             reactionButton(controlSize: 52, symbolSize: 20)
             Spacer(minLength: Theme.Spacing.sm)
             RatingBar(entry: entry, accent: palette.accent, isReadOnly: !allowsRating)
@@ -45,6 +89,9 @@ extension EntryDetailView {
     var compactActions: some View {
         HStack(spacing: 10) {
             compactHeartButton
+            if canSaveToLibrary {
+                saveButton(controlSize: 46, symbolSize: 18)
+            }
             reactionButton(controlSize: 46, symbolSize: 18)
             compactInfoButton
         }
