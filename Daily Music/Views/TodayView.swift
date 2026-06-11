@@ -230,12 +230,8 @@ private struct NewDropIncomingView: View {
                 }
             } label: {
                 Label("Check again", systemImage: "arrow.clockwise")
-                    .font(.headline.weight(.bold))
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(Theme.Brand.gradient[0])
+            .buttonStyle(PrimaryActionButtonStyle(tint: Theme.Brand.gradient[0]))
             .padding(.horizontal, Theme.Spacing.xl)
 
             Spacer()
@@ -274,10 +270,13 @@ private struct TodayErrorView: View {
                 description: Text("We couldn't load today's drop. Please try again.")
             )
 
+            // Retry after an error is a secondary action, not the screen's
+            // celebration moment — bordered, not prominent.
             Button("Retry") {
                 Task { await onRetry() }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .tint(Theme.Brand.gradient[0])
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))

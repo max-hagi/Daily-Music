@@ -176,7 +176,8 @@ struct FavoritesView: View {
             Button("Retry") {
                 Task { await model?.load(favoriteIDs: env.favoritesStore.ids) }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .tint(.pink)
         }
         .background(background)
     }
