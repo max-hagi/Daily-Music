@@ -34,6 +34,7 @@ struct GlassCardModifier<S: Shape>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .glassEffect(.regular.tint(tint), in: shape)
+            .contentShape(shape)
             .overlay {
                 shape.stroke(.white.opacity(0.22), lineWidth: 1)
             }
@@ -143,6 +144,7 @@ struct PrimaryActionButtonStyle: ButtonStyle {
 struct PressableCardButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .contentShape(Rectangle())
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .opacity(configuration.isPressed ? 0.92 : 1)
             .animation(.spring(response: 0.3, dampingFraction: 0.72), value: configuration.isPressed)

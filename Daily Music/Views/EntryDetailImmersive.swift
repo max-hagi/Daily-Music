@@ -14,19 +14,25 @@ import SwiftUI
 
 extension EntryDetailView {
     var immersiveLayout: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                songZone
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 0) {
+                    songZone {
+                        scrollToJournal(proxy)
+                    }
+                    .id(ImmersiveSection.song)
                     .frame(maxWidth: .infinity)
                     .containerRelativeFrame(.vertical)   // ≈ one viewport → snap target
-                journalZone
+                    journalZone
+                        .id(ImmersiveSection.journal)
+                }
+                .scrollTargetLayout()
             }
-            .scrollTargetLayout()
+            .scrollTargetBehavior(StorySnapScrollTargetBehavior())
         }
-        .scrollTargetBehavior(StorySnapScrollTargetBehavior())
     }
 
-    private var songZone: some View {
+    private func songZone(openJournal: @escaping () -> Void) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
             if let preArtworkMessage {
                 Text(preArtworkMessage)
@@ -45,15 +51,27 @@ extension EntryDetailView {
             ratingExperience
             inlineReactionsBar
             openInSectionWithRatingNudge
-            Spacer(minLength: 0)
-            Label("the story", systemImage: "chevron.down")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
-                .padding(.bottom, Theme.Spacing.xs)
+            Spacer(minLength: Theme.Spacing.sm)
+            JournalPreviewDock(
+                preview: JournalPreview.text(from: entry.journalMarkdown),
+                openJournal: openJournal
+            )
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.bottom, Theme.Spacing.sm)
         }
         // Clamp accessibility text sizes so the one-screen song zone stays intact;
         // the journal (reading) text below is left fully scalable.
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
+    }
+
+    private func scrollToJournal(_ proxy: ScrollViewProxy) {
+        if reduceMotion {
+            proxy.scrollTo(ImmersiveSection.journal, anchor: .top)
+        } else {
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
+                proxy.scrollTo(ImmersiveSection.journal, anchor: .top)
+            }
+        }
     }
 
     private var ratingExperience: some View {
@@ -188,6 +206,60 @@ extension EntryDetailView {
                 .opacity(shouldReduceMotion || phase.isIdentity ? 1 : 0)
                 .offset(y: shouldReduceMotion ? 0 : (phase.isIdentity ? 0 : 40))
         }
+    }
+}
+
+private enum ImmersiveSection: Hashable {
+    case song
+    case journal
+}
+
+private struct JournalPreviewDock: View {
+    let preview: String
+    let openJournal: () -> Void
+
+    var body: some View {
+        Button(action: openJournal) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Capsule()
+                    .fill(.secondary.opacity(0.34))
+                    .frame(width: 38, height: 5)
+                    .frame(maxWidth: .infinity)
+
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
+                    Text("Today's journal")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(.primary)
+
+                    Spacer(minLength: Theme.Spacing.sm)
+
+                    Image(systemName: "chevron.up")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.secondary)
+                }
+
+                Text(preview)
+                    .font(.caption.weight(.semibold))
+                    .lineSpacing(2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.top, 10)
+            .padding(.bottom, Theme.Spacing.md)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous)
+                    .stroke(.white.opacity(0.38), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.14), radius: 22, y: 12)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Read today's journal")
+        .accessibilityHint("Opens the story for today's song.")
     }
 }
 

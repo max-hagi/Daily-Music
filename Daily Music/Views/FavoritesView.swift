@@ -89,13 +89,16 @@ struct FavoritesView: View {
             }
             Section {
                 ForEach(entries) { entry in
+                    let rowShape = RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                     Button { selectedEntry = entry } label: {
                         EntryRow(entry: entry)
                             .padding(Theme.Spacing.md)
-                            .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+                            .glassCardStyle(tint: .pink.opacity(0.08), in: rowShape)
+                            .contentShape(rowShape)
                     }
                     .buttonStyle(.plain)
-                    .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+                    .contentShape(rowShape)
+                    .contentShape(.contextMenuPreview, rowShape)
                     .contextMenu {
                         Button { selectedEntry = entry } label: {
                             Label("Open Entry", systemImage: "arrow.up.forward.app")

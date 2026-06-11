@@ -265,7 +265,7 @@ struct TasteMirrorBoard: View {
 
         return Group {
             if let onTap = driverTap(h) {
-                Button(action: onTap) { content }
+                Button(action: onTap) { content.contentShape(shape) }
                     .buttonStyle(.plain)
                     .glassEffect(.regular.tint(accent.opacity(0.30)).interactive(), in: shape)
             } else {
@@ -293,7 +293,7 @@ struct TasteMirrorBoard: View {
 
         return Group {
             if let onTap = driverTap(h) {
-                Button(action: onTap) { content }
+                Button(action: onTap) { content.contentShape(shape) }
                     .buttonStyle(.plain)
                     .glassEffect(.regular.tint(accent.opacity(0.30)).interactive(), in: shape)
             } else {
@@ -426,9 +426,10 @@ struct TasteMirrorBoard: View {
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, 15)
+        .frame(maxWidth: .infinity, alignment: .leading)
 
         if let onTap {
-            Button(action: onTap) { row }
+            Button(action: onTap) { row.contentShape(shape) }
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: shape)
         } else {

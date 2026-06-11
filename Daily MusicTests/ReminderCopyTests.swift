@@ -51,4 +51,19 @@ struct ReminderCopyTests {
         )
         #expect(a == b)
     }
+
+    @Test func journalPreviewUsesFirstNonEmptyParagraphAndStripsMarkdown() {
+        let markdown = """
+
+        **Tonight** starts with a bassline that feels like a streetlight turning on.
+
+        The second paragraph should not be part of the preview.
+        """
+
+        #expect(JournalPreview.text(from: markdown) == "Tonight starts with a bassline that feels like a streetlight turning on.")
+    }
+
+    @Test func journalPreviewFallsBackWhenMarkdownIsEmpty() {
+        #expect(JournalPreview.text(from: "   \n\n ") == "Read the story behind today's song.")
+    }
 }
