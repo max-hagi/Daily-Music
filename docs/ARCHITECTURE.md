@@ -163,7 +163,9 @@ flowchart TD
 ```
 
 `VaultView` loads its own reactions map directly from `ReactionsService` (not via
-the VM) and drives the player. The hero is data-driven via the shared
+the VM) and drives the player. The hero renders through the shared
+[HeroCard](Daily%20Music/Views/Components/HeroCard.swift) gradient-stage scaffold
+and is data-driven via the shared
 [CatchUp](Daily%20Music/Models/CatchUp.swift) rule: last week's entries on days
 with no check-in, minus ones already opened in the Vault (`CatchUpLog`, a
 UserDefaults-backed store on `AppEnvironment`). The same rule feeds the Vault
@@ -326,7 +328,14 @@ flowchart TD
 
 `RatingBar` and `ReactionsBar` each own a small inline model (`RatingModel`,
 `ReactionsModel`) created from the env service — so they're self-contained and
-reusable. Guest sessions are read-only; the gating reads `SessionStore`. See
+reusable. Guest sessions are read-only; the gating reads `SessionStore`.
+
+The view is split across three files (all extensions of one `EntryDetailView`
+type): the main file holds the public view, standard layout, and shared
+backdrop/headers; [EntryDetailImmersive](Daily%20Music/Views/EntryDetailImmersive.swift)
+holds the two-zone snap layout Today uses (plus the snap scroll behavior);
+[EntryActionCluster](Daily%20Music/Views/EntryActionCluster.swift) holds the
+favorite/rating/reaction/info controls in full-size and compact variants. See
 [EntryDetailView](Daily%20Music/Views/EntryDetailView.swift) · [RatingBar](Daily%20Music/Views/RatingBar.swift) · [ReactionsBar](Daily%20Music/Views/ReactionsBar.swift) · [SongInfoSheet](Daily%20Music/Views/SongInfoSheet.swift) · [OpenInSection](Daily%20Music/Views/OpenInSection.swift).
 
 ### 3.7 Player

@@ -27,16 +27,16 @@ struct EntryDetailView: View {
     /// Daily taste signals only mutate for today's song; past entries keep the same controls read-only.
     var allowsDailyInteraction = true
 
-    @Environment(AppEnvironment.self) private var env
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var palette = ArtworkPalette()
+    @Environment(AppEnvironment.self) var env
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @State var palette = ArtworkPalette()
     @State private var showingShare = false
-    @State private var showingInfo = false
-    @State private var showingReactions = false
-    @State private var selectedReactionEmoji: String?
-    @State private var didDismissAnonymousRatingNudge = false
+    @State var showingInfo = false
+    @State var showingReactions = false
+    @State var selectedReactionEmoji: String?
+    @State var didDismissAnonymousRatingNudge = false
     // One-time tip explaining that 👍/👎 shapes Insights (Today only).
-    @AppStorage("hasSeenRatingNudgeLiquidGlass") private var hasSeenRatingNudge = false
+    @AppStorage("hasSeenRatingNudgeLiquidGlass") var hasSeenRatingNudge = false
 
     var body: some View {
         ZStack {
@@ -106,185 +106,6 @@ struct EntryDetailView: View {
         }
     }
 
-    // MARK: - Immersive layout (Today) — two zones with snap
-
-    private var immersiveLayout: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                songZone
-                    .frame(maxWidth: .infinity)
-                    .containerRelativeFrame(.vertical)   // ≈ one viewport → snap target
-                journalZone
-            }
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(StorySnapScrollTargetBehavior())
-    }
-
-    private var songZone: some View {
-        VStack(spacing: Theme.Spacing.sm) {
-            if let preArtworkMessage {
-                Text(preArtworkMessage)
-                    .font(.caption.weight(.semibold))   // shrunk greeting
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .padding(.top, Theme.Spacing.sm)
-            } else {
-                Color.clear
-                    .frame(height: 16)
-                    .padding(.top, Theme.Spacing.sm)
-            }
-            AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.card)
-                .padding(.horizontal, albumArtHorizontalPadding)
-            entryIdentityWithInlineControls(dateLabel: dateLabel)
-            ratingExperience
-            inlineReactionsBar
-            openInSectionWithRatingNudge
-            Spacer(minLength: 0)
-            Label("the story", systemImage: "chevron.down")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
-                .padding(.bottom, Theme.Spacing.xs)
-        }
-        // Clamp accessibility text sizes so the one-screen song zone stays intact;
-        // the journal (reading) text below is left fully scalable.
-        .dynamicTypeSize(...DynamicTypeSize.xLarge)
-    }
-
-    private var ratingExperience: some View {
-        VStack(spacing: 0) {
-            primaryRatingControl
-        }
-        .frame(maxWidth: 420)
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.top, Theme.Spacing.sm)
-        .padding(.bottom, 2)
-    }
-
-    private var inlineReactionsBar: some View {
-        ReactionsBar(
-            entry: entry,
-            accent: palette.accent,
-            isReadOnly: !allowsEntryReaction,
-            spacing: 6,
-            emojiFont: .body,
-            countFont: .caption2.weight(.semibold),
-            horizontalPadding: 8,
-            verticalPadding: 5
-        )
-        .glassPillStyle(tint: palette.accent.opacity(0.12), horizontalInset: 9)
-        .opacity(0.86)
-        .padding(.top, 0)
-    }
-
-    // The tip stacks ABOVE the Open In buttons — never covering them — so the
-    // primary action (actually playing the song) stays tappable on first run.
-    private var openInSectionWithRatingNudge: some View {
-        VStack(spacing: Theme.Spacing.sm) {
-            if shouldShowRatingNudge {
-                ratingNudge
-                    .padding(.horizontal)
-            }
-
-            OpenInSection(entry: entry, accent: palette.accent)
-        }
-        .padding(.top, Theme.Spacing.lg)
-        .animation(ratingNudgeAnimation, value: shouldShowRatingNudge)
-    }
-
-    private var shouldShowRatingNudge: Bool {
-        isAnonymousUser ? !didDismissAnonymousRatingNudge : !hasSeenRatingNudge
-    }
-
-    private var isAnonymousUser: Bool {
-        env.session.session?.isGuest == true
-    }
-
-    private var ratingNudgeAnimation: Animation? {
-        reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.78)
-    }
-
-    private func dismissRatingNudge() {
-        withAnimation(ratingNudgeAnimation) {
-            if isAnonymousUser {
-                didDismissAnonymousRatingNudge = true
-            } else {
-                hasSeenRatingNudge = true
-            }
-        }
-    }
-
-    /// One-time tip paired with the rating control so the thumbs read as an Insights input.
-    private var ratingNudge: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 15, weight: .heavy))
-                .foregroundStyle(.primary)
-                .frame(width: 32, height: 32)
-                .glassEffect(.regular, in: .circle)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Tune your Insights")
-                    .font(.subheadline.weight(.heavy))
-                    .foregroundStyle(.primary)
-                Text("Use 👍 or 👎 to shape your taste stats.")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: Theme.Spacing.xs)
-
-            Button {
-                dismissRatingNudge()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary.opacity(0.9))
-                    .glassIconButtonStyle(tint: .secondary.opacity(0.9), size: 30)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss tip")
-        }
-        .padding(.leading, 12)
-        .padding(.trailing, 8)
-        .padding(.vertical, 11)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 18, y: 10)
-        .transition(
-            .asymmetric(
-                insertion: .opacity.combined(with: .scale(scale: 0.94)).combined(with: .move(edge: .top)),
-                removal: .opacity.combined(with: .scale(scale: 0.96)).combined(with: .move(edge: .bottom))
-            )
-        )
-        .accessibilityElement(children: .combine)
-    }
-
-    private var journalZone: some View {
-        let shouldReduceMotion = reduceMotion
-
-        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Capsule()
-                .fill(.secondary.opacity(0.4))
-                .frame(width: 40, height: 5)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 12)
-            Text(entry.title).font(.dmTitle())
-            JournalText(markdown: entry.journalMarkdown)
-        }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.bottom, 60)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))   // opaque reading surface rises over the art
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous))
-        .scrollTransition { content, phase in
-            content
-                .opacity(shouldReduceMotion || phase.isIdentity ? 1 : 0)
-                .offset(y: shouldReduceMotion ? 0 : (phase.isIdentity ? 0 : 40))
-        }
-    }
-
     private var reactionStateLoadID: String {
         "\(entry.id.uuidString)-\(env.session.session?.userID.uuidString ?? "signed-out")-\(reactionsAreReadOnly)"
     }
@@ -296,148 +117,6 @@ struct EntryDetailView: View {
         }
 
         selectedReactionEmoji = try? await env.reactions.myReaction(entryID: entry.id)
-    }
-
-    private func toggleFavourite() {
-        Haptics.tap()
-        Task {
-            await env.favoritesStore.toggle(entry)
-        }
-    }
-
-    // MARK: - Action cluster (favorite + rating + info)
-
-    private var actionCluster: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            heartButton
-            reactionButton(controlSize: 52, symbolSize: 20)
-            Spacer(minLength: Theme.Spacing.sm)
-            RatingBar(entry: entry, accent: palette.accent, isReadOnly: !allowsRating)
-            Spacer(minLength: Theme.Spacing.sm)
-            infoButton
-        }
-        .padding(.horizontal)
-    }
-
-    private var primaryRatingControl: some View {
-        RatingBar(
-            entry: entry,
-            accent: palette.accent,
-            controlSize: 84,
-            symbolSize: 32,
-            spacing: 18,
-            isReadOnly: !allowsRating
-        )
-    }
-
-    private var compactActions: some View {
-        HStack(spacing: 10) {
-            compactHeartButton
-            reactionButton(controlSize: 46, symbolSize: 18)
-            compactInfoButton
-        }
-    }
-
-    private var heartButton: some View {
-        let store = env.favoritesStore
-        let isFav = store.isFavorite(entry)
-        return Button {
-            toggleFavourite()
-        } label: {
-            Image(systemName: isFav ? "heart.fill" : "heart")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(isFav ? .red : palette.accent)
-                .frame(width: 52, height: 52)
-                .symbolEffect(.bounce, value: isFav)   // little "pop" on favorite/unfavorite
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .accessibilityLabel(isFav ? "Remove from favorites" : "Add to favorites")
-    }
-
-    private var infoButton: some View {
-        Button { showingInfo = true } label: {
-            Image(systemName: "info")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(palette.accent)
-                .frame(width: 52, height: 52)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .accessibilityLabel("Song info")
-    }
-
-    @ViewBuilder
-    private func reactionButtonSymbol(symbolSize: CGFloat) -> some View {
-        if let selectedReactionEmoji {
-            Text(selectedReactionEmoji)
-                .font(.system(size: symbolSize + 6))
-                .lineLimit(1)
-                .fixedSize()
-        } else {
-            Image(systemName: "face.smiling")
-                .font(.system(size: symbolSize, weight: .bold))
-                .foregroundStyle(palette.accent)
-        }
-    }
-
-    private func reactionButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
-        Button {
-            showingReactions = true
-        } label: {
-            reactionButtonSymbol(symbolSize: symbolSize)
-                .frame(width: controlSize, height: controlSize)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .accessibilityLabel("React")
-        .popover(isPresented: $showingReactions, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
-            reactionsPopover
-        }
-    }
-
-    private var reactionsPopover: some View {
-        ReactionsBar(
-            entry: entry,
-            accent: palette.accent,
-            isReadOnly: !allowsEntryReaction,
-            onSelection: { emoji in
-                selectedReactionEmoji = emoji
-                showingReactions = false
-            }
-        )
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
-        .background(.regularMaterial, in: Capsule())
-        .presentationCompactAdaptation(.popover)
-    }
-
-    private var compactHeartButton: some View {
-        let store = env.favoritesStore
-        let isFav = store.isFavorite(entry)
-        return Button {
-            toggleFavourite()
-        } label: {
-            Image(systemName: isFav ? "heart.fill" : "heart")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(isFav ? .red : palette.accent)
-                .frame(width: 46, height: 46)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .accessibilityLabel(isFav ? "Remove from favorites" : "Add to favorites")
-    }
-
-    private var compactInfoButton: some View {
-        Button { showingInfo = true } label: {
-            Image(systemName: "info")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(palette.accent)
-                .frame(width: 46, height: 46)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .accessibilityLabel("Song info")
     }
 
     // MARK: - Backdrop + headers (shared)
@@ -469,14 +148,14 @@ struct EntryDetailView: View {
         usesImmersiveBackdrop && !palette.didFinishLoading
     }
 
-    private var allowsEntryReaction: Bool {
+    var allowsEntryReaction: Bool {
         allowsDailyInteraction && Calendar.current.isDateInToday(entry.date) && !reactionsAreReadOnly
     }
 
     /// Ratings (👍/👎) are interactive on ANY entry — including past Vault/Favorites
     /// songs — so people build their taste from the back-catalog (those ratings feed
     /// the taste mirror). Reactions stay release-day-only via `allowsEntryReaction`.
-    private var allowsRating: Bool { allowsDailyInteraction }
+    var allowsRating: Bool { allowsDailyInteraction }
 
     private var standardBackdropColors: [Color] {
         [palette.accent.opacity(0.45), palette.accent.opacity(0)]
@@ -541,7 +220,7 @@ struct EntryDetailView: View {
         .padding(.horizontal, Theme.Spacing.lg)
     }
 
-    private func entryIdentityWithInlineControls(dateLabel: String?) -> some View {
+    func entryIdentityWithInlineControls(dateLabel: String?) -> some View {
         VStack(spacing: 5) {
             if let dateLabel {
                 Text(dateLabel.uppercased())
@@ -611,41 +290,11 @@ struct EntryDetailView: View {
     }
 }
 
-private struct StorySnapScrollTargetBehavior: ScrollTargetBehavior {
-    private let commitRatio: CGFloat = 0.62
-    private let flickVelocity: CGFloat = 1_100
-
-    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
-        guard context.axes.contains(.vertical) else { return }
-
-        let maxOffset = max(0, context.contentSize.height - context.containerSize.height)
-        guard maxOffset > 0 else { return }
-
-        let originalY = context.originalTarget.rect.minY.clamped(to: 0...maxOffset)
-        let proposedY = target.rect.minY.clamped(to: 0...maxOffset)
-        let delta = proposedY - originalY
-        guard delta != 0 else { return }
-
-        let destinationY = delta > 0 ? maxOffset : 0
-        let travelDistance = abs(destinationY - originalY)
-        let clearsResistance = abs(delta) >= travelDistance * commitRatio
-        let isIntentionalFlick = abs(context.velocity.dy) >= flickVelocity
-
-        target.rect.origin.y = clearsResistance || isIntentionalFlick ? destinationY : originalY
-    }
-}
-
-private extension Comparable {
-    func clamped(to range: ClosedRange<Self>) -> Self {
-        min(max(self, range.lowerBound), range.upperBound)
-    }
-}
-
 // The full-screen "spinning disc" placeholder shown (immersive mode only) while
 // the artwork downloads, so Today never appears half-themed.
 private struct ArtworkLoadingScreen: View {
     let entry: DailyEntry
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
     @State private var isAnimating = false
 
     var body: some View {
