@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		08F041F74042C7B42FE29DCB /* PlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD93DFCBD69276F616E276C /* PlaybackTests.swift */; };
+		0A0A0A0A0A0A0A0A0A0A00B1 /* AppleMusicSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F1 /* AppleMusicSessionTests.swift */; };
+		0A0A0A0A0A0A0A0A0A0A00B2 /* MusicPlayerRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F2 /* MusicPlayerRoutingTests.swift */; };
+		0A0A0A0A0A0A0A0A0A0A00B3 /* SavedTracksLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F3 /* SavedTracksLogTests.swift */; };
+		0A0A0A0A0A0A0A0A0A0A00B4 /* CatalogEnrichmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F4 /* CatalogEnrichmentTests.swift */; };
 		1A2B3C4D5E6F708192A3B4C6 /* StreakTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */; };
 		1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */; };
 		2B3C4D5E6F708192A3B4C5D7 /* ReminderCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */; };
@@ -65,6 +69,10 @@
 
 /* Begin PBXFileReference section */
 		0795BD5F0CB7C0DC25730AC4 /* Daily MusicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Daily MusicTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A0A0A0A0A0A0A0A0A0A00F1 /* AppleMusicSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppleMusicSessionTests.swift; sourceTree = "<group>"; };
+		0A0A0A0A0A0A0A0A0A0A00F2 /* MusicPlayerRoutingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MusicPlayerRoutingTests.swift; sourceTree = "<group>"; };
+		0A0A0A0A0A0A0A0A0A0A00F3 /* SavedTracksLogTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SavedTracksLogTests.swift; sourceTree = "<group>"; };
+		0A0A0A0A0A0A0A0A0A0A00F4 /* CatalogEnrichmentTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogEnrichmentTests.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreakTests.swift; sourceTree = "<group>"; };
 		2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReminderCopyTests.swift; sourceTree = "<group>"; };
 		3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatchUpTests.swift; sourceTree = "<group>"; };
@@ -176,6 +184,10 @@
 				1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */,
 				2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */,
 				3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */,
+				0A0A0A0A0A0A0A0A0A0A00F1 /* AppleMusicSessionTests.swift */,
+				0A0A0A0A0A0A0A0A0A0A00F2 /* MusicPlayerRoutingTests.swift */,
+				0A0A0A0A0A0A0A0A0A0A00F3 /* SavedTracksLogTests.swift */,
+				0A0A0A0A0A0A0A0A0A0A00F4 /* CatalogEnrichmentTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -362,6 +374,10 @@
 				ABCD00112233445566778899 /* FriendNudgeTests.swift in Sources */,
 				C7F0B6A12E7D4C11A9E0A001 /* SessionStoreTests.swift in Sources */,
 				08F041F74042C7B42FE29DCB /* PlaybackTests.swift in Sources */,
+				0A0A0A0A0A0A0A0A0A0A00B1 /* AppleMusicSessionTests.swift in Sources */,
+				0A0A0A0A0A0A0A0A0A0A00B2 /* MusicPlayerRoutingTests.swift in Sources */,
+				0A0A0A0A0A0A0A0A0A0A00B3 /* SavedTracksLogTests.swift in Sources */,
+				0A0A0A0A0A0A0A0A0A0A00B4 /* CatalogEnrichmentTests.swift in Sources */,
 				78F3EE0454C3E5EB3825C97D /* TasteSeedTests.swift in Sources */,
 				757406A9EE882CBC5E185CA4 /* ArchetypeSnapshotTests.swift in Sources */,
 				9F5825D17AE73206DEAA9846 /* ArchetypeRevealTests.swift in Sources */,
