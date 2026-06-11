@@ -73,7 +73,6 @@ struct VaultView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 vaultHero(entries)
-                archiveStats(entries)
                 calendarSection(entries)
                 recentSection(entries)
             }
@@ -121,33 +120,13 @@ struct VaultView: View {
     private func vaultHero(_ entries: [DailyEntry]) -> some View {
         let missed = missedRecentEntries(entries)
 
-        return VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            HStack(alignment: .top) {
-                Image(systemName: missed.isEmpty ? "checkmark.seal.fill" : "archivebox.fill")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 58, height: 58)
-                    .background(.black.opacity(0.22), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
-
-                Spacer()
-
-                Text(missed.isEmpty ? "ALL CAUGHT UP" : "CATCH-UP MODE")
-                    .font(.caption.weight(.heavy))
-                    .foregroundStyle(.white.opacity(0.72))
-            }
-
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text(heroTitle(missedCount: missed.count))
-                    .font(.dmHero())
-                    .foregroundStyle(.white)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(heroSubtitle(missedCount: missed.count))
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.86))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
+        return HeroCard(
+            icon: missed.isEmpty ? "checkmark.seal.fill" : "archivebox.fill",
+            eyebrow: missed.isEmpty ? "ALL CAUGHT UP" : "CATCH-UP MODE",
+            title: heroTitle(missedCount: missed.count),
+            subtitle: heroSubtitle(missedCount: missed.count),
+            gradient: Theme.Surface.vaultHero
+        ) {
             if let featured = missed.first ?? entries.first {
                 Button {
                     openVaultEntry(featured)
@@ -157,17 +136,6 @@ struct VaultView: View {
                 .buttonStyle(PressableCardButtonStyle())
             }
         }
-        .padding(Theme.Spacing.lg)
-        .background(
-            LinearGradient(
-                colors: Theme.Surface.vaultHero,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous)
-        )
-        .heroGlow(Theme.Surface.vaultHero[1])
-
     }
 
     private func heroTitle(missedCount: Int) -> String {
@@ -190,34 +158,6 @@ struct VaultView: View {
         return "\(weekday)'s pick — tap to catch up"
     }
 
-    private func archiveStats(_ entries: [DailyEntry]) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            vaultMetric(value: "\(entries.count)", label: "songs", symbol: "music.note.list", tint: .teal)
-            vaultMetric(value: "\(entriesThisMonth(entries))", label: "this month", symbol: "calendar", tint: .orange)
-        }
-    }
-
-    private func vaultMetric(value: String, label: String, symbol: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Image(systemName: symbol)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(tint)
-                .frame(width: 42, height: 42)
-                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.dmStat())
-                Text(label)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Theme.Spacing.md)
-        .glassCardStyle(tint: tint.opacity(0.10), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
-    }
-
     private func calendarSection(_ entries: [DailyEntry]) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack {
@@ -225,6 +165,11 @@ struct VaultView: View {
                     Text("Archive calendar")
                         .font(.dmTitle())
                     Text("Dots mark days with a published pick.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    // The archive's only stats — demoted to quiet trivia so the
+                    // catch-up hero and calendar own the screen.
+                    Text("\(entries.count) songs · \(entriesThisMonth(entries)) this month")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

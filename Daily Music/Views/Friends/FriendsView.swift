@@ -96,14 +96,15 @@ struct FriendsView: View {
                     avatar(request.profile)
                     Text(request.profile.displayName ?? "New friend").font(.headline)
                     Spacer()
+                    // .title3 on the icons only: keeps their touch size without
+                    // inflating the name away from the app-wide .headline rows.
                     Button { Task { await store.respond(request, accept: true) } } label: {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Image(systemName: "checkmark.circle.fill").font(.title3).foregroundStyle(.green)
                     }.buttonStyle(.plain)
                     Button { Task { await store.respond(request, accept: false) } } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        Image(systemName: "xmark.circle.fill").font(.title3).foregroundStyle(.secondary)
                     }.buttonStyle(.plain)
                 }
-                .font(.title3)
             }
         }
     }

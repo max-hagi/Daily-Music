@@ -3,7 +3,7 @@
 //  Daily Music
 //
 //  The hearted entries, styled to match Vault/Insights: light gradient surface,
-//  a gradient hero, and material card rows. Recomputes whenever the FavoritesStore
+//  a compact header, and material card rows. Recomputes whenever the FavoritesStore
 //  changes, so un-hearting anywhere updates the list live.
 //
 
@@ -82,7 +82,7 @@ struct FavoritesView: View {
     private func loaded(_ entries: [DailyEntry]) -> some View {
         List {
             Section {
-                hero(count: entries.count)
+                header(count: entries.count)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -127,37 +127,25 @@ struct FavoritesView: View {
         }
     }
 
-    private func hero(count: Int) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack(alignment: .top) {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 58, height: 58)
-                    .background(.white.opacity(0.22), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
-                Spacer()
-                Text("YOUR COLLECTION")
-                    .font(.caption.weight(.heavy))
-                    .foregroundStyle(.white.opacity(0.75))
+    // Compact header instead of a gradient hero: the count is trivia, so the
+    // songs themselves stay the visual lead of the screen.
+    private func header(count: Int) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "heart.fill")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.pink)
+            VStack(alignment: .leading, spacing: 2) {
+                // Inline ternary handles singular/plural ("1 favorite" vs "3 favorites").
+                Text("\(count) \(count == 1 ? "favorite" : "favorites")")
+                    .font(.dmTitle())
+                Text("The songs that stopped you in your tracks.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
-            // Inline ternary handles singular/plural ("1 favorite" vs "3 favorites").
-            Text("\(count) \(count == 1 ? "favorite" : "favorites")")
-                .font(.dmHero())
-                .foregroundStyle(.white)
-            Text("The songs that stopped you in your tracks.")
-                .font(.callout.weight(.medium))
-                .foregroundStyle(.white.opacity(0.9))
+            Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Theme.Spacing.lg)
-        .background(
-            LinearGradient(
-                colors: [Color(red: 0.96, green: 0.27, blue: 0.45), Color(red: 0.79, green: 0.16, blue: 0.55)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous)
-        )
-        .shadow(color: Color(red: 0.96, green: 0.27, blue: 0.45).opacity(0.25), radius: 18, y: 10)
+        .padding(Theme.Spacing.md)
+        .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
     }
 
     private var emptyState: some View {
