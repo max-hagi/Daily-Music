@@ -333,7 +333,10 @@ reusable. Guest sessions are read-only; the gating reads `SessionStore`.
 The view is split across three files (all extensions of one `EntryDetailView`
 type): the main file holds the public view, standard layout, and shared
 backdrop/headers; [EntryDetailImmersive](Daily%20Music/Views/EntryDetailImmersive.swift)
-holds the two-zone snap layout Today uses (plus the snap scroll behavior);
+holds the two-zone snap layout Today uses (plus the snap scroll behavior and
+the journal preview dock, whose opacity tracks scroll offset so it fades out
+as the journal rises and back in on return — preview text comes from
+[JournalPreview](Daily%20Music/Models/JournalPreview.swift));
 [EntryActionCluster](Daily%20Music/Views/EntryActionCluster.swift) holds the
 favorite/rating/reaction/info controls in full-size and compact variants. See
 [EntryDetailView](Daily%20Music/Views/EntryDetailView.swift) · [RatingBar](Daily%20Music/Views/RatingBar.swift) · [ReactionsBar](Daily%20Music/Views/ReactionsBar.swift) · [SongInfoSheet](Daily%20Music/Views/SongInfoSheet.swift) · [OpenInSection](Daily%20Music/Views/OpenInSection.swift).
