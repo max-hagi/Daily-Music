@@ -2,31 +2,46 @@
 //  TasteMirrorBoard.swift
 //  Daily Music
 //
-//  The reusable taste-mirror visualization: archetype hero + a 2×2 grid of
-//  Liquid-Glass standout tiles (Mood/Era/Theme/Energy) + slim Genre/Language rows.
-//  Owns its own standout-detail sheet, so any screen that shows a mirror — yours in
-//  InsightsView, a friend's in FriendInsightsView — gets tappable, read-only
-//  breakdowns for free. Surrounding chrome (color wash, Wrapped button, friend
-//  header) belongs to the host screen.
+//  The reusable taste-mirror visualization, driver-first: archetype hero +
+//  "what made you" driver cards (the categories that actually decided the
+//  archetype, sized by importance) + quiet one-line rows for everything else.
+//  Owns its own standout-detail sheet, so any screen that shows a mirror —
+//  yours in InsightsView, a friend's in FriendInsightsView — gets tappable,
+//  read-only breakdowns for free. Surrounding chrome (color wash, Wrapped
+//  button, friend header) belongs to the host screen.
 //
 
 import SwiftUI
 
 struct TasteMirrorBoard: View {
     let mirror: TasteMirror
-    /// false when showing a friend's mirror → hero copy switches from "you" to "they".
+    /// false when showing a friend's mirror → copy switches from "you" to "they".
     var isCurrentUser: Bool = true
     /// Insights passes the weekly-stable archetype here; friend mirrors leave it nil.
     var displayArchetype: TasteProfile? = nil
     var onRatingChanged: (() -> Void)? = nil
+    /// Insights wires the hero's replay icon; friend mirrors leave it nil.
+    var onReplay: (() -> Void)? = nil
+    /// "Next reveal in N days" line inside the hero; nil hides it.
+    var revealCountdownText: String? = nil
     @State private var detail: StandoutDetail?
 
     // MARK: entrance animation state
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared = false
+    /// True while the one-shot full choreography (bloom + shimmer + haptic) runs.
+    @State private var rewardPlaying = false
+    @State private var bloom = false
+    @State private var shimmer = false
+
+    /// Archetype IDs that already played the full choreography this app session —
+    /// the hit stays special; re-visits get the quick entrance.
+    @MainActor private static var rewardedIDs = Set<String>()
+
+    private var displayProfile: TasteProfile { displayArchetype ?? mirror.archetype ?? .theShapeshifter }
 
     /// Accent = the archetype's lead color (neutral default while still forming).
-    private var accent: Color { (displayArchetype ?? mirror.archetype ?? .theShapeshifter).colors[0] }
+    private var accent: Color { displayProfile.colors[0] }
 
     /// The archetype ID being displayed — changing it re-triggers the entrance.
     private var currentArchetypeID: String? { (displayArchetype ?? mirror.archetype)?.id }
@@ -41,9 +56,12 @@ struct TasteMirrorBoard: View {
         )
     }
 
+    private var flare: ArchetypeRevealFlare { .flare(for: displayProfile) }
+
     var body: some View {
+        let highlights = self.highlights
         VStack(spacing: Theme.Spacing.lg) {
-            // ── Act 1: Hero ── punches in first, big spring
+            // ── Act 1: Hero ── punches in first, big spring, then blooms once
             hero(mirror)
                 .modifier(EntranceModifier(
                     appeared: appeared, reduceMotion: reduceMotion,
@@ -51,65 +69,19 @@ struct TasteMirrorBoard: View {
                     response: 0.50, damping: 0.60
                 ))
 
-            // ── Section label: fades in just after hero settles ──
-            sectionLabel("WHY YOU'RE YOU")
-                .modifier(FadeInModifier(
-                    appeared: appeared, reduceMotion: reduceMotion, delay: 0.08
-                ))
-
-            let highlights = self.highlights
-            let anyHighlights = !highlights.isEmpty
-
-            // ── Act 2: Tile grid — staggered spring pop ──
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 14),
-                                GridItem(.flexible(), spacing: 14)], spacing: 14) {
-                marqueeTile(mirror.mood,   lead: "Mood",   accent: accent,
-                            highlight: highlights["mood"], anyHighlights: anyHighlights)
-                    .modifier(EntranceModifier(
-                        appeared: appeared, reduceMotion: reduceMotion,
-                        scale: 0.80, offsetY: 16, delay: 0.10,
-                        response: 0.44, damping: 0.56
-                    ))
-                // Era never drives the archetype (decade isn't a scorer input),
-                // but it still recedes alongside the other non-drivers.
-                marqueeTile(mirror.decade, lead: "Era",    accent: accent,
-                            highlight: nil, anyHighlights: anyHighlights)
-                    .modifier(EntranceModifier(
-                        appeared: appeared, reduceMotion: reduceMotion,
-                        scale: 0.80, offsetY: 16, delay: 0.16,
-                        response: 0.44, damping: 0.56
-                    ))
-                marqueeTile(mirror.theme,  lead: "Theme",  accent: accent,
-                            highlight: highlights["theme"], anyHighlights: anyHighlights)
-                    .modifier(EntranceModifier(
-                        appeared: appeared, reduceMotion: reduceMotion,
-                        scale: 0.80, offsetY: 16, delay: 0.22,
-                        response: 0.44, damping: 0.56
-                    ))
-                energyTile(mirror.energy, accent: accent,
-                           highlight: highlights["energy"], anyHighlights: anyHighlights)
-                    .modifier(EntranceModifier(
-                        appeared: appeared, reduceMotion: reduceMotion,
-                        scale: 0.80, offsetY: 16, delay: 0.28,
-                        response: 0.44, damping: 0.56
-                    ))
+            // ── Act 2: The drivers — what actually decided the archetype ──
+            if !highlights.isEmpty {
+                driverSection(highlights)
             }
 
-            // ── Act 3: Secondary rows drift in last ──
-            secondaryRow(mirror.genre,    lead: "Genre",    accent: accent,
-                         highlight: highlights["genre"])
-                .modifier(FadeInModifier(
-                    appeared: appeared, reduceMotion: reduceMotion, delay: 0.34
-                ))
-            secondaryRow(mirror.language, lead: "Language", accent: accent)
-                .modifier(FadeInModifier(
-                    appeared: appeared, reduceMotion: reduceMotion, delay: 0.38
-                ))
+            // ── Act 3: Everything else recedes into quiet rows ──
+            quietRows(highlights)
         }
         .sheet(item: $detail) { StandoutDetailView(detail: $0, onRatingChanged: onRatingChanged) }
         .onAppear {
             guard !appeared else { return }
             appeared = true
+            playRewardIfEarned()
         }
         .onChange(of: currentArchetypeID) { _, _ in
             guard !reduceMotion else { return }
@@ -117,16 +89,48 @@ struct TasteMirrorBoard: View {
             Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 40_000_000) // 40 ms gap
                 appeared = true
+                playRewardIfEarned()
             }
+        }
+    }
+
+    // MARK: one-shot reward choreography
+
+    /// Bloom + shimmer + haptic, only when earned (first time this session per
+    /// archetype). Timings line up with the entrance springs below.
+    @MainActor private func playRewardIfEarned() {
+        guard let id = currentArchetypeID, !highlights.isEmpty,
+              !Self.rewardedIDs.contains(id) else { return }
+        Self.rewardedIDs.insert(id)
+        let flavor = BoardEntranceFlavor.flavor(for: flare.lightStyle)
+        let pattern = flare.hapticPattern
+        rewardPlaying = true
+        Task { @MainActor in
+            // Hero has settled (~0.45 s) → bloom swells.
+            try? await Task.sleep(for: .milliseconds(420))
+            if !reduceMotion {
+                withAnimation(.easeOut(duration: flavor.bloomDuration * 0.45)) { bloom = true }
+            }
+            // #1 driver card lands (~0.7 s) → reward beat + shimmer.
+            try? await Task.sleep(for: .milliseconds(300))
+            if isCurrentUser { Haptics.driverReward(pattern: pattern) }
+            guard !reduceMotion else { rewardPlaying = false; return }
+            shimmer = true
+            try? await Task.sleep(for: .milliseconds(Int(flavor.bloomDuration * 450)))
+            withAnimation(.easeInOut(duration: flavor.bloomDuration * 0.55)) { bloom = false }
+            try? await Task.sleep(for: .milliseconds(1_200))
+            rewardPlaying = false
+            shimmer = false
         }
     }
 
     // MARK: hero
 
     private func hero(_ mirror: TasteMirror) -> some View {
-        let profile = displayArchetype ?? mirror.archetype ?? .theShapeshifter
+        let profile = displayProfile
         let unlocked = displayArchetype != nil || mirror.archetype != nil
         let remaining = max(TasteMirror.Thresholds.minRatedArchetype - mirror.totalRated, 0)
+        let flavor = BoardEntranceFlavor.flavor(for: flare.lightStyle)
         return ZStack(alignment: .bottomTrailing) {
             Image(systemName: profile.symbol)
                 .font(.system(size: 168, weight: .bold))
@@ -144,6 +148,17 @@ struct TasteMirrorBoard: View {
                     Text(unlocked ? (isCurrentUser ? "YOUR ARCHETYPE" : "THEIR ARCHETYPE") : "FORMING")
                         .font(.caption.weight(.heavy))
                         .foregroundStyle(.white.opacity(0.75))
+                    if unlocked, let onReplay {
+                        Button(action: onReplay) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.white.opacity(0.7))
+                                .frame(width: 28, height: 28)
+                                .background(.white.opacity(0.14), in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Replay reveal")
+                    }
                 }
                 Text(unlocked ? profile.title : "\(remaining) to go")
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
@@ -162,13 +177,10 @@ struct TasteMirrorBoard: View {
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.white.opacity(0.62))
                     .fixedSize(horizontal: false, vertical: true)
-                if unlocked, profile.id == mirror.archetype?.id,
-                   let evidence = mirror.evidence,
-                   let receipts = archetypeReceiptsCopy(evidence: evidence, isCurrentUser: isCurrentUser) {
-                    Text(receipts)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .fixedSize(horizontal: false, vertical: true)
+                if unlocked, let revealCountdownText {
+                    Text(revealCountdownText)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.45))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -176,7 +188,8 @@ struct TasteMirrorBoard: View {
         .padding(Theme.Spacing.lg)
         .background(ArchetypeHeroBackground(profile: profile))
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: profile.colors[0].opacity(0.35), radius: 20, y: 10)
+        .shadow(color: profile.colors[0].opacity(bloom ? flavor.bloomOpacity : 0.35),
+                radius: bloom ? flavor.bloomRadius : 20, y: 10)
     }
 
     // MARK: section label
@@ -188,183 +201,259 @@ struct TasteMirrorBoard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: marquee tiles
+    // MARK: driver section
 
     @ViewBuilder
-    private func marqueeTile(_ dim: DimensionInsight, lead: String, accent: Color,
-                             highlight: DriverHighlight?, anyHighlights: Bool) -> some View {
-        if dim.isUnlocked, let s = dim.topStandout {
-            // A driver tile headlines the category that shaped the archetype,
-            // which may differ from the dimension's own standout. Heart-only
-            // driver categories can be absent from the tile data — fall back
-            // to the standout name (badge stays).
-            let driverStat = highlight.flatMap { h in dim.categories.first { $0.name == h.fact.category } }
-            let headline = driverStat?.name ?? s.name
-            tile(lead: lead,
-                 headline: headline,
-                 icon: categorySymbol(dim.id, headline) ?? dimIcon(dim.id),
-                 accent: accent,
-                 highlight: highlight,
-                 receded: highlight == nil && anyHighlights,
-                 onTap: isCurrentUser ? { detail = makeDetail(dim: dim, accent: accent, featured: driverStat) } : nil)
-        } else {
-            lockedTile(lead: lead, icon: dimIcon(dim.id))
+    private func driverSection(_ highlights: [String: DriverHighlight]) -> some View {
+        let ranked = highlights.values.sorted { $0.rank < $1.rank }
+        let title = displayProfile.title.uppercased()
+
+        sectionLabel(isCurrentUser ? "WHAT MADE YOU \(title)" : "WHAT MADE THEM \(title)")
+            .modifier(FadeInModifier(appeared: appeared, reduceMotion: reduceMotion, delay: 0.08))
+
+        if let first = ranked.first {
+            primaryDriverCard(first)
+                .modifier(EntranceModifier(
+                    appeared: appeared, reduceMotion: reduceMotion,
+                    scale: 0.82, offsetY: 18, delay: 0.12,
+                    response: 0.45, damping: 0.55
+                ))
+        }
+
+        if ranked.count > 1 {
+            HStack(alignment: .top, spacing: 14) {
+                ForEach(Array(ranked.dropFirst().prefix(2).enumerated()), id: \.element.rank) { index, h in
+                    secondaryDriverCard(h)
+                        .modifier(TiltEntranceModifier(
+                            appeared: appeared, reduceMotion: reduceMotion,
+                            angle: index == 0 ? 2 : -2,
+                            delay: 0.22 + Double(index) * 0.06
+                        ))
+                }
+                // A lone #2 stays half-width, leading-aligned.
+                if ranked.count == 2 {
+                    Color.clear.frame(maxWidth: .infinity, minHeight: 1)
+                }
+            }
         }
     }
 
-    @ViewBuilder
-    private func energyTile(_ energy: EnergyInsight, accent: Color,
-                            highlight: DriverHighlight?, anyHighlights: Bool) -> some View {
-        if energy.isUnlocked, let lean = energy.leanLabel {
-            // When energy drove the archetype, headline the driving band itself
-            // ("High energy"), not the mean-based lean label.
-            let headline = highlight.map { "\($0.fact.category) energy" } ?? lean
-            tile(lead: "Energy", headline: headline, icon: "bolt.fill", accent: accent,
-                 highlight: highlight, receded: highlight == nil && anyHighlights,
-                 onTap: isCurrentUser ? { detail = makeEnergyDetail(energy, accent: accent) } : nil)
-        } else {
-            lockedTile(lead: "Energy", icon: "bolt.fill")
-        }
-    }
-
-    /// A standout tile. `onTap == nil` renders it inert (a friend's read-only mirror):
-    /// no button, and non-interactive glass so it doesn't invite a tap.
-    /// Drivers get a louder tint + accent ring; when any driver is showing,
-    /// the rest recede so the hierarchy reads at a glance.
-    @ViewBuilder
-    private func tile(lead: String, headline: String, icon: String,
-                      accent: Color, highlight: DriverHighlight?, receded: Bool,
-                      onTap: (() -> Void)?) -> some View {
+    private func primaryDriverCard(_ h: DriverHighlight) -> some View {
         let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
-        let tint = accent.opacity(highlight != nil ? 0.30 : (receded ? 0.10 : 0.16))
-        let visual = tileVisual(lead: lead, headline: headline, icon: icon,
-                                accent: accent, highlight: highlight, receded: receded)
-            .overlay {
-                if highlight != nil {
-                    shape.strokeBorder(accent.opacity(0.5), lineWidth: 1)
-                }
+        let content = VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 5) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 10, weight: .black))
+                Text("#1 DRIVER · \(dimensionLabel(h.fact.dimensionID).uppercased())")
+                    .font(.caption2.weight(.heavy))
             }
-        if let onTap {
-            Button(action: onTap) { visual }
-                .buttonStyle(.plain)
-                .glassEffect(.regular.tint(tint).interactive(), in: shape)
-        } else {
-            visual
-                .glassEffect(.regular.tint(tint), in: shape)
+            .foregroundStyle(accent)
+            Text(headline(for: h))
+                .font(.system(size: 28, weight: .heavy, design: .rounded))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(driverReceiptCopy(fact: h.fact, isCurrentUser: isCurrentUser))
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
+        .padding(Theme.Spacing.md)
+        .overlay { shape.strokeBorder(accent.opacity(0.5), lineWidth: 1) }
+        .overlay { shimmerOverlay(in: shape) }
+
+        return Group {
+            if let onTap = driverTap(h) {
+                Button(action: onTap) { content }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.tint(accent.opacity(0.30)).interactive(), in: shape)
+            } else {
+                content
+                    .glassEffect(.regular.tint(accent.opacity(0.30)), in: shape)
+            }
         }
     }
 
-    private func tileVisual(lead: String, headline: String, icon: String, accent: Color,
-                            highlight: DriverHighlight?, receded: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                Image(systemName: icon)
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(accent)
-                    .frame(width: 40, height: 40)
-                    .background(accent.opacity(0.18), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-                Spacer(minLength: 0)
-                if let highlight {
-                    driverBadge(highlight, accent: accent)
-                }
-            }
-            Spacer(minLength: 0)
-            Text(lead.uppercased())
+    private func secondaryDriverCard(_ h: DriverHighlight) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+        let content = VStack(alignment: .leading, spacing: 6) {
+            Text("#\(h.rank) · \(dimensionLabel(h.fact.dimensionID).uppercased())")
                 .font(.caption2.weight(.heavy))
                 .foregroundStyle(accent.opacity(0.85))
-            Text(headline)
-                .font(.system(size: 20, weight: .heavy, design: .rounded))
-                .foregroundStyle(receded ? .secondary : .primary)
+            Spacer(minLength: 0)
+            Text(headline(for: h))
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
         }
-        .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
         .padding(Theme.Spacing.md)
-    }
 
-    /// The "this shaped your archetype" pill: rank 1 gets the number, the rest
-    /// just the claim (a leaderboard of #2/#3 would read as noise).
-    private func driverBadge(_ highlight: DriverHighlight, accent: Color) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: "star.fill")
-                .font(.system(size: 8, weight: .black))
-            Text(highlight.rank == 1 ? "#1" : "SHAPED YOU")
-                .font(.system(size: 9, weight: .black))
+        return Group {
+            if let onTap = driverTap(h) {
+                Button(action: onTap) { content }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.tint(accent.opacity(0.30)).interactive(), in: shape)
+            } else {
+                content
+                    .glassEffect(.regular.tint(accent.opacity(0.30)), in: shape)
+            }
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 4)
-        .background(accent, in: Capsule())
     }
 
-    private func lockedTile(lead: String, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    /// A single shimmer sweep across the #1 card during the reward moment.
+    @ViewBuilder
+    private func shimmerOverlay(in shape: RoundedRectangle) -> some View {
+        if rewardPlaying && !reduceMotion {
+            GeometryReader { geo in
+                LinearGradient(colors: [.clear, accent.opacity(0.35), .clear],
+                               startPoint: .leading, endPoint: .trailing)
+                    .frame(width: geo.size.width / 2.5)
+                    .offset(x: shimmer ? geo.size.width * 1.2 : -geo.size.width * 0.6)
+                    .animation(.easeInOut(duration: 0.7), value: shimmer)
+            }
+            .clipShape(shape)
+            .allowsHitTesting(false)
+        }
+    }
+
+    /// The driving category as a headline; energy phrases the band itself.
+    private func headline(for h: DriverHighlight) -> String {
+        h.fact.dimensionID == "energy" ? "\(h.fact.category) energy" : h.fact.category
+    }
+
+    private func dimensionLabel(_ id: String) -> String {
+        switch id {
+        case "mood":   "Mood"
+        case "theme":  "Theme"
+        case "genre":  "Genre"
+        case "energy": "Energy"
+        default:       id.capitalized
+        }
+    }
+
+    /// Tap-through for a driver card: detail sheet featured on the driving
+    /// category; falls back to the dimension's standout when the category is
+    /// heart-only (absent from tile data); nil when locked or a friend's mirror.
+    private func driverTap(_ h: DriverHighlight) -> (() -> Void)? {
+        guard isCurrentUser else { return nil }
+        if h.fact.dimensionID == "energy" {
+            guard mirror.energy.isUnlocked else { return nil }
+            return { detail = makeEnergyDetail(mirror.energy, accent: accent) }
+        }
+        guard let dim = dimension(for: h.fact.dimensionID), dim.isUnlocked else { return nil }
+        let featured = dim.categories.first { $0.name == h.fact.category }
+        return { detail = makeDetail(dim: dim, accent: accent, featured: featured) }
+    }
+
+    private func dimension(for id: String) -> DimensionInsight? {
+        switch id {
+        case "mood":  mirror.mood
+        case "theme": mirror.theme
+        case "genre": mirror.genre
+        default:      nil
+        }
+    }
+
+    // MARK: quiet rows
+
+    @ViewBuilder
+    private func quietRows(_ highlights: [String: DriverHighlight]) -> some View {
+        sectionLabel(highlights.isEmpty ? "YOUR TASTE" : "MORE ABOUT YOUR TASTE")
+            .modifier(FadeInModifier(appeared: appeared, reduceMotion: reduceMotion, delay: 0.30))
+
+        VStack(spacing: 10) {
+            if highlights["mood"] == nil { dimensionRow(mirror.mood, lead: "Mood", delay: 0.32) }
+            if highlights["theme"] == nil { dimensionRow(mirror.theme, lead: "Theme", delay: 0.35) }
+            if highlights["genre"] == nil { dimensionRow(mirror.genre, lead: "Genre", delay: 0.38) }
+            if highlights["energy"] == nil { energyRow(mirror.energy, delay: 0.41) }
+            dimensionRow(mirror.decade, lead: "Era", delay: 0.44)
+            dimensionRow(mirror.language, lead: "Language", delay: 0.47)
+        }
+    }
+
+    @ViewBuilder
+    private func dimensionRow(_ dim: DimensionInsight, lead: String, delay: Double) -> some View {
+        Group {
+            if dim.isUnlocked, let s = dim.topStandout {
+                quietRow(lead: lead, icon: dimIcon(dim.id), value: s.name,
+                         onTap: isCurrentUser ? { detail = makeDetail(dim: dim, accent: accent) } : nil)
+            } else {
+                lockedRow(lead: lead)
+            }
+        }
+        .modifier(FadeInModifier(appeared: appeared, reduceMotion: reduceMotion, delay: delay))
+    }
+
+    @ViewBuilder
+    private func energyRow(_ energy: EnergyInsight, delay: Double) -> some View {
+        Group {
+            if energy.isUnlocked, let lean = energy.leanLabel {
+                quietRow(lead: "Energy", icon: "bolt.fill", value: lean,
+                         onTap: isCurrentUser ? { detail = makeEnergyDetail(energy, accent: accent) } : nil)
+            } else {
+                lockedRow(lead: "Energy")
+            }
+        }
+        .modifier(FadeInModifier(appeared: appeared, reduceMotion: reduceMotion, delay: delay))
+    }
+
+    /// One compact stat row. `onTap == nil` renders it inert (friend mirrors).
+    @ViewBuilder
+    private func quietRow(lead: String, icon: String, value: String,
+                          onTap: (() -> Void)?) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+        let row = HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundStyle(accent)
+                .frame(width: 26)
+            Text(lead)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .lineLimit(1)
+            // Chevron only when it's actually tappable (your own mirror).
+            if onTap != nil {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, 15)
+
+        if let onTap {
+            Button(action: onTap) { row }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: shape)
+        } else {
+            row.glassEffect(.regular, in: shape)
+        }
+    }
+
+    private func lockedRow(lead: String) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
             Image(systemName: "lock.fill")
-                .font(.title3)
+                .font(.headline)
                 .foregroundStyle(.secondary)
-            Spacer(minLength: 0)
-            Text(lead.uppercased())
-                .font(.caption2.weight(.heavy))
+                .frame(width: 26)
+            Text(lead)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
-            Text("Rate more to unlock")
+            Spacer()
+            Text("Rate more")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
-        .padding(Theme.Spacing.md)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, 15)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .opacity(0.85)
-    }
-
-    // MARK: secondary rows (genre / language)
-
-    @ViewBuilder
-    private func secondaryRow(_ dim: DimensionInsight, lead: String, accent: Color,
-                              highlight: DriverHighlight? = nil) -> some View {
-        if dim.isUnlocked, let s = dim.dominant {
-            // Genre can drive the archetype (e.g. The Pophead): show the driving
-            // category and the same badge the tiles use. Language never gets one.
-            let driverStat = highlight.flatMap { h in dim.categories.first { $0.name == h.fact.category } }
-            let shown = driverStat ?? s
-            let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
-            let row = HStack(spacing: Theme.Spacing.md) {
-                Image(systemName: dimIcon(dim.id))
-                    .font(.headline)
-                    .foregroundStyle(accent)
-                    .frame(width: 26)
-                Text(lead)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                if let highlight {
-                    driverBadge(highlight, accent: accent)
-                }
-                Spacer()
-                Text(shown.name)
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(1)
-                // Chevron only when it's actually tappable (your own mirror).
-                if isCurrentUser {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, 15)
-            .overlay {
-                if highlight != nil {
-                    shape.strokeBorder(accent.opacity(0.5), lineWidth: 1)
-                }
-            }
-
-            if isCurrentUser {
-                Button { detail = makeDetail(dim: dim, accent: accent, featured: shown) } label: { row }
-                    .buttonStyle(.plain)
-                    .glassEffect(.regular.interactive(), in: shape)
-            } else {
-                row.glassEffect(.regular, in: shape)
-            }
-        }
     }
 
     // MARK: detail builders
@@ -445,7 +534,7 @@ struct TasteMirrorBoard: View {
 
 // MARK: - Entrance animation helpers
 
-/// Punchy spring scale + lift + fade. Used for the hero card and each tile.
+/// Punchy spring scale + lift + fade. Used for the hero card and driver cards.
 private struct EntranceModifier: ViewModifier {
     let appeared: Bool
     let reduceMotion: Bool
@@ -469,7 +558,29 @@ private struct EntranceModifier: ViewModifier {
     }
 }
 
-/// Simple opacity drift. Used for labels and secondary rows.
+/// Spring pop with a slight rotation settle — the #2/#3 driver cards.
+private struct TiltEntranceModifier: ViewModifier {
+    let appeared: Bool
+    let reduceMotion: Bool
+    var angle: Double = 2
+    var delay: Double = 0
+
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(appeared ? 0 : angle))
+            .scaleEffect(appeared ? 1 : 0.85)
+            .offset(y: appeared ? 0 : 14)
+            .opacity(appeared ? 1 : 0)
+            .animation(
+                reduceMotion
+                    ? .none
+                    : .spring(response: 0.45, dampingFraction: 0.6).delay(delay),
+                value: appeared
+            )
+    }
+}
+
+/// Simple opacity drift. Used for labels and quiet rows.
 private struct FadeInModifier: ViewModifier {
     let appeared: Bool
     let reduceMotion: Bool
