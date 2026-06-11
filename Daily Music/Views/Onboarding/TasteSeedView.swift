@@ -73,7 +73,7 @@ struct TasteSeedView: View {
             // Begin tapped → rating starts → first preview auto-plays. The Begin
             // tap is the consenting user gesture for audio.
             guard newPhase == .rating, let song = deck.current else { return }
-            Task { await player.toggle(song) }
+            Task { await player.toggle(song, context: .sample) }
             Task { await artPalette.load(from: song.albumArtURL) }
         }
         .onChange(of: deck.index) { _, _ in
@@ -85,7 +85,7 @@ struct TasteSeedView: View {
             // Loop: a finished preview restarts until the user swipes.
             guard phase == .rating, newState == .finished,
                   let song = deck.current, player.nowPlayingEntryID == song.id else { return }
-            Task { await player.toggle(song) }   // toggle from .finished replays fresh
+            Task { await player.toggle(song, context: .sample) }   // toggle from .finished replays fresh
         }
     }
 
@@ -284,14 +284,14 @@ struct TasteSeedView: View {
 
     // MARK: actions
     private func togglePreview(_ song: DailyEntry) {
-        Task { await player.toggle(song) }
+        Task { await player.toggle(song, context: .sample) }
     }
 
     private func judge(_ value: Int) {
         Haptics.tap()
         deck.judge(value)
         if let next = deck.current {
-            Task { await player.toggle(next) }   // different entry → starts fresh
+            Task { await player.toggle(next, context: .sample) }   // different entry → starts fresh
         } else {
             read = StartingRead.from(picks: deck.picks)
             SeedRatings.save(deck.picks)   // seed the real taste mirror
