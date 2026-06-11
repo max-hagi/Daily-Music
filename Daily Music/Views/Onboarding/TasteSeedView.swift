@@ -50,9 +50,8 @@ struct TasteSeedView: View {
     var body: some View {
         ZStack {
             // One bloom backdrop across all phases; while rating it tints from
-            // the current card's artwork and forces the dark base so the white
-            // chrome stays legible.
-            OnboardingBloomBackground(palette: bloomPalette, forceDark: phase == .rating)
+            // the current card's artwork. Adaptive chrome keeps light mode light.
+            OnboardingBloomBackground(palette: bloomPalette)
                 .ignoresSafeArea()
             switch phase {
             case .intro:  intro
@@ -64,7 +63,7 @@ struct TasteSeedView: View {
             if phase != .reveal {
                 Button("Skip") { stopAndExit(onSkip) }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(phase == .rating ? AnyShapeStyle(.white.opacity(0.7)) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(.secondary)
                     .padding()
             }
         }
@@ -154,7 +153,7 @@ struct TasteSeedView: View {
             ForEach(0..<deck.songs.count, id: \.self) { i in
                 Circle()
                     .fill(i == deck.index ? artPalette.accent
-                          : i < deck.index ? Color.white : Color.white.opacity(0.28))
+                          : i < deck.index ? Color.primary.opacity(0.75) : Color.primary.opacity(0.25))
                     .frame(width: i == deck.index ? 9 : 6, height: i == deck.index ? 9 : 6)
             }
         }
@@ -168,16 +167,16 @@ struct TasteSeedView: View {
         VStack(spacing: 8) {
             Text(song.title)
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.8)
             Text(song.artist)
                 .font(.headline)
-                .foregroundStyle(.white.opacity(0.75)).lineLimit(1)
+                .foregroundStyle(.secondary).lineLimit(1)
 
             // Live preview bar — shows the clip moving (tap the art to pause).
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.22))
-                Capsule().fill(.white)
+                Capsule().fill(Color.primary.opacity(0.18))
+                Capsule().fill(Color.primary)
                     .frame(width: 200 * player.progress)
             }
             .frame(width: 200, height: 4)
@@ -191,7 +190,7 @@ struct TasteSeedView: View {
                         .padding(.horizontal, 9).padding(.vertical, 4)
                         .background(.ultraThinMaterial, in: Capsule())
                         .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 1))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(.primary.opacity(0.85))
                 }
             }
         }
@@ -246,11 +245,22 @@ struct TasteSeedView: View {
                 Text("Your starting frequency")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
-                Text(readHeadline)
+                // The archetype is the headline — the identity moment. The
+                // mood · genre read is demoted to flavor text under it.
+                Text(profile.title)
                     .font(.system(size: 30, weight: .heavy, design: .rounded))
                     .multilineTextAlignment(.center)
-                Text("Your taste mirror starts here and sharpens every day you rate a song. Today's song is waiting once you finish setup.")
+                Text(profile.tagline)
                     .font(.callout.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Text(readHeadline)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(profile.colors.first ?? Theme.Brand.gradient[0])
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(.ultraThinMaterial, in: Capsule())
+                Text("Your taste mirror starts here and sharpens every day you rate a song. Today's song is waiting once you finish setup.")
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
