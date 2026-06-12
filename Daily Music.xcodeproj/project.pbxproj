@@ -12,6 +12,10 @@
 		0A0A0A0A0A0A0A0A0A0A00B2 /* MusicPlayerRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F2 /* MusicPlayerRoutingTests.swift */; };
 		0A0A0A0A0A0A0A0A0A0A00B3 /* SavedTracksLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F3 /* SavedTracksLogTests.swift */; };
 		0A0A0A0A0A0A0A0A0A0A00B4 /* CatalogEnrichmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F4 /* CatalogEnrichmentTests.swift */; };
+		0B0B0B0B0B0B0B0B0B0B00B1 /* SpotifyPKCETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0B0B0B0B0B0B0B0B0B00F1 /* SpotifyPKCETests.swift */; };
+		0B0B0B0B0B0B0B0B0B0B00B2 /* KeychainStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0B0B0B0B0B0B0B0B0B00F2 /* KeychainStoreTests.swift */; };
+		0B0B0B0B0B0B0B0B0B0B00B3 /* SpotifySessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0B0B0B0B0B0B0B0B0B00F3 /* SpotifySessionTests.swift */; };
+		0B0B0B0B0B0B0B0B0B0B00B4 /* SpotifyLibraryAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0B0B0B0B0B0B0B0B0B00F4 /* SpotifyLibraryAPITests.swift */; };
 		1A2B3C4D5E6F708192A3B4C6 /* StreakTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */; };
 		1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */; };
 		2B3C4D5E6F708192A3B4C5D7 /* ReminderCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */; };
@@ -73,6 +77,10 @@
 		0A0A0A0A0A0A0A0A0A0A00F2 /* MusicPlayerRoutingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MusicPlayerRoutingTests.swift; sourceTree = "<group>"; };
 		0A0A0A0A0A0A0A0A0A0A00F3 /* SavedTracksLogTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SavedTracksLogTests.swift; sourceTree = "<group>"; };
 		0A0A0A0A0A0A0A0A0A0A00F4 /* CatalogEnrichmentTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogEnrichmentTests.swift; sourceTree = "<group>"; };
+		0B0B0B0B0B0B0B0B0B0B00F1 /* SpotifyPKCETests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpotifyPKCETests.swift; sourceTree = "<group>"; };
+		0B0B0B0B0B0B0B0B0B0B00F2 /* KeychainStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainStoreTests.swift; sourceTree = "<group>"; };
+		0B0B0B0B0B0B0B0B0B0B00F3 /* SpotifySessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpotifySessionTests.swift; sourceTree = "<group>"; };
+		0B0B0B0B0B0B0B0B0B0B00F4 /* SpotifyLibraryAPITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpotifyLibraryAPITests.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreakTests.swift; sourceTree = "<group>"; };
 		2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReminderCopyTests.swift; sourceTree = "<group>"; };
 		3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatchUpTests.swift; sourceTree = "<group>"; };
@@ -188,6 +196,10 @@
 				0A0A0A0A0A0A0A0A0A0A00F2 /* MusicPlayerRoutingTests.swift */,
 				0A0A0A0A0A0A0A0A0A0A00F3 /* SavedTracksLogTests.swift */,
 				0A0A0A0A0A0A0A0A0A0A00F4 /* CatalogEnrichmentTests.swift */,
+				0B0B0B0B0B0B0B0B0B0B00F1 /* SpotifyPKCETests.swift */,
+				0B0B0B0B0B0B0B0B0B0B00F2 /* KeychainStoreTests.swift */,
+				0B0B0B0B0B0B0B0B0B0B00F3 /* SpotifySessionTests.swift */,
+				0B0B0B0B0B0B0B0B0B0B00F4 /* SpotifyLibraryAPITests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -378,6 +390,10 @@
 				0A0A0A0A0A0A0A0A0A0A00B2 /* MusicPlayerRoutingTests.swift in Sources */,
 				0A0A0A0A0A0A0A0A0A0A00B3 /* SavedTracksLogTests.swift in Sources */,
 				0A0A0A0A0A0A0A0A0A0A00B4 /* CatalogEnrichmentTests.swift in Sources */,
+				0B0B0B0B0B0B0B0B0B0B00B1 /* SpotifyPKCETests.swift in Sources */,
+				0B0B0B0B0B0B0B0B0B0B00B2 /* KeychainStoreTests.swift in Sources */,
+				0B0B0B0B0B0B0B0B0B0B00B3 /* SpotifySessionTests.swift in Sources */,
+				0B0B0B0B0B0B0B0B0B0B00B4 /* SpotifyLibraryAPITests.swift in Sources */,
 				78F3EE0454C3E5EB3825C97D /* TasteSeedTests.swift in Sources */,
 				757406A9EE882CBC5E185CA4 /* ArchetypeSnapshotTests.swift in Sources */,
 				9F5825D17AE73206DEAA9846 /* ArchetypeRevealTests.swift in Sources */,

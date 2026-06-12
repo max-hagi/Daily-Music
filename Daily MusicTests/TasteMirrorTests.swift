@@ -566,6 +566,12 @@ struct DriverHighlightsTests {
         #expect(DriverHighlights.compute(
             evidence: evidence, displayedArchetypeID: nil, liveArchetypeID: "outsider").isEmpty)
     }
+
+    @Test func twoDriverLayoutUsesFullWidthSupportingCard() {
+        #expect(DriverCardLayout.secondaryWidths(totalDrivers: 1) == [])
+        #expect(DriverCardLayout.secondaryWidths(totalDrivers: 2) == [.full])
+        #expect(DriverCardLayout.secondaryWidths(totalDrivers: 3) == [.half, .half])
+    }
 }
 
 // MARK: - BoardEntranceFlavor
@@ -593,6 +599,18 @@ struct BoardEntranceFlavorTests {
     @Test func unmappedStylesGetStandard() {
         #expect(BoardEntranceFlavor.flavor(for: .colorRibbons) == .standard)
         #expect(BoardEntranceFlavor.flavor(for: .none) == .standard)
+    }
+}
+
+// MARK: - CategorySongsSheet
+
+struct CategorySongsSheetTests {
+
+    @Test func longSongListsStartCollapsedWithPreviewLimit() {
+        #expect(CategorySongsDisclosure.visibleCount(songCount: 2, isExpanded: false) == 2)
+        #expect(CategorySongsDisclosure.visibleCount(songCount: 8, isExpanded: false) == CategorySongsDisclosure.previewLimit)
+        #expect(CategorySongsDisclosure.visibleCount(songCount: 8, isExpanded: true) == 8)
+        #expect(CategorySongsDisclosure.startsCollapsed(songCount: 8))
     }
 }
 
