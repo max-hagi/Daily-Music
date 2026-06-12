@@ -45,15 +45,16 @@ final class AppEnvironment {
     let friendNudgeStore: FriendNudgeStore
     let catchUpLog: CatchUpLog
     let appleMusic: AppleMusicSession
+    let spotify: SpotifySession
     let savedTracks: SavedTracksLog
     /// Day-one handoff: set when the taste-seed reveal completes so TodayView
     /// raises the first ceremony immediately (no settle beat). One-shot —
     /// TodayView clears it after consuming.
     var launchIntoCeremony = false
 
-    /// Every connectable service, in priority order. (Spotify joins in a
-    /// later task.)
-    var musicServices: [any MusicServiceConnection] { [appleMusic] }
+    /// Every connectable service, in priority order (Apple Music first; both
+    /// can't grant saves simultaneously today — its flag is off).
+    var musicServices: [any MusicServiceConnection] { [appleMusic, spotify] }
 
     /// The connected service that can take a library save right now, if any —
     /// drives the save button's visibility and routing.
@@ -79,7 +80,8 @@ final class AppEnvironment {
         musicEngine: MusicEngine,
         fullMusicEngine: MusicEngine? = nil,
         appleMusicAuthorizer: AppleMusicAuthorizing,
-        appleMusicLibrary: AppleMusicLibraryWriting = MusicKitLibraryWriter()
+        appleMusicLibrary: AppleMusicLibraryWriting = MusicKitLibraryWriter(),
+        spotify: SpotifySession
     ) {
         self.auth = auth
         self.entries = entries
@@ -91,6 +93,7 @@ final class AppEnvironment {
         // The Apple Music session must exist before the player (routing) and
         // the enriched catalog (capability gating) — both read it.
         self.appleMusic = AppleMusicSession(authorizer: appleMusicAuthorizer, library: appleMusicLibrary)
+        self.spotify = spotify
         self.savedTracks = SavedTracksLog()
         // Enriched lookup decorates the base when the flag is on; the session's
         // capabilities gate it per-call, so non-connected users hit the base path.
@@ -149,7 +152,12 @@ final class AppEnvironment {
             // in the simulator without the MusicKit entitlement.
             fullMusicEngine: MockMusicEngine(),
             appleMusicAuthorizer: MockAppleMusicAuthorizer(),
-            appleMusicLibrary: MockAppleMusicLibraryWriter()
+            appleMusicLibrary: MockAppleMusicLibraryWriter(),
+            // Connect-on-tap with a stubbed save so simulator saves never hit HTTP.
+            spotify: SpotifySession(
+                authenticator: MockSpotifyAuthenticator(),
+                save: { _, _ in try? await Task.sleep(for: .milliseconds(400)) }
+            )
         )
     }
 
@@ -177,7 +185,8 @@ final class AppEnvironment {
             // Dormant until FeatureFlags.appleMusicConnect: no full engine means
             // routing can never leave the preview path.
             fullMusicEngine: FeatureFlags.appleMusicConnect ? FullTrackMusicEngine() : nil,
-            appleMusicAuthorizer: MusicKitAuthorizer()
+            appleMusicAuthorizer: MusicKitAuthorizer(),
+            spotify: SpotifySession(authenticator: SpotifyAuthenticator())
         )
     }
 }

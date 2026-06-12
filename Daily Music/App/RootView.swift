@@ -89,9 +89,10 @@ struct RootView: View {
         // automatically cancels it if the view goes away.
         .task {
             guard !didRestore else { return }    // don't re-run on later redraws
-            // Silently re-derive the Apple Music connection (never prompts) so
-            // capabilities are ready before the first play. Idempotent.
+            // Silently re-derive service connections (never prompts) so
+            // capabilities are ready before the first play/save. Idempotent.
             await env.appleMusic.restore()
+            await env.spotify.restore()
             let start = Date()
             // Resolve the session + onboarding status BEFORE routing, so a returning
             // user is never briefly shown the wizard while the profile check is still
