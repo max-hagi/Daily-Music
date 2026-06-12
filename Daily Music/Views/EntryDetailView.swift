@@ -251,8 +251,15 @@ struct EntryDetailView: View {
                 .padding(.horizontal, 78)
 
                 HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-                    compactHeartButton
-                        .frame(width: 82, alignment: .leading)
+                    // Left column: "keep this song" affordances — favorite, and
+                    // (when a connected service can take it) save-to-playlist.
+                    VStack(spacing: Theme.Spacing.sm) {
+                        compactHeartButton
+                        if canSaveToLibrary {
+                            saveButton(controlSize: 46, symbolSize: 18)
+                        }
+                    }
+                    .frame(width: 82, alignment: .leading)
 
                     Spacer(minLength: 0)
 

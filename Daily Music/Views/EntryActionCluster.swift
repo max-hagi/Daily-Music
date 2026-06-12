@@ -21,7 +21,8 @@ extension EntryDetailView {
 
     /// Save is offered when ANY connected service can write to its library
     /// (Apple Music needs a subscription; Spotify needs a linked account).
-    private var canSaveToLibrary: Bool {
+    /// Internal (not private): the immersive layout file also reads it.
+    var canSaveToLibrary: Bool {
         env.librarySaveService != nil
     }
 
@@ -44,7 +45,7 @@ extension EntryDetailView {
         }
     }
 
-    private func saveButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
+    func saveButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
         let saved = env.savedTracks.isSaved(entry)
         return Button {
             saveToLibrary()
