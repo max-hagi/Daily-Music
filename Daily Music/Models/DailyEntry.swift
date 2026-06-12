@@ -53,14 +53,15 @@ struct DailyEntry: Identifiable, Hashable, Codable {
         URL(string: "https://music.apple.com/song/\(appleMusicID)")
     }
 
+    /// The bare Spotify track ID — "spotify:track:X" → "X" (already-bare IDs
+    /// pass through). Used by deep links and the Web API save.
+    var spotifyTrackID: String {
+        spotifyURI.split(separator: ":").last.map(String.init) ?? spotifyURI
+    }
+
     /// Deep link that opens this track in the Spotify app (or the web fallback).
     var spotifyURL: URL? {
-        // spotify:track:ID  →  https://open.spotify.com/track/ID
-        // Split on ":", take the last chunk (the bare ID); `.map(String.init)`
-        // converts the Substring to a String, and `?? spotifyURI` is the fallback
-        // if the split somehow produced nothing.
-        let trackID = spotifyURI.split(separator: ":").last.map(String.init) ?? spotifyURI
-        return URL(string: "https://open.spotify.com/track/\(trackID)")
+        URL(string: "https://open.spotify.com/track/\(spotifyTrackID)")
     }
 
     /// Decade label derived from `year`, e.g. 1986 → "1980s". nil if untagged.
