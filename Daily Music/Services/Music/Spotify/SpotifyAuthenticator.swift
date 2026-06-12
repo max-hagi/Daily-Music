@@ -10,6 +10,7 @@
 
 import Foundation
 import AuthenticationServices
+import UIKit
 
 struct SpotifyTokens: Codable, Equatable {
     var accessToken: String
@@ -171,7 +172,14 @@ final class SpotifyAuthenticator: NSObject, SpotifyAuthenticating, @unchecked Se
 
 extension SpotifyAuthenticator: ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        ASPresentationAnchor()
+        // Anchor to the app's real key window. A detached ASPresentationAnchor()
+        // (an orphan UIWindow with no scene) breaks the sheet's dismissal —
+        // janky animation and a lingering dim layer over the app.
+        let keyWindow = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }?
+            .keyWindow
+        return keyWindow ?? ASPresentationAnchor()
     }
 }
 
