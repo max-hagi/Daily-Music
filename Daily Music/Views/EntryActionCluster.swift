@@ -35,8 +35,8 @@ extension EntryDetailView {
                 try await service.saveToLibrary(entry)
                 env.savedTracks.markSaved(entry)
             } catch {
-                if case SpotifyLibraryAPI.APIError.notAllowlisted = error {
-                    saveErrorMessage = "This Spotify app is in development mode — your account needs to be allowlisted in the Spotify dashboard first."
+                if case SpotifyLibraryAPI.APIError.forbidden(let reason) = error {
+                    saveErrorMessage = reason   // Spotify's own explanation
                 } else {
                     saveErrorMessage = "Check your connected service in Settings and try again."
                 }

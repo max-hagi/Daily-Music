@@ -13,7 +13,10 @@ import Foundation
 struct SpotifyLibraryAPI {
     enum APIError: Error, Equatable {
         case http(Int)          // non-success status (after retries)
-        case notAllowlisted     // 403 — Spotify dev-mode user cap
+        /// 403 — Spotify refused (dev-mode allowlist, owner-Premium
+        /// requirement, …). Carries the server's own explanation so the
+        /// alert can say WHY instead of guessing.
+        case forbidden(String)
         case invalidResponse
     }
 
@@ -95,7 +98,8 @@ struct SpotifyLibraryAPI {
         case 200...299:
             return data
         case 403:
-            throw APIError.notAllowlisted
+            throw APIError.forbidden(Self.errorMessage(in: data)
+                ?? "Spotify refused the request. Check the app's status in the Spotify developer dashboard.")
         case 429 where !isRetry:
             let delay = Double(http.value(forHTTPHeaderField: "Retry-After") ?? "1") ?? 1
             try await Task.sleep(for: .seconds(delay))
@@ -103,5 +107,14 @@ struct SpotifyLibraryAPI {
         default:
             throw APIError.http(http.statusCode)
         }
+    }
+
+    /// Spotify error bodies look like {"error":{"status":403,"message":"…"}}.
+    private static func errorMessage(in data: Data) -> String? {
+        struct ErrorBody: Decodable {
+            struct Inner: Decodable { let message: String? }
+            let error: Inner
+        }
+        return (try? JSONDecoder().decode(ErrorBody.self, from: data))?.error.message
     }
 }
