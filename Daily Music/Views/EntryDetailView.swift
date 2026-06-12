@@ -33,6 +33,7 @@ struct EntryDetailView: View {
     @State private var showingShare = false
     @State var showingInfo = false
     @State var saveFailed = false
+    @State var saveErrorMessage = ""
     @State var showingReactions = false
     @State var selectedReactionEmoji: String?
     @State var didDismissAnonymousRatingNudge = false

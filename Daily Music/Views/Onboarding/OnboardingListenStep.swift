@@ -49,9 +49,13 @@ struct OnboardingListenStep: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.8),
                        value: settings.preferredStreamingService)
 
-            if FeatureFlags.appleMusicConnect,
-               settings.preferredStreamingService == .appleMusic {
-                AppleMusicConnectPrompt(accent: accent)
+            if settings.preferredStreamingService == .spotify {
+                ServiceConnectPrompt(service: .spotify, accent: accent,
+                                     title: "Connect Spotify to save songs")
+            } else if FeatureFlags.appleMusicConnect,
+                      settings.preferredStreamingService == .appleMusic {
+                ServiceConnectPrompt(service: .appleMusic, accent: accent,
+                                     title: "Connect Apple Music for full songs")
             }
         }
         .multilineTextAlignment(.center)
@@ -59,18 +63,23 @@ struct OnboardingListenStep: View {
     }
 }
 
-/// Optional, skippable connect nudge for users who picked Apple Music.
+/// Optional, skippable connect nudge for the picked service.
 /// Never blocks onboarding — it's an upgrade, not a gate.
-private struct AppleMusicConnectPrompt: View {
+private struct ServiceConnectPrompt: View {
+    let service: StreamingService
     var accent: Color
+    let title: String
     @Environment(AppEnvironment.self) private var env
 
+    private var session: (any MusicServiceConnection)? {
+        env.musicServices.first { $0.service == service }
+    }
+
     var body: some View {
-        let session = env.appleMusic
-        Group {
+        if let session {
             switch session.status {
             case .connected:
-                Label("Apple Music connected", systemImage: "checkmark.circle.fill")
+                Label("\(service.displayName) connected", systemImage: "checkmark.circle.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.green)
             case .notConnected:
@@ -78,12 +87,8 @@ private struct AppleMusicConnectPrompt: View {
                     Task { await session.connect() }
                 } label: {
                     HStack(spacing: 8) {
-                        if session.isConnecting {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "applelogo")
-                        }
-                        Text("Connect Apple Music for full songs")
+                        ServiceLogo(service: service)
+                        Text(title)
                             .font(.subheadline.weight(.semibold))
                     }
                     .padding(.horizontal, Theme.Spacing.md)
@@ -92,7 +97,6 @@ private struct AppleMusicConnectPrompt: View {
                 }
                 .buttonStyle(.plain)
                 .tint(accent)
-                .disabled(session.isConnecting)
             }
         }
     }

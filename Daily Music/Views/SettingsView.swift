@@ -254,6 +254,7 @@ private struct SettingsForm: View {
 
     private var musicSection: some View {
         Section {
+            spotifyRow
             if FeatureFlags.appleMusicConnect {
                 appleMusicRow
             }
@@ -263,7 +264,42 @@ private struct SettingsForm: View {
                 }
             }
         } header: {
-            Text(FeatureFlags.appleMusicConnect ? "Connected services" : "Music")
+            Text("Connected services")
+        } footer: {
+            Text("Disconnecting removes Daily Music's access on this device. To fully revoke it, visit spotify.com/account/apps.")
+        }
+    }
+
+    /// The Spotify entry in "Connected services" — saves only (Spotify offers
+    /// third-party apps no in-app playback).
+    @ViewBuilder
+    private var spotifyRow: some View {
+        let session = env.spotify
+        switch session.status {
+        case .connected:
+            VStack(alignment: .leading, spacing: 4) {
+                Label("Spotify connected", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("Saves songs to your Daily Music playlist.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Button("Disconnect Spotify", role: .destructive) {
+                session.disconnect()
+            }
+        case .notConnected:
+            Button {
+                Task { await session.connect() }
+            } label: {
+                HStack {
+                    Label { Text("Connect Spotify") } icon: { ServiceLogo(service: .spotify) }
+                    if session.isConnecting {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(session.isConnecting)
         }
     }
 
@@ -283,7 +319,7 @@ private struct SettingsForm: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Button("Disconnect", role: .destructive) {
+            Button("Disconnect Apple Music", role: .destructive) {
                 session.disconnect()
             }
         case .notConnected:

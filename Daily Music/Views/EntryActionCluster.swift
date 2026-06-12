@@ -34,6 +34,11 @@ extension EntryDetailView {
                 try await service.saveToLibrary(entry)
                 env.savedTracks.markSaved(entry)
             } catch {
+                if case SpotifyLibraryAPI.APIError.notAllowlisted = error {
+                    saveErrorMessage = "This Spotify app is in development mode — your account needs to be allowlisted in the Spotify dashboard first."
+                } else {
+                    saveErrorMessage = "Check your connected service in Settings and try again."
+                }
                 saveFailed = true
             }
         }
@@ -57,7 +62,7 @@ extension EntryDetailView {
         .alert("Couldn't save this song", isPresented: $saveFailed) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Check your connected service in Settings and try again.")
+            Text(saveErrorMessage)
         }
     }
 
