@@ -84,6 +84,13 @@ struct SpotifyLibraryAPI {
     private func send(_ request: URLRequest, isRetry: Bool = false) async throws -> Data {
         let (data, response) = try await transport(request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        #if DEBUG
+        if !(200...299).contains(http.statusCode) {
+            // Spotify's error body names the exact cause (not-registered vs
+            // insufficient scope vs …) — surface it while debugging.
+            print("⚠️ Spotify API \(http.statusCode) on \(request.httpMethod ?? "?") \(request.url?.path ?? "?"): \(String(data: data, encoding: .utf8) ?? "<no body>")")
+        }
+        #endif
         switch http.statusCode {
         case 200...299:
             return data
