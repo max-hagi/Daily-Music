@@ -32,8 +32,6 @@ protocol MusicEngine: AnyObject {
     /// Continue the CURRENT clip from where pause left it (play(_:) starts over).
     func resume() async
     func stop() async
-    /// Find-or-create the "Daily Music" library playlist and add the track.
-    func addToDailyPlaylist(appleMusicID: String) async throws
 
     /// Reported ~5×/sec while a preview plays: (elapsedSeconds, totalSeconds).
     var onProgress: ((TimeInterval, TimeInterval) -> Void)? { get set }
@@ -198,13 +196,6 @@ final class MusicPlayer {
         await activeEngine.seek(to: clamped)
     }
 
-    // `throws` is re-thrown to the caller (the view) so it can surface a failure
-    // to add to the playlist (e.g. not authorized). Library writes go to the
-    // full engine when wired (it owns MusicKit); otherwise the preview engine's
-    // clear "needs Apple Music" error surfaces.
-    func addToDailyPlaylist(_ entry: DailyEntry) async throws {
-        try await (fullEngine ?? previewEngine).addToDailyPlaylist(appleMusicID: entry.appleMusicID)
-    }
 }
 
 /// Simulates playback so the UI is fully explorable without MusicKit/Apple Music.
@@ -245,8 +236,5 @@ final class MockMusicEngine: MusicEngine {
     func seek(to seconds: TimeInterval) async {
         elapsed = min(max(0, seconds), simulatedDuration)
         onProgress?(elapsed, simulatedDuration)
-    }
-    func addToDailyPlaylist(appleMusicID: String) async throws {
-        try? await Task.sleep(for: .milliseconds(400))
     }
 }

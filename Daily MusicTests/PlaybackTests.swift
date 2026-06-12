@@ -16,7 +16,6 @@ struct PlaybackTests {
         func resume() async { resumeCalls += 1 }
         func stop() async {}
         func seek(to seconds: TimeInterval) async { seeks.append(seconds) }
-        func addToDailyPlaylist(appleMusicID: String) async throws {}
     }
 
     private func sampleEntry() -> DailyEntry {

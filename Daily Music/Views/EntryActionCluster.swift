@@ -19,21 +19,22 @@ extension EntryDetailView {
         }
     }
 
-    /// Save is only offered when the connected service can write to the
-    /// library (Apple Music + active subscription).
+    /// Save is offered when ANY connected service can write to its library
+    /// (Apple Music needs a subscription; Spotify needs a linked account).
     private var canSaveToLibrary: Bool {
-        env.appleMusic.status.capabilities.contains(.librarySave)
+        env.librarySaveService != nil
     }
 
-    private func saveToAppleMusic() {
-        guard !env.savedTracks.isSaved(entry) else { return }
+    private func saveToLibrary() {
+        guard let service = env.librarySaveService,
+              !env.savedTracks.isSaved(entry) else { return }
         Haptics.tap()
         Task {
             do {
-                try await env.musicPlayer.addToDailyPlaylist(entry)
+                try await service.saveToLibrary(entry)
                 env.savedTracks.markSaved(entry)
             } catch {
-                saveToAppleMusicFailed = true
+                saveFailed = true
             }
         }
     }
@@ -41,7 +42,7 @@ extension EntryDetailView {
     private func saveButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
         let saved = env.savedTracks.isSaved(entry)
         return Button {
-            saveToAppleMusic()
+            saveToLibrary()
         } label: {
             Image(systemName: saved ? "checkmark.circle.fill" : "plus.circle")
                 .font(.system(size: symbolSize, weight: .bold))
@@ -52,11 +53,11 @@ extension EntryDetailView {
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: .circle)
         .disabled(saved)
-        .accessibilityLabel(saved ? "Added to your Daily Music playlist" : "Add to your Daily Music playlist")
-        .alert("Couldn't save to Apple Music", isPresented: $saveToAppleMusicFailed) {
+        .accessibilityLabel(saved ? "Added to your Daily Music playlist" : "Save to your Daily Music playlist")
+        .alert("Couldn't save this song", isPresented: $saveFailed) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Check your Apple Music connection in Settings and try again.")
+            Text("Check your connected service in Settings and try again.")
         }
     }
 

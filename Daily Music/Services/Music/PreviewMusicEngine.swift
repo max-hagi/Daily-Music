@@ -91,11 +91,6 @@ final class PreviewMusicEngine: MusicEngine {
         }
     }
 
-    func addToDailyPlaylist(appleMusicID: String) async throws {
-        // Library writes require MusicKit (paid account). Surface clearly.
-        throw MusicEngineError.addToPlaylistUnavailable
-    }
-
     @MainActor
     private func teardown() {
         if let timeObserver { player?.removeTimeObserver(timeObserver) }

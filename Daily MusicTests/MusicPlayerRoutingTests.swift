@@ -19,7 +19,6 @@ struct MusicPlayerRoutingTests {
         func resume() async { resumeCalls += 1 }
         func stop() async {}
         func seek(to seconds: TimeInterval) async {}
-        func addToDailyPlaylist(appleMusicID: String) async throws {}
     }
 
     private func sampleEntry() -> DailyEntry {

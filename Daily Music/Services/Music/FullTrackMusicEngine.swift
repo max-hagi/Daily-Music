@@ -26,7 +26,6 @@ final class FullTrackMusicEngine: MusicEngine {
     var onProgress: ((TimeInterval, TimeInterval) -> Void)?
     var onFinish: (() -> Void)?
 
-    private static let playlistName = "Daily Music"
     private var progressTask: Task<Void, Never>?
     private var trackDuration: TimeInterval = 0
     private var reportedFinish = false
@@ -63,20 +62,6 @@ final class FullTrackMusicEngine: MusicEngine {
 
     func seek(to seconds: TimeInterval) async {
         player.playbackTime = seconds
-    }
-
-    func addToDailyPlaylist(appleMusicID: String) async throws {
-        try await ensureAuthorized()
-        let song = try await fetchSong(id: appleMusicID)
-
-        // Find-or-create: reuse our playlist if present, otherwise create it
-        // seeded with this song.
-        let existing = try await MusicLibraryRequest<Playlist>().response().items
-        if let playlist = existing.first(where: { $0.name == Self.playlistName }) {
-            try await MusicLibrary.shared.add(song, to: playlist)
-        } else {
-            _ = try await MusicLibrary.shared.createPlaylist(name: Self.playlistName, items: [song])
-        }
     }
 
     // MARK: Helpers
@@ -128,14 +113,12 @@ enum MusicEngineError: LocalizedError {
     case notAuthorized
     case songNotFound
     case noPreviewAvailable
-    case addToPlaylistUnavailable
 
     var errorDescription: String? {
         switch self {
         case .notAuthorized:    "Apple Music access wasn't granted."
         case .songNotFound:     "Couldn't find this song in the Apple Music catalog."
         case .noPreviewAvailable: "No preview is available for this song."
-        case .addToPlaylistUnavailable: "Saving to your library needs Apple Music. Use \"Open in…\" for now."
         }
     }
 }

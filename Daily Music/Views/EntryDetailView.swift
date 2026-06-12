@@ -32,7 +32,7 @@ struct EntryDetailView: View {
     @State var palette = ArtworkPalette()
     @State private var showingShare = false
     @State var showingInfo = false
-    @State var saveToAppleMusicFailed = false
+    @State var saveFailed = false
     @State var showingReactions = false
     @State var selectedReactionEmoji: String?
     @State var didDismissAnonymousRatingNudge = false

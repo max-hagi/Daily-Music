@@ -51,6 +51,16 @@ final class AppEnvironment {
     /// TodayView clears it after consuming.
     var launchIntoCeremony = false
 
+    /// Every connectable service, in priority order. (Spotify joins in a
+    /// later task.)
+    var musicServices: [any MusicServiceConnection] { [appleMusic] }
+
+    /// The connected service that can take a library save right now, if any —
+    /// drives the save button's visibility and routing.
+    var librarySaveService: (any MusicServiceConnection)? {
+        musicServices.first { $0.status.capabilities.contains(.librarySave) }
+    }
+
     init(
         auth: AuthService,
         entries: EntryService,
@@ -68,7 +78,8 @@ final class AppEnvironment {
         pushRegistration: PushRegistrationService,
         musicEngine: MusicEngine,
         fullMusicEngine: MusicEngine? = nil,
-        appleMusicAuthorizer: AppleMusicAuthorizing
+        appleMusicAuthorizer: AppleMusicAuthorizing,
+        appleMusicLibrary: AppleMusicLibraryWriting = MusicKitLibraryWriter()
     ) {
         self.auth = auth
         self.entries = entries
@@ -79,7 +90,7 @@ final class AppEnvironment {
         self.ratings = ratings
         // The Apple Music session must exist before the player (routing) and
         // the enriched catalog (capability gating) — both read it.
-        self.appleMusic = AppleMusicSession(authorizer: appleMusicAuthorizer)
+        self.appleMusic = AppleMusicSession(authorizer: appleMusicAuthorizer, library: appleMusicLibrary)
         self.savedTracks = SavedTracksLog()
         // Enriched lookup decorates the base when the flag is on; the session's
         // capabilities gate it per-call, so non-connected users hit the base path.
@@ -137,7 +148,8 @@ final class AppEnvironment {
             // connected state (full playback, saves, rich metadata) explorable
             // in the simulator without the MusicKit entitlement.
             fullMusicEngine: MockMusicEngine(),
-            appleMusicAuthorizer: MockAppleMusicAuthorizer()
+            appleMusicAuthorizer: MockAppleMusicAuthorizer(),
+            appleMusicLibrary: MockAppleMusicLibraryWriter()
         )
     }
 

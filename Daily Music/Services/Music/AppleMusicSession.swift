@@ -66,6 +66,39 @@ struct MusicKitAuthorizer: AppleMusicAuthorizing {
     }
 }
 
+/// Seam over MusicKit library writes, so the session is testable and the
+/// mock environment can fake saves without the entitlement.
+protocol AppleMusicLibraryWriting: Sendable {
+    func addToDailyPlaylist(appleMusicID: String) async throws
+}
+
+/// Live MusicKit implementation — find-or-create the "Daily Music" playlist.
+/// (Moved here from FullTrackMusicEngine: saving is a connection concern,
+/// not a playback concern.)
+struct MusicKitLibraryWriter: AppleMusicLibraryWriting {
+    private static let playlistName = "Daily Music"
+
+    func addToDailyPlaylist(appleMusicID: String) async throws {
+        let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(appleMusicID))
+        guard let song = try await request.response().items.first else {
+            throw MusicEngineError.songNotFound
+        }
+        let existing = try await MusicLibraryRequest<Playlist>().response().items
+        if let playlist = existing.first(where: { $0.name == Self.playlistName }) {
+            try await MusicLibrary.shared.add(song, to: playlist)
+        } else {
+            _ = try await MusicLibrary.shared.createPlaylist(name: Self.playlistName, items: [song])
+        }
+    }
+}
+
+/// Dev/sim stand-in: pretends the save worked.
+struct MockAppleMusicLibraryWriter: AppleMusicLibraryWriting {
+    func addToDailyPlaylist(appleMusicID: String) async throws {
+        try? await Task.sleep(for: .milliseconds(400))
+    }
+}
+
 @MainActor
 @Observable
 final class AppleMusicSession: MusicServiceConnection {
@@ -74,13 +107,23 @@ final class AppleMusicSession: MusicServiceConnection {
     private(set) var isConnecting = false
 
     private let authorizer: AppleMusicAuthorizing
+    private let library: AppleMusicLibraryWriting
     private let defaults: UserDefaults
     private static let connectedKey = "appleMusic.userConnected"
     private var updatesTask: Task<Void, Never>?
 
-    init(authorizer: AppleMusicAuthorizing, defaults: UserDefaults = .standard) {
+    init(
+        authorizer: AppleMusicAuthorizing,
+        library: AppleMusicLibraryWriting = MusicKitLibraryWriter(),
+        defaults: UserDefaults = .standard
+    ) {
         self.authorizer = authorizer
+        self.library = library
         self.defaults = defaults
+    }
+
+    func saveToLibrary(_ entry: DailyEntry) async throws {
+        try await library.addToDailyPlaylist(appleMusicID: entry.appleMusicID)
     }
 
     /// Launch path: re-derive status ONLY if the user connected before and iOS

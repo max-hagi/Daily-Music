@@ -38,4 +38,8 @@ protocol MusicServiceConnection: AnyObject {
     var status: MusicConnectionStatus { get }
     func connect() async
     func disconnect()
+    /// Save a track to this service's library presence for the app (the
+    /// private "Daily Music" playlist). Only meaningful when capabilities
+    /// contain .librarySave — callers gate on that.
+    func saveToLibrary(_ entry: DailyEntry) async throws
 }
