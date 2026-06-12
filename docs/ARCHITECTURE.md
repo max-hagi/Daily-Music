@@ -375,6 +375,24 @@ distinguishes `play()` (fresh start) from `resume()` (continue after pause) —
 pause/play must NOT restart the clip — and `MusicPlayer.restart()` backs the
 player's back-to-start button.
 
+**Library saves** route through the connection layer, not the engines:
+`MusicServiceConnection.saveToLibrary(_:)` is implemented by each session and
+the entry-detail save button asks `AppEnvironment.librarySaveService` (first
+connected service granting `.librarySave`) — so Apple Music and Spotify are
+symmetric, and engines are pure playback.
+
+**Spotify connection** (`SpotifySession` + `SpotifyAuthenticator` +
+`SpotifyLibraryAPI`, in `Services/Music/Spotify/`): **live, no feature flag.**
+Explicit connect via OAuth PKCE (`ASWebAuthenticationSession`,
+`dailymusic://spotify-callback`, no client secret anywhere); tokens live in
+the Keychain (`daily-music.spotify`) with rotating refresh. Capabilities are
+`[.librarySave]` only — Spotify offers third-party apps no in-app playback and
+no rich metadata. Saves find-or-create a private "Daily Music" playlist
+(playlist ID cached in UserDefaults `spotify.dailyPlaylistID`; 404 re-resolves
+once). A rejected refresh quietly drops the session to `.notConnected`.
+Dev-mode caveat: until Spotify's extended-quota review, only allowlisted
+accounts (~25) can connect.
+
 **Apple Music connection** (`AppleMusicSession`, on `AppEnvironment`): an
 explicit user "Connect" (Settings → Connected services, or the optional
 onboarding nudge) runs MusicKit authorization + a subscription check and maps
@@ -475,7 +493,8 @@ table is the fastest way to go from "this data is wrong" to "this table/RPC".
 | [ReactionsService](Daily%20Music/Services/ReactionsService.swift) | [SupabaseReactionsService](Daily%20Music/Services/Supabase/SupabaseReactionsService.swift) | table `reactions` |
 | [RatingService](Daily%20Music/Services/RatingService.swift) | [SupabaseRatingService](Daily%20Music/Services/Supabase/SupabaseRatingService.swift) | table `song_ratings` |
 | [CatalogInfoService](Daily%20Music/Services/CatalogInfoService.swift) | `LiveCatalogInfoService` (wrapped by `EnrichedCatalogInfoService` when `FeatureFlags.appleMusicConnect`) | iTunes lookup API (external) · MusicKit catalog extras (editorial notes, hi-res art) when connected |
-| [MusicServiceConnection](Daily%20Music/Services/Music/MusicServiceConnection.swift) | [AppleMusicSession](Daily%20Music/Services/Music/AppleMusicSession.swift) | MusicKit auth + subscription via `AppleMusicAuthorizing` seam · UserDefaults `appleMusic.userConnected` |
+| [MusicServiceConnection](Daily%20Music/Services/Music/MusicServiceConnection.swift) | [AppleMusicSession](Daily%20Music/Services/Music/AppleMusicSession.swift) | MusicKit auth + subscription via `AppleMusicAuthorizing` seam · library writes via `AppleMusicLibraryWriting` · UserDefaults `appleMusic.userConnected` |
+| [MusicServiceConnection](Daily%20Music/Services/Music/MusicServiceConnection.swift) | [SpotifySession](Daily%20Music/Services/Music/Spotify/SpotifySession.swift) | OAuth PKCE ([SpotifyAuthenticator](Daily%20Music/Services/Music/Spotify/SpotifyAuthenticator.swift)) · Keychain `daily-music.spotify` · Web API ([SpotifyLibraryAPI](Daily%20Music/Services/Music/Spotify/SpotifyLibraryAPI.swift)) · UserDefaults `spotify.dailyPlaylistID` |
 | — ([SavedTracksLog](Daily%20Music/Models/SavedTracksLog.swift), store) | — | UserDefaults `appleMusic.savedEntryIDs` (playlist-save state) |
 | [SettingsService](Daily%20Music/Services/SettingsService.swift) | [SupabaseSettingsService](Daily%20Music/Services/Supabase/SupabaseSettingsService.swift) | table `profiles` |
 | [ProfileService](Daily%20Music/Services/ProfileService.swift) | [SupabaseProfileService](Daily%20Music/Services/Supabase/SupabaseProfileService.swift) | table `profiles` · storage `avatars` |
@@ -582,3 +601,5 @@ visual/haptic data for the reveal animation. See [Models/](Daily%20Music/Models)
 | Full tracks not playing for a subscriber | `MusicPlayer.startFresh` routing + [AppleMusicSession](Daily%20Music/Services/Music/AppleMusicSession.swift) capabilities + `FeatureFlags.appleMusicConnect` (engine isn't even constructed when off) |
 | Save button missing on entry detail | `.librarySave` capability — needs connected **and** subscribed, plus the feature flag |
 | Editorial notes missing in info sheet | `EnrichedCatalogInfoService` gating (`.richMetadata`) — falls back to plain iTunes lookup on any MusicKit failure |
+| Spotify connect fails / row stuck on Connect | [SpotifyAuthenticator](Daily%20Music/Services/Music/Spotify/SpotifyAuthenticator.swift) — redirect URI must match the dashboard registration character-exactly (`dailymusic://spotify-callback`) |
+| Spotify save fails with the dev-mode message (403) | The account isn't allowlisted — Spotify dashboard → app → User Management |
