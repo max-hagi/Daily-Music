@@ -3,10 +3,9 @@
 //  Daily Music
 //
 //  The "missed drops" rule, shared by the Vault hero and the Vault tab badge.
-//  A drop is missed when it was published in the last week on a day the user
-//  never opened the app — AND they haven't since caught up on it in the Vault.
-//  The second condition is what makes catching up satisfying: opening a missed
-//  song visibly clears it from the hero and the badge (closure, not nagging).
+//  A drop is "rescuable" (surfaced as missed) when it's inside the catch-up
+//  window and the user hasn't heard it yet; hearing it clears it. Derived from
+//  ListenStatus so listen state has a single source of truth.
 //
 
 import Foundation
@@ -29,37 +28,5 @@ enum CatchUp {
             ListenStatus.of(entryDate: $0.date, heardAt: heardAt[$0.id],
                             calendar: calendar, asOf: now) == .rescuable
         }
-    }
-}
-
-/// Remembers which archived entries the user has opened, so missed drops clear
-/// once they're caught up on. Local-only (UserDefaults): a check-in row records
-/// "opened the app today", not "heard Tuesday's song" — this fills that gap.
-@MainActor
-@Observable
-final class CatchUpLog {
-    private(set) var heardEntryIDs: Set<UUID>
-
-    private let defaults: UserDefaults
-    private static let key = "vault.heardEntryIDs"
-    /// Keep the log bounded — entries older than the catch-up window can't
-    /// affect anything, so a generous cap is plenty.
-    private static let maxStored = 120
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        let stored = defaults.stringArray(forKey: Self.key) ?? []
-        heardEntryIDs = Set(stored.compactMap(UUID.init(uuidString:)))
-    }
-
-    func markHeard(_ entry: DailyEntry) {
-        guard !heardEntryIDs.contains(entry.id) else { return }
-        heardEntryIDs.insert(entry.id)
-        var stored = defaults.stringArray(forKey: Self.key) ?? []
-        stored.append(entry.id.uuidString)
-        if stored.count > Self.maxStored {
-            stored.removeFirst(stored.count - Self.maxStored)
-        }
-        defaults.set(stored, forKey: Self.key)
     }
 }

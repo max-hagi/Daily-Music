@@ -55,20 +55,6 @@ struct CatchUpTests {
         )
         #expect(missed.isEmpty)
     }
-
-    @Test func logPersistsAndRestoresHeardIDs() async {
-        let suiteName = "catchup-tests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let target = entry(daysAgo: 2)
-        let log = await CatchUpLog(defaults: defaults)
-        await log.markHeard(target)
-        await #expect(log.heardEntryIDs.contains(target.id))
-
-        let restored = await CatchUpLog(defaults: defaults)
-        await #expect(restored.heardEntryIDs.contains(target.id))
-    }
 }
 
 struct TodayDropTimelineScheduleTests {

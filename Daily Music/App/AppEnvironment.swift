@@ -45,7 +45,6 @@ final class AppEnvironment {
     let profileStore: ProfileStore
     let friendsStore: FriendsStore
     let friendNudgeStore: FriendNudgeStore
-    let catchUpLog: CatchUpLog
     let appleMusic: AppleMusicSession
     let spotify: SpotifySession
     let savedTracks: SavedTracksLog
@@ -126,7 +125,6 @@ final class AppEnvironment {
         self.profileStore = ProfileStore(service: profiles)
         self.friendsStore = FriendsStore(service: friends)
         self.friendNudgeStore = FriendNudgeStore(service: friendNudges)
-        self.catchUpLog = CatchUpLog()
     }
 
     // Two factory methods that assemble a fully-wired container. Picking `mock()`
