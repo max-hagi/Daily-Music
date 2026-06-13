@@ -18,13 +18,17 @@ struct CalendarMonthView: View {
     // entryID → the emoji THIS user reacted with, so a reacted day shows the emoji
     // in place of the generic dot.
     private let reactionsByEntry: [UUID: String]
+    // entryID → its ListenStatus, used to colour the day marker (optional).
+    private let statusForEntry: ((DailyEntry) -> ListenStatus)?
     // Which month is on screen. @State so the chevrons can change it and redraw.
     @State private var month: Date
     private let calendar = Calendar.current
 
     // A CUSTOM init. Normally SwiftUI synthesizes one, but here we transform the
     // input and seed @State from a computed value.
-    init(entries: [DailyEntry], reactions: [UUID: String] = [:], onSelect: ((DailyEntry) -> Void)? = nil) {
+    init(entries: [DailyEntry], reactions: [UUID: String] = [:],
+         status: ((DailyEntry) -> ListenStatus)? = nil,
+         onSelect: ((DailyEntry) -> Void)? = nil) {
         let cal = Calendar.current
         var dict: [Date: DailyEntry] = [:]
         for entry in entries {
@@ -32,6 +36,7 @@ struct CalendarMonthView: View {
         }
         self.entriesByDay = dict
         self.reactionsByEntry = reactions
+        self.statusForEntry = status
         self.onSelect = onSelect
 
         // Open on the current month so today's date is visible on first load.
@@ -156,7 +161,7 @@ struct CalendarMonthView: View {
                                 .fixedSize()
                         } else {
                             Circle()
-                                .fill(Color.accentColor)
+                                .fill((statusForEntry?(entry).indicatorColor) ?? Color.accentColor)
                                 .frame(width: 5, height: 5)
                         }
                     }

@@ -69,6 +69,10 @@ struct VaultView: View {
     private func content(_ entries: [DailyEntry]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                CollectionCountCard(
+                    total: env.listensStore.collectionCount,
+                    thisMonth: env.listensStore.collectedThisMonth()
+                )
                 vaultHero(entries)
                 calendarSection(entries)
                 recentSection(entries)
@@ -162,18 +166,14 @@ struct VaultView: View {
                     Text("Dots mark days with a published pick.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    // The archive's only stats — demoted to quiet trivia so the
-                    // catch-up hero and calendar own the screen.
-                    Text("\(entries.count) songs · \(entriesThisMonth(entries)) this month")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: "circle.grid.3x3.fill")
                     .foregroundStyle(.teal)
             }
 
-            CalendarMonthView(entries: entries, reactions: reactions) { entry in
+            CalendarMonthView(entries: entries, reactions: reactions,
+                              status: { env.listensStore.status(for: $0) }) { entry in
                 openVaultEntry(entry)
             }
         }
@@ -205,24 +205,17 @@ struct VaultView: View {
                 }
             }
 
-            VStack(spacing: 10) {
-                // `.prefix(5)` takes at most the first five; ForEach needs an Array,
-                // and no `id:` is required because DailyEntry is Identifiable.
-                ForEach(Array(entries.prefix(5))) { entry in
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12) {
+                ForEach(Array(entries.prefix(12))) { entry in
                     Button {
                         openVaultEntry(entry)
                     } label: {
-                        VaultTintedEntryRow(entry: entry)
+                        SleeveView(entry: entry, status: env.listensStore.status(for: entry), size: 72)
                     }
                     .buttonStyle(PressableCardButtonStyle())
                 }
             }
         }
-    }
-
-    // Count entries whose date is in the current month (toGranularity: .month).
-    private func entriesThisMonth(_ entries: [DailyEntry]) -> Int {
-        entries.filter { calendar.isDate($0.date, equalTo: Date(), toGranularity: .month) }.count
     }
 
     private func openVaultEntry(_ entry: DailyEntry, openedFromExternalSource: Bool = false) {
