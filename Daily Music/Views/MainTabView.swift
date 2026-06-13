@@ -16,7 +16,6 @@ struct MainTabView: View {
     // Cached inputs for the Vault "missed drops" badge, so catching up in the
     // Vault recomputes the count instantly without refetching.
     @State private var publishedEntries: [DailyEntry] = []
-    @State private var checkInDays: Set<Date> = []
     @AppStorage("pendingTodayRoute") private var pendingTodayRoute = false
     @AppStorage("pendingWrappedRoute") private var pendingWrappedRoute = false
 
@@ -42,7 +41,6 @@ struct MainTabView: View {
         .task { await refreshReminderWindow() }
         .task {
             publishedEntries = (try? await env.entries.publishedHistory()) ?? []
-            checkInDays = (try? await env.checkIns.checkInDates()) ?? []
         }
         .onAppear {
             consumePendingTodayRouteIfNeeded()
@@ -52,13 +50,12 @@ struct MainTabView: View {
         .onChange(of: pendingWrappedRoute) { _, _ in consumePendingWrappedRouteIfNeeded() }
     }
 
-    /// Recomputes on any state it reads (entries, check-ins, catch-up log), so
-    /// opening a missed song in the Vault decrements the badge immediately.
+    /// Recomputes on the listens it reads, so opening a missed song in the Vault
+    /// decrements the badge immediately.
     private var missedDropCount: Int {
         CatchUp.missedEntries(
             in: publishedEntries,
-            checkInDays: checkInDays,
-            heardEntryIDs: env.catchUpLog.heardEntryIDs
+            heardAt: env.listensStore.heardAt
         ).count
     }
 

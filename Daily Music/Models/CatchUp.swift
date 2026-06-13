@@ -15,25 +15,19 @@ enum CatchUp {
     /// How far back a drop still "counts" as missed. Older ones are just archive.
     static let windowDays = 7
 
-    /// Entries from the window (excluding today — that's the Today tab's moment)
-    /// published on days with no check-in, minus the ones already caught up on.
+    /// Entries still rescuable: missed but inside the window. Drives the Vault
+    /// hero and tab badge. Derived from ListenStatus, so an entry clears the
+    /// moment it's heard (rescuable → caughtUp). Note: opening the app without
+    /// listening no longer clears it — only an actual listen does.
     static func missedEntries(
         in entries: [DailyEntry],
-        checkInDays: Set<Date>,
-        heardEntryIDs: Set<UUID>,
+        heardAt: [UUID: Date],
         calendar: Calendar = .current,
         asOf now: Date = Date()
     ) -> [DailyEntry] {
-        let today = calendar.startOfDay(for: now)
-        guard let cutoff = calendar.date(byAdding: .day, value: -windowDays, to: today) else { return [] }
-        let openedDays = Set(checkInDays.map { calendar.startOfDay(for: $0) })
-
-        return entries.filter { entry in
-            let day = calendar.startOfDay(for: entry.date)
-            return day >= cutoff
-                && day < today
-                && !openedDays.contains(day)
-                && !heardEntryIDs.contains(entry.id)
+        entries.filter {
+            ListenStatus.of(entryDate: $0.date, heardAt: heardAt[$0.id],
+                            calendar: calendar, asOf: now) == .rescuable
         }
     }
 }

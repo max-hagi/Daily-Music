@@ -21,23 +21,21 @@ struct CatchUpTests {
         )
     }
 
-    @Test func dropsOnUnopenedDaysCountAsMissed() {
-        let missedEntry = entry(daysAgo: 2)
-        let heardEntry = entry(daysAgo: 1)
+    @Test func dropsWithinWindowNotHeardAreRescuable() {
+        let rescuable = entry(daysAgo: 2)
+        let heard = entry(daysAgo: 1)
         let missed = CatchUp.missedEntries(
-            in: [missedEntry, heardEntry],
-            checkInDays: [day(-1)],          // opened yesterday, not 2 days ago
-            heardEntryIDs: [],
+            in: [rescuable, heard],
+            heardAt: [heard.id: day(-1)],
             calendar: calendar, asOf: now
         )
-        #expect(missed.map(\.id) == [missedEntry.id])
+        #expect(missed.map(\.id) == [rescuable.id])
     }
 
     @Test func todayIsNeverMissed() {
         let todays = entry(daysAgo: 0)
         let missed = CatchUp.missedEntries(
-            in: [todays], checkInDays: [], heardEntryIDs: [],
-            calendar: calendar, asOf: now
+            in: [todays], heardAt: [:], calendar: calendar, asOf: now
         )
         #expect(missed.isEmpty)
     }
@@ -45,8 +43,7 @@ struct CatchUpTests {
     @Test func dropsOlderThanTheWindowAreJustArchive() {
         let old = entry(daysAgo: 8)
         let missed = CatchUp.missedEntries(
-            in: [old], checkInDays: [], heardEntryIDs: [],
-            calendar: calendar, asOf: now
+            in: [old], heardAt: [:], calendar: calendar, asOf: now
         )
         #expect(missed.isEmpty)
     }
@@ -54,8 +51,7 @@ struct CatchUpTests {
     @Test func catchingUpClearsTheEntry() {
         let target = entry(daysAgo: 3)
         let missed = CatchUp.missedEntries(
-            in: [target], checkInDays: [], heardEntryIDs: [target.id],
-            calendar: calendar, asOf: now
+            in: [target], heardAt: [target.id: day(-1)], calendar: calendar, asOf: now
         )
         #expect(missed.isEmpty)
     }

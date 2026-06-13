@@ -19,8 +19,6 @@ struct VaultView: View {
     @State private var selectedVaultEntryOpenedFromExternalSource = false
     // entryID → my reaction emoji, used to stamp the calendar days.
     @State private var reactions: [UUID: String] = [:]
-    // Days the user opened the app — drives the data-driven catch-up hero.
-    @State private var checkInDays: Set<Date> = []
 
     init(
         entryToOpen: Binding<DailyEntry?> = .constant(nil),
@@ -59,7 +57,6 @@ struct VaultView: View {
             await model?.load()
             // Stamp the calendar with this user's reactions (best-effort; empty on failure).
             reactions = (try? await env.reactions.myReactions()) ?? [:]
-            checkInDays = (try? await env.checkIns.checkInDates()) ?? []
             openPendingEntry()
         }
         .onChange(of: entryToOpen?.id) { _, _ in
@@ -82,7 +79,6 @@ struct VaultView: View {
         .refreshable {
             await model?.load()
             reactions = (try? await env.reactions.myReactions()) ?? [:]
-            checkInDays = (try? await env.checkIns.checkInDates()) ?? []
             Haptics.tap()
         }
         
@@ -108,8 +104,7 @@ struct VaultView: View {
     private func missedRecentEntries(_ entries: [DailyEntry]) -> [DailyEntry] {
         CatchUp.missedEntries(
             in: entries,
-            checkInDays: checkInDays,
-            heardEntryIDs: env.catchUpLog.heardEntryIDs,
+            heardAt: env.listensStore.heardAt,
             calendar: calendar
         )
     }
