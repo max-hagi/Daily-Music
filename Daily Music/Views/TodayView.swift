@@ -72,7 +72,7 @@ struct TodayView: View {
                     }
                 }
 
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if let streak = model?.streak, streak.current > 0 {
                         TodayToolbarStreakBadge(streak: streak)
                     }
@@ -290,33 +290,62 @@ private struct TodayToolbarStreakBadge: View {
     // Remember the last milestone we celebrated so reopening the app on the
     // same day doesn't replay the haptic.
     @AppStorage("lastCelebratedStreakMilestone") private var lastCelebratedMilestone = 0
+    // Day-stamp of the last flare, so the once-a-day flourish never replays.
+    @AppStorage("lastStreakFlareDay") private var lastStreakFlareDay = 0.0
     @State private var showingDetail = false
+    @State private var flaring = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button {
             Haptics.select()
             showingDetail = true
         } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 Image(systemName: "flame.fill")
-                    .font(.caption.weight(.heavy))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
+                    .scaleEffect(flaring && !reduceMotion ? 1.5 : 1)
+                    .overlay {
+                        if flaring && !reduceMotion {
+                            Circle()
+                                .stroke(.orange.opacity(0.6), lineWidth: 2)
+                                .scaleEffect(flaring ? 2.6 : 0.6)
+                                .opacity(flaring ? 0 : 0.8)
+                        }
+                    }
 
                 Text(label)
-                    .font(.caption.weight(.heavy))
+                    .font(.caption.weight(.semibold))
                     .monospacedDigit()
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
             }
-            .glassPillStyle(tint: .orange.opacity(streak.isMilestoneToday ? 0.22 : 0.08))
+            .glassPillStyle(tint: .orange.opacity(streak.isMilestoneToday ? 0.22 : 0))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
-        .onAppear { celebrateMilestoneIfNeeded() }
+        .onAppear {
+            celebrateMilestoneIfNeeded()
+            flareIfNeeded()
+        }
         .popover(isPresented: $showingDetail, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
             streakDetail
                 .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private func flareIfNeeded() {
+        let last = lastStreakFlareDay == 0 ? nil : Date(timeIntervalSinceReferenceDate: lastStreakFlareDay)
+        guard StreakFlare.shouldFlare(lastFlareDay: last, isAliveToday: streak.isAliveToday) else { return }
+        lastStreakFlareDay = Date().timeIntervalSinceReferenceDate
+        Haptics.tap()
+        guard !reduceMotion else { return }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.5)) { flaring = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(650))
+            withAnimation(.easeOut(duration: 0.25)) { flaring = false }
         }
     }
 
