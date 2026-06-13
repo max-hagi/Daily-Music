@@ -42,6 +42,11 @@ final class ListensStore {
     /// Hero metric: records collected (every row with a heard_at).
     var collectionCount: Int { heardAt.count }
 
+    /// Records collected in the same calendar month as `now`.
+    func collectedThisMonth(asOf now: Date = Date(), calendar: Calendar = .current) -> Int {
+        heardAt.values.filter { calendar.isDate($0, equalTo: now, toGranularity: .month) }.count
+    }
+
     /// Merge server rows into the cache, keeping the earliest heard_at per entry.
     func load() async {
         guard let remote = try? await service.heardEntries() else { return }

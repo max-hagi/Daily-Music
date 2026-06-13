@@ -216,4 +216,12 @@ struct ListensStoreTests {
         await store.load()
         #expect(store.isHeard(e))
     }
+
+    @Test func collectedThisMonthCountsOnlyThisMonth() async {
+        let store = ListensStore(service: MockListensService(), defaults: freshDefaults())
+        store.markHeard(entry())
+        store.markHeard(entry())
+        #expect(store.collectedThisMonth() == 2)
+        #expect(store.collectedThisMonth(asOf: .distantFuture) == 0)
+    }
 }
