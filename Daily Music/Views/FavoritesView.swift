@@ -80,53 +80,78 @@ struct FavoritesView: View {
     }
 
     private func loaded(_ entries: [DailyEntry]) -> some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 header(count: entries.count)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-            Section {
-                ForEach(entries) { entry in
-                    let rowShape = RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                    Button { selectedEntry = entry } label: {
-                        EntryRow(entry: entry)
-                            .padding(Theme.Spacing.md)
-                            .glassCardStyle(tint: .pink.opacity(0.08), in: rowShape)
-                            .contentShape(rowShape)
-                    }
-                    .buttonStyle(.plain)
-                    .contentShape(rowShape)
-                    .contentShape(.contextMenuPreview, rowShape)
-                    .contextMenu {
-                        Button { selectedEntry = entry } label: {
-                            Label("Open Entry", systemImage: "arrow.up.forward.app")
-                        }
-
-                        Button(role: .destructive) { removeFavorite(entry) } label: {
-                            Label("Remove Favorite", systemImage: "heart.slash.fill")
-                        }
-                    } preview: {
-                        FavoriteEntryPeek(entry: entry)
-                    }
-                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) { removeFavorite(entry) } label: {
-                            Label("Remove", systemImage: "heart.slash.fill")
-                        }
-                    }
+                    .padding(.horizontal, Theme.Spacing.md)
+                ForEach(shelfRows(entries), id: \.self) { row in
+                    shelf(row)
                 }
             }
+            .padding(.vertical, Theme.Spacing.md)
         }
-        .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(background)
         .refreshable {
             await env.favoritesStore.load()
             Haptics.tap()
+        }
+    }
+
+    // Chunk the wall into rows of three records.
+    private func shelfRows(_ entries: [DailyEntry]) -> [[DailyEntry]] {
+        stride(from: 0, to: entries.count, by: 3).map {
+            Array(entries[$0 ..< min($0 + 3, entries.count)])
+        }
+    }
+
+    private func shelf(_ row: [DailyEntry]) -> some View {
+        VStack(spacing: 6) {
+            HStack(alignment: .bottom, spacing: Theme.Spacing.md) {
+                ForEach(row) { entry in
+                    framedRecord(entry)
+                }
+                ForEach(0 ..< (3 - row.count), id: \.self) { _ in
+                    Spacer().frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            // The shelf ledge.
+            Rectangle()
+                .fill(.primary.opacity(0.12))
+                .frame(height: 2)
+                .padding(.horizontal, Theme.Spacing.sm)
+        }
+    }
+
+    private func framedRecord(_ entry: DailyEntry) -> some View {
+        Button { selectedEntry = entry } label: {
+            VStack(spacing: 6) {
+                AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.chip)
+                    .aspectRatio(1, contentMode: .fit)
+                    .padding(6)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                            .stroke(.white.opacity(0.25), lineWidth: 0.5)
+                    )
+                VStack(spacing: 1) {
+                    Text(entry.title).font(.caption.weight(.semibold)).lineLimit(1)
+                    Text(entry.artist).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button { selectedEntry = entry } label: {
+                Label("Open Entry", systemImage: "arrow.up.forward.app")
+            }
+            Button(role: .destructive) { removeFavorite(entry) } label: {
+                Label("Remove Favorite", systemImage: "heart.slash.fill")
+            }
+        } preview: {
+            FavoriteEntryPeek(entry: entry)
         }
     }
 
