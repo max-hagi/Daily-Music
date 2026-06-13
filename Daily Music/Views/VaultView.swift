@@ -234,7 +234,7 @@ struct VaultView: View {
         selectedVaultEntryOpenedFromExternalSource = openedFromExternalSource
         selectedVaultEntry = entry
         // Opening counts as catching up — the hero and tab badge clear live.
-        env.catchUpLog.markHeard(entry)
+        env.listensStore.markHeard(entry)
     }
 
     private func openPendingEntry() {
@@ -283,7 +283,7 @@ struct VaultAllSongsView: View {
                 List(filtered) { entry in
                     Button {
                         selectedEntry = entry
-                        env.catchUpLog.markHeard(entry)   // counts as catching up
+                        env.listensStore.markHeard(entry)   // counts as catching up
                     } label: {
                         EntryRow(entry: entry)
                     }

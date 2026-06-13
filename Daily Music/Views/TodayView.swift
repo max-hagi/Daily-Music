@@ -103,6 +103,7 @@ struct TodayView: View {
                 if let entry = loadedEntry {
                     ListeningView(entry: entry, showsRevealIntro: listeningIsCeremony) {
                         heardEntryID = entry.id.uuidString
+                        env.listensStore.markHeard(entry)
                         showingListening = false
                         // Reading mode is silent: moving to the story (or the clip
                         // finishing) hands the room back — no audio left running.
