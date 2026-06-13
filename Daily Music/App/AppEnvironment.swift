@@ -25,6 +25,7 @@ final class AppEnvironment {
     let auth: AuthService
     let entries: EntryService
     let favorites: FavoritesService
+    let listens: ListensService
     let checkIns: CheckInService
     let sharedStats: SharedStatsService
     let reactions: ReactionsService
@@ -39,6 +40,7 @@ final class AppEnvironment {
     let musicPlayer: MusicPlayer
     let session: SessionStore
     let favoritesStore: FavoritesStore
+    let listensStore: ListensStore
     let ratingsStore: RatingsStore
     let profileStore: ProfileStore
     let friendsStore: FriendsStore
@@ -66,6 +68,7 @@ final class AppEnvironment {
         auth: AuthService,
         entries: EntryService,
         favorites: FavoritesService,
+        listens: ListensService,
         checkIns: CheckInService,
         sharedStats: SharedStatsService,
         reactions: ReactionsService,
@@ -86,6 +89,7 @@ final class AppEnvironment {
         self.auth = auth
         self.entries = entries
         self.favorites = favorites
+        self.listens = listens
         self.checkIns = checkIns
         self.sharedStats = sharedStats
         self.reactions = reactions
@@ -117,6 +121,7 @@ final class AppEnvironment {
         )
         self.session = SessionStore(auth: auth)
         self.favoritesStore = FavoritesStore(service: favorites)
+        self.listensStore = ListensStore(service: listens)
         self.ratingsStore = RatingsStore(service: ratings)
         self.profileStore = ProfileStore(service: profiles)
         self.friendsStore = FriendsStore(service: friends)
@@ -135,6 +140,7 @@ final class AppEnvironment {
             auth: MockAuthService(),
             entries: MockEntryService(),
             favorites: MockFavoritesService(),
+            listens: MockListensService(),
             checkIns: MockCheckInService(),
             sharedStats: MockSharedStatsService(),
             reactions: MockReactionsService(),
@@ -169,6 +175,7 @@ final class AppEnvironment {
             auth: SupabaseAuthService(),
             entries: SupabaseEntryService(),
             favorites: SupabaseFavouritesService(),
+            listens: SupabaseListensService(),
             checkIns: SupabaseCheckInService(),
             sharedStats: SupabaseSharedStatsService(),
             reactions: SupabaseReactionsService(),
