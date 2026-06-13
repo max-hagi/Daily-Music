@@ -74,4 +74,20 @@ struct StreakTests {
         let streak = Streak(current: 7, best: 7, isAliveToday: false)
         #expect(!streak.isMilestoneToday)
     }
+
+    @Test func flaresOnFirstAliveExtensionOfTheDay() {
+        #expect(StreakFlare.shouldFlare(lastFlareDay: nil, isAliveToday: true, calendar: calendar, asOf: now))
+    }
+
+    @Test func doesNotFlareAgainSameDay() {
+        #expect(!StreakFlare.shouldFlare(lastFlareDay: now, isAliveToday: true, calendar: calendar, asOf: now))
+    }
+
+    @Test func flaresAgainOnANewDay() {
+        #expect(StreakFlare.shouldFlare(lastFlareDay: day(-1), isAliveToday: true, calendar: calendar, asOf: now))
+    }
+
+    @Test func neverFlaresWhenNotAliveToday() {
+        #expect(!StreakFlare.shouldFlare(lastFlareDay: nil, isAliveToday: false, calendar: calendar, asOf: now))
+    }
 }
