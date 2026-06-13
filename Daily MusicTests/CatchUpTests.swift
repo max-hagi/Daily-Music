@@ -74,3 +74,29 @@ struct CatchUpTests {
         await #expect(restored.heardEntryIDs.contains(target.id))
     }
 }
+
+struct TodayDropTimelineScheduleTests {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Toronto")!
+        return calendar
+    }
+
+    @Test func fetchedDropRollsOverToPendingShortlyAfterNextMidnight() {
+        let now = calendar.date(from: DateComponents(year: 2026, month: 6, day: 12, hour: 21))!
+        let expectedRollover = calendar.date(from: DateComponents(year: 2026, month: 6, day: 13, hour: 0, minute: 5))!
+
+        let schedule = TodayDropTimelineSchedule.loadedDropSchedule(now: now, calendar: calendar)
+
+        #expect(schedule.rollover == expectedRollover)
+        #expect(schedule.reloadAfter == expectedRollover.addingTimeInterval(10 * 60))
+    }
+
+    @Test func missingDropRetriesSoon() {
+        let now = calendar.date(from: DateComponents(year: 2026, month: 6, day: 13, hour: 0, minute: 5))!
+
+        let retry = TodayDropTimelineSchedule.missingDropRetryDate(now: now)
+
+        #expect(retry == now.addingTimeInterval(15 * 60))
+    }
+}

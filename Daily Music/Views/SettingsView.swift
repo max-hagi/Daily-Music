@@ -478,18 +478,14 @@ private struct SettingsForm: View {
         } header: {
             Text("Developer")
         } footer: {
-            Text("DEBUG only. Clears the local onboarding flags (completion, version, taste-seed, memento, first-listen) and drops you back into the wizard. Doesn't touch the server onboarded_at — the version gate re-triggers locally.")
+            Text("DEBUG only. Clears the local onboarding flags and first-listen state, then drops you back into the wizard. Keeps the original taste-arc origin and existing seed until the retake is completed.")
         }
     }
 
     /// Wipes the on-device onboarding state so the wizard re-appears. `completedOnboardingVersion = 0`
     /// is the dependable trigger (it survives the launch reconcile, unlike hasCompletedOnboarding).
     private func resetOnboarding() {
-        SeedRatings.clear()
         let defaults = UserDefaults.standard
-        defaults.removeObject(forKey: "startingMood")
-        defaults.removeObject(forKey: "startingGenre")
-        defaults.removeObject(forKey: "startingDecade")
         defaults.removeObject(forKey: "heardEntryID")
         completedOnboardingVersion = 0
         hasCompletedOnboarding = false   // flips RootView's gate → onboarding shows
