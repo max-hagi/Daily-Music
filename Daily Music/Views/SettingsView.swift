@@ -485,8 +485,6 @@ private struct SettingsForm: View {
     /// Wipes the on-device onboarding state so the wizard re-appears. `completedOnboardingVersion = 0`
     /// is the dependable trigger (it survives the launch reconcile, unlike hasCompletedOnboarding).
     private func resetOnboarding() {
-        let defaults = UserDefaults.standard
-        defaults.removeObject(forKey: "heardEntryID")
         completedOnboardingVersion = 0
         hasCompletedOnboarding = false   // flips RootView's gate → onboarding shows
     }

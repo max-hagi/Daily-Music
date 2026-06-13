@@ -21,7 +21,6 @@ struct TodayView: View {
     /// True when the listen cover was auto-opened as today's first-listen
     /// ceremony (gets the reveal intro); false for manual headphones taps.
     @State private var listeningIsCeremony = false
-    @AppStorage("heardEntryID") private var heardEntryID = ""  // last entry the user listened to
 
     var body: some View {
         // NavigationStack provides the nav bar + push/pop. Each tab has its own.
@@ -102,7 +101,6 @@ struct TodayView: View {
             .fullScreenCover(isPresented: $showingListening) {
                 if let entry = loadedEntry {
                     ListeningView(entry: entry, showsRevealIntro: listeningIsCeremony) {
-                        heardEntryID = entry.id.uuidString
                         env.listensStore.markHeard(entry)
                         showingListening = false
                         // Reading mode is silent: moving to the story (or the clip
@@ -113,8 +111,7 @@ struct TodayView: View {
             }
             .onChange(of: loadedEntry?.id) { _, _ in
                 guard let entry = loadedEntry else { return }
-                let heard = heardEntryID.isEmpty ? nil : heardEntryID
-                guard ListeningCeremony.shouldAutoOpen(todayEntryID: entry.id, heardEntryID: heard) else { return }
+                guard ListeningCeremony.shouldAutoOpen(hasHeardToday: env.listensStore.isHeard(entry)) else { return }
                 // Normally Today settles for a beat before the ceremony rises; on
                 // day one (straight from the onboarding reveal) the beat is zero
                 // so the arc — rate songs → archetype → first song — is unbroken.

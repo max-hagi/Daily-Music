@@ -85,17 +85,11 @@ struct PlaybackTests {
     }
 
     @Test func autoOpensWhenTodayNotYetHeard() {
-        let id = UUID()
-        #expect(ListeningCeremony.shouldAutoOpen(todayEntryID: id, heardEntryID: nil))
+        #expect(ListeningCeremony.shouldAutoOpen(hasHeardToday: false))
     }
 
     @Test func doesNotAutoOpenWhenTodayAlreadyHeard() {
-        let id = UUID()
-        #expect(!ListeningCeremony.shouldAutoOpen(todayEntryID: id, heardEntryID: id.uuidString))
-    }
-
-    @Test func autoOpensWhenHeardWasADifferentDay() {
-        #expect(ListeningCeremony.shouldAutoOpen(todayEntryID: UUID(), heardEntryID: UUID().uuidString))
+        #expect(!ListeningCeremony.shouldAutoOpen(hasHeardToday: true))
     }
 
     // The taste-seed loop depends on this: replaying a finished clip via toggle()

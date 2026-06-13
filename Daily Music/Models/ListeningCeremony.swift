@@ -10,10 +10,10 @@
 import Foundation
 
 enum ListeningCeremony {
-    /// `heardEntryID` is the stored uuidString of the last entry the user listened
-    /// to (nil if none yet). Auto-open unless it already equals today's entry.
-    static func shouldAutoOpen(todayEntryID: UUID, heardEntryID: String?) -> Bool {
-        heardEntryID != todayEntryID.uuidString
+    /// Auto-open the immersive screen only when today's drop hasn't been heard
+    /// yet. The caller derives `hasHeardToday` from ListensStore.
+    static func shouldAutoOpen(hasHeardToday: Bool) -> Bool {
+        !hasHeardToday
     }
 
     /// How long Today settles on screen before the ceremony rises. Day one —
