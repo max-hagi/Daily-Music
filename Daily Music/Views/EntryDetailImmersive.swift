@@ -41,6 +41,9 @@ extension EntryDetailView {
         }
     }
 
+    // Hero sleeve size on Today. Deliberately tunable — expect to adjust when testing.
+    private var coverSleeveSize: CGFloat { 300 }
+
     private func songZone(openJournal: @escaping () -> Void) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
             if let preArtworkMessage {
@@ -54,8 +57,23 @@ extension EntryDetailView {
                     .frame(height: 16)
                     .padding(.top, Theme.Spacing.sm)
             }
-            AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.card)
-                .padding(.horizontal, albumArtHorizontalPadding)
+            if onRequestListen != nil {
+                // Today: the cover IS the sleeve, so pending→mint collection state
+                // reads at a glance (same language as the Vault).
+                SleeveView(
+                    entry: entry,
+                    status: env.listensStore.status(for: entry),
+                    size: coverSleeveSize
+                )
+                .frame(maxWidth: .infinity)
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.7),
+                    value: env.listensStore.status(for: entry).indicatorColor
+                )
+            } else {
+                AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.card)
+                    .padding(.horizontal, albumArtHorizontalPadding)
+            }
             entryIdentityWithInlineControls(dateLabel: dateLabel)
             ratingExperience
             openInSectionWithRatingNudge
