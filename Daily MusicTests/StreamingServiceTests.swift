@@ -35,4 +35,24 @@ struct StreamingServiceTests {
     @Test func allCasesCoverFour() {
         #expect(StreamingService.allCases.count == 4)
     }
+
+    @Test func openInRowShowsSaveOnlyWhenServiceCanSave() {
+        #expect(OpenInRowState(canSaveToLibrary: true, isSaved: false).showsSaveButton)
+        #expect(!OpenInRowState(canSaveToLibrary: false, isSaved: false).showsSaveButton)
+    }
+
+    @Test func openInRowSavedStateUsesAddedIconAndDisablesSave() {
+        let state = OpenInRowState(canSaveToLibrary: true, isSaved: true)
+
+        #expect(state.showsSaveButton)
+        #expect(state.saveIconName == "checkmark.circle.fill")
+        #expect(state.isSaveDisabled)
+    }
+
+    @Test func openInRowUnsavedStateUsesAddIconAndAllowsSave() {
+        let state = OpenInRowState(canSaveToLibrary: true, isSaved: false)
+
+        #expect(state.saveIconName == "plus.circle")
+        #expect(!state.isSaveDisabled)
+    }
 }

@@ -26,7 +26,7 @@ extension EntryDetailView {
         env.librarySaveService != nil
     }
 
-    private func saveToLibrary() {
+    func saveToLibrary() {
         guard let service = env.librarySaveService,
               !env.savedTracks.isSaved(entry) else { return }
         Haptics.tap()
@@ -45,34 +45,16 @@ extension EntryDetailView {
         }
     }
 
-    func saveButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
-        let saved = env.savedTracks.isSaved(entry)
-        return Button {
-            saveToLibrary()
-        } label: {
-            Image(systemName: saved ? "checkmark.circle.fill" : "plus.circle")
-                .font(.system(size: symbolSize, weight: .bold))
-                .foregroundStyle(saved ? .green : palette.accent)
-                .frame(width: controlSize, height: controlSize)
-                .symbolEffect(.bounce, value: saved)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .disabled(saved)
-        .accessibilityLabel(saved ? "Added to your Daily Music playlist" : "Save to your Daily Music playlist")
-        .alert("Couldn't save this song", isPresented: $saveFailed) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(saveErrorMessage)
-        }
+    var openInRowState: OpenInRowState {
+        OpenInRowState(
+            canSaveToLibrary: canSaveToLibrary,
+            isSaved: env.savedTracks.isSaved(entry)
+        )
     }
 
     var actionCluster: some View {
         HStack(spacing: Theme.Spacing.md) {
             heartButton
-            if canSaveToLibrary {
-                saveButton(controlSize: 52, symbolSize: 20)
-            }
             reactionButton(controlSize: 52, symbolSize: 20)
             Spacer(minLength: Theme.Spacing.sm)
             RatingBar(entry: entry, accent: palette.accent, isReadOnly: !allowsRating)
@@ -96,9 +78,6 @@ extension EntryDetailView {
     var compactActions: some View {
         HStack(spacing: 10) {
             compactHeartButton
-            if canSaveToLibrary {
-                saveButton(controlSize: 46, symbolSize: 18)
-            }
             reactionButton(controlSize: 46, symbolSize: 18)
             compactInfoButton
         }

@@ -120,7 +120,17 @@ extension EntryDetailView {
                     .padding(.horizontal)
             }
 
-            OpenInSection(entry: entry, accent: palette.accent)
+            OpenInSection(
+                entry: entry,
+                accent: palette.accent,
+                rowState: openInRowState,
+                saveAction: saveToLibrary
+            )
+            .alert("Couldn't save this song", isPresented: $saveFailed) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(saveErrorMessage)
+            }
         }
         .padding(.top, Theme.Spacing.lg)
         .animation(ratingNudgeAnimation, value: shouldShowRatingNudge)

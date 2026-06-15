@@ -101,7 +101,17 @@ struct EntryDetailView: View {
                     .padding(.horizontal, albumArtHorizontalPadding)
                 header
                 actionCluster
-                OpenInSection(entry: entry, accent: palette.accent)
+                OpenInSection(
+                    entry: entry,
+                    accent: palette.accent,
+                    rowState: openInRowState,
+                    saveAction: saveToLibrary
+                )
+                .alert("Couldn't save this song", isPresented: $saveFailed) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(saveErrorMessage)
+                }
                 Divider().padding(.vertical, 4).padding(.horizontal)
                 JournalText(markdown: entry.journalMarkdown)
                     .padding(.horizontal)
@@ -251,13 +261,10 @@ struct EntryDetailView: View {
                 .padding(.horizontal, 78)
 
                 HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-                    // Left column: "keep this song" affordances — favorite, and
-                    // (when a connected service can take it) save-to-playlist.
+                    // Left column: the local keep affordance. Library save lives
+                    // in the Open In row with the other streaming handoff actions.
                     VStack(spacing: Theme.Spacing.sm) {
                         compactHeartButton
-                        if canSaveToLibrary {
-                            saveButton(controlSize: 46, symbolSize: 18)
-                        }
                     }
                     .frame(width: 82, alignment: .leading)
 
