@@ -67,3 +67,17 @@ struct PersonNameTests {
         #expect(PersonName.firstName(from: "  Max  Smith ") == "Max")
     }
 }
+
+struct NewDropPromptRuleTests {
+    @Test func showsWhenUncollectedAndNotDismissed() {
+        #expect(NewDropPromptRule.shouldShow(isCollected: false, dismissedThisSession: false) == true)
+    }
+
+    @Test func hiddenOnceCollected() {
+        #expect(NewDropPromptRule.shouldShow(isCollected: true, dismissedThisSession: false) == false)
+    }
+
+    @Test func hiddenAfterDismissThisSession() {
+        #expect(NewDropPromptRule.shouldShow(isCollected: false, dismissedThisSession: true) == false)
+    }
+}
