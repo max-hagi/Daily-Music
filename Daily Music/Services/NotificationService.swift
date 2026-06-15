@@ -91,6 +91,9 @@ final class LocalNotificationService: NotificationService {
             content.title = copy.title
             content.body = copy.body
             content.sound = .default
+            // Tapping the reminder opens Today; the in-app new-drop prompt takes it
+            // from there (RootView.onOpenURL → pendingTodayRoute → MainTabView).
+            content.userInfo = ["url": "dailymusic://today"]
 
             // Full date components (not just hour+minute) → fires exactly once
             // on that day, so each day can carry its own copy.
