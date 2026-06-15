@@ -55,6 +55,7 @@ enum Theme {
 
     enum Brand {
         /// Fallback gradient when no artwork color is available.
+        /// TODO match the app icon
         static let gradient = [Color.purple, Color.indigo, Color.cyan, Color.orange]
     }
 

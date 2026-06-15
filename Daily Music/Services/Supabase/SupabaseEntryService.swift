@@ -53,6 +53,10 @@ final class SupabaseEntryService: EntryService {
             .from("daily_entries")
             .select()
             .lte("published_at", value: Self.now)   // exclude future-dated rows (RLS also enforces this)
+            // Also cap by local calendar day: published_at is stored in UTC, so a
+            // "tomorrow" entry publishes hours before midnight for timezones west
+            // of UTC and would leak into the Vault early without this.
+            .lte("date", value: Self.dayFormatter.string(from: Date()))
             .order("date", ascending: false)        // newest first
             .execute()
             .value

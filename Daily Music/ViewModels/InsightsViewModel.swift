@@ -83,11 +83,11 @@ final class InsightsViewModel {
             guard value != nil || fav else { return nil }
             return RatedSong(entry: entry, value: value ?? 0, isFavorite: fav)
         }
-        // Merge the onboarding taste-seed so the profile is established at onboarding
-        // and evolves as real daily ratings accumulate. The stable (displayed)
-        // archetype is the hysteresis incumbent — siblings must beat it clearly.
-        let mirror = TasteMirror.build(
-            from: rated + SeedRatings.load(),
+        // Onboarding seed is a cold-start fallback, not a current/month signal.
+        // Once real daily ratings exist, the user's live mirror comes from those.
+        let mirror = Self.buildCurrentMirror(
+            realRated: rated,
+            seedRatings: SeedRatings.load(),
             incumbentID: snapshotStore.load().stableArchetypeID
         )
         historyEntries = history
@@ -172,6 +172,17 @@ final class InsightsViewModel {
 }
 
 extension InsightsViewModel {
+    nonisolated static func buildCurrentMirror(
+        realRated: [RatedSong],
+        seedRatings: [RatedSong],
+        incumbentID: String? = nil
+    ) -> TasteMirror {
+        TasteMirror.build(
+            from: realRated.isEmpty ? seedRatings : realRated,
+            incumbentID: incumbentID
+        )
+    }
+
     nonisolated static func buildTasteEras(
         history: [DailyEntry],
         ratings: [UUID: Int],
@@ -198,7 +209,7 @@ extension InsightsViewModel {
             profile: currentProfile,
             mirror: currentMirror,
             driverLine: driverLine(for: currentMirror),
-            songs: currentMirror.ratedSongs.prefix(3).map(\.entry)
+            songs: signalSongs(for: currentMirror)
         ))
 
         if let revealID = snapshot.lastRevealedArchetypeID,
@@ -247,10 +258,10 @@ extension InsightsViewModel {
                 profile: mirror.archetype,
                 mirror: mirror,
                 driverLine: driverLine(for: mirror),
-                songs: rated
-                    .sorted { $0.entry.date > $1.entry.date }
-                    .prefix(3)
-                    .map(\.entry)
+                songs: signalSongs(
+                    for: mirror,
+                    fallback: rated.sorted { $0.entry.date > $1.entry.date }
+                )
             )
         }
         .sorted { $0.date > $1.date }
@@ -276,6 +287,22 @@ extension InsightsViewModel {
         }
 
         return eras
+    }
+
+    nonisolated private static func signalSongs(
+        for mirror: TasteMirror,
+        fallback: [RatedSong]? = nil
+    ) -> [DailyEntry] {
+        if let fact = mirror.evidence?.facts.first {
+            let matching = mirror.songs(forDimensionID: fact.dimensionID, category: fact.category)
+            if !matching.isEmpty {
+                return matching.prefix(3).map(\.entry)
+            }
+        }
+
+        return (fallback ?? mirror.ratedSongs)
+            .prefix(3)
+            .map(\.entry)
     }
 
     nonisolated static func buildTasteArcSummary(

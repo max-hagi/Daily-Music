@@ -66,6 +66,35 @@ struct TasteSeedTests {
         UserDefaults.standard.synchronize()
     }
 
+    @Test func seedRatingsReplacementKeepsOriginalTimestamp() {
+        UserDefaults.standard.removeObject(forKey: "tasteSeedRatings")
+        UserDefaults.standard.synchronize()
+        SeedRatings.clear()
+        UserDefaults.standard.synchronize()
+
+        let originalTimestamp = Date(timeIntervalSince1970: 1_000)
+        let first = RatedSong(
+            entry: entry(mood: "Dreamy", genre: "Alternative", year: 2015),
+            value: 1
+        )
+        SeedRatings.save([first], ratedAt: originalTimestamp)
+        let replacement = RatedSong(
+            entry: entry(mood: "Melancholy", genre: "Alternative", year: 2001),
+            value: 1
+        )
+        SeedRatings.save([replacement])
+
+        let result = SeedRatings.load()
+        #expect(result.count == 1)
+        #expect(result[0].entry.mood == "Melancholy")
+        #expect(result[0].ratedAt == originalTimestamp)
+
+        SeedRatings.clear()
+        UserDefaults.standard.synchronize()
+        UserDefaults.standard.removeObject(forKey: "tasteSeedRatings")
+        UserDefaults.standard.synchronize()
+    }
+
     @Test func seedRatingsMutate_replaceExisting() {
         // Ensure clean state before test
         UserDefaults.standard.removeObject(forKey: "tasteSeedRatings")

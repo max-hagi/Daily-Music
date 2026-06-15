@@ -166,10 +166,18 @@ Use `English` for songs that are primarily English even if there's a brief line 
 ---
 
 ### `published_at`
-When the entry becomes visible in the app. Set this to the same day as `date` at midnight UTC.
+When the entry becomes visible in the app. Set this to **midnight Toronto time** of the
+entry's `date` — NOT midnight UTC. Midnight UTC is 8 PM the previous evening in Toronto,
+which used to leak tomorrow's song into the Vault early.
+
+Easiest way — let Postgres convert for you in the INSERT:
+```sql
+(DATE '2026-06-15')::timestamp AT TIME ZONE 'America/Toronto'
 ```
-Format: YYYY-MM-DD 00:00:00+00
-Example: 2026-06-15 00:00:00+00
+Or as a literal (04:00 UTC in summer/EDT, 05:00 UTC in winter/EST):
+```
+Format: YYYY-MM-DD 04:00:00+00
+Example: 2026-06-15 04:00:00+00
 ```
 Set it in the **past** if you want the entry to appear immediately. Set it to a **future date** to queue it.
 
@@ -194,7 +202,7 @@ INSERT INTO daily_entries (
   '1234567890',
   'spotify:track:xxxxxxxxxxxxxxxxxxxx',
   'Pop', 2024, 'Joyful', 4, 'Love & Romance', 'English',
-  '2026-06-15 00:00:00+00'
+  (DATE '2026-06-15')::timestamp AT TIME ZONE 'America/Toronto'
 );
 ```
 

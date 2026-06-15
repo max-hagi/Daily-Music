@@ -14,10 +14,10 @@ import Foundation
 enum SeedRatings {
     private static let key = "tasteSeedRatings"
 
-    static func save(_ ratings: [RatedSong]) {
-        let now = Date()
+    static func save(_ ratings: [RatedSong], ratedAt: Date? = nil) {
+        let timestamp = ratedAt ?? existingTimestamp() ?? Date()
         let stamped = ratings.map {
-            RatedSong(entry: $0.entry, value: $0.value, isFavorite: $0.isFavorite, ratedAt: $0.ratedAt ?? now)
+            RatedSong(entry: $0.entry, value: $0.value, isFavorite: $0.isFavorite, ratedAt: $0.ratedAt ?? timestamp)
         }
         guard let data = try? JSONEncoder().encode(stamped) else { return }
         UserDefaults.standard.set(data, forKey: key)
@@ -30,4 +30,10 @@ enum SeedRatings {
     }
 
     static func clear() { UserDefaults.standard.removeObject(forKey: key) }
+
+    private static func existingTimestamp() -> Date? {
+        load()
+            .compactMap(\.ratedAt)
+            .min()
+    }
 }

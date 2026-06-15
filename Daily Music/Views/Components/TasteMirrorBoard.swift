@@ -220,19 +220,24 @@ struct TasteMirrorBoard: View {
                 ))
         }
 
-        if ranked.count > 1 {
+        let secondary = Array(ranked.dropFirst().prefix(2))
+        let widths = DriverCardLayout.secondaryWidths(totalDrivers: ranked.count)
+        if widths.first == .full, let h = secondary.first {
+            secondaryDriverCard(h)
+                .modifier(TiltEntranceModifier(
+                    appeared: appeared, reduceMotion: reduceMotion,
+                    angle: 1.5,
+                    delay: 0.22
+                ))
+        } else if !secondary.isEmpty {
             HStack(alignment: .top, spacing: 14) {
-                ForEach(Array(ranked.dropFirst().prefix(2).enumerated()), id: \.element.rank) { index, h in
+                ForEach(Array(secondary.enumerated()), id: \.element.rank) { index, h in
                     secondaryDriverCard(h)
                         .modifier(TiltEntranceModifier(
                             appeared: appeared, reduceMotion: reduceMotion,
                             angle: index == 0 ? 2 : -2,
                             delay: 0.22 + Double(index) * 0.06
                         ))
-                }
-                // A lone #2 stays half-width, leading-aligned.
-                if ranked.count == 2 {
-                    Color.clear.frame(maxWidth: .infinity, minHeight: 1)
                 }
             }
         }

@@ -12,6 +12,7 @@ struct WrappedView: View {
     // Passed IN from Insights (which already knows the favorites) rather than read
     // here — the caller owns that data.
     let favoriteIDs: Set<UUID>
+  
     /// Which month to recap (any date inside it). Defaults to now; the
     /// 1st-of-month moment passes last month.
     var targetMonth: Date = Date()
@@ -203,4 +204,13 @@ struct WrappedView: View {
         .frame(maxWidth: .infinity)
         .cardStyle()
     }
+}
+
+#Preview {
+    WrappedView(favoriteIDs: [
+        MockEntryService.mockEntryID(0),
+        MockEntryService.mockEntryID(2),
+        MockEntryService.mockEntryID(5),
+    ])
+    .environment(AppEnvironment.mock())
 }

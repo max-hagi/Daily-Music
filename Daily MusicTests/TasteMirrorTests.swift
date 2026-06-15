@@ -287,6 +287,72 @@ struct TasteMirrorTests {
         #expect(eras.contains { $0.title.contains("May") })
     }
 
+    @Test func tasteEraExamplesMatchReceiptCategoryWhenEvidenceExists() {
+        let calendar = Calendar(identifier: .gregorian)
+        let may = calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!
+        let june = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1))!
+        let melancholy = (0..<7).map {
+            Self.entry(id: 600 + $0, mood: "Melancholy")
+                .withDate(may.addingTimeInterval(Double($0) * 86_400))
+        }
+        let unrelatedLatest = (0..<3).map {
+            Self.entry(id: 700 + $0, mood: "Joyful")
+                .withDate(may.addingTimeInterval(Double(20 + $0) * 86_400))
+        }
+        let current = Self.entry(id: 800, mood: "Euphoric").withDate(june)
+        var ratings = Dictionary(uniqueKeysWithValues: melancholy.map { ($0.id, 1) })
+        ratings[melancholy.last!.id] = -1
+        for entry in unrelatedLatest + [current] {
+            ratings[entry.id] = -1
+        }
+
+        let eras = InsightsViewModel.buildTasteEras(
+            history: melancholy + unrelatedLatest + [current],
+            ratings: ratings,
+            favoriteIDs: [],
+            startingRead: StartingRead(),
+            currentMirror: TasteMirror.build(from: [RatedSong(entry: current, value: -1)]),
+            snapshot: .empty,
+            calendar: calendar
+        )
+
+        let mayEra = eras.first { $0.kind == .monthly && $0.title.contains("May") }
+        #expect(mayEra?.driverLine?.contains("Melancholy") == true)
+        #expect(mayEra?.songs.isEmpty == false)
+        #expect(mayEra?.songs.allSatisfy { $0.mood == "Melancholy" } == true)
+    }
+
+    @Test func currentMirrorIgnoresSeedOnceRealRatingsExist() {
+        let real = (0..<10).map {
+            RatedSong(entry: Self.entry(id: 900 + $0, mood: "Euphoric"), value: 1)
+        }
+        let seed = (0..<10).map {
+            RatedSong(entry: Self.entry(id: 950 + $0, mood: "Melancholy"), value: 1)
+        }
+
+        let mirror = InsightsViewModel.buildCurrentMirror(
+            realRated: real,
+            seedRatings: seed
+        )
+
+        #expect(mirror.mood.topStandout?.name == "Euphoric")
+        #expect(mirror.ratedSongs.allSatisfy { $0.entry.mood == "Euphoric" })
+    }
+
+    @Test func currentMirrorUsesSeedWhenNoRealRatingsExist() {
+        let seed = (0..<10).map {
+            RatedSong(entry: Self.entry(id: 1_000 + $0, mood: "Melancholy"), value: 1)
+        }
+
+        let mirror = InsightsViewModel.buildCurrentMirror(
+            realRated: [],
+            seedRatings: seed
+        )
+
+        #expect(mirror.mood.topStandout?.name == "Melancholy")
+        #expect(mirror.ratedSongs.count == seed.count)
+    }
+
     @Test func mirrorPassesIncumbentThrough() {
         let data = ArchetypeScorerTests.songs(6, value: 1, mood: "Joyful", idBase: 0)
             + ArchetypeScorerTests.songs(2, value: -1, mood: "Joyful", idBase: 50)

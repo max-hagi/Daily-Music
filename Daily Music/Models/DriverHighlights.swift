@@ -17,6 +17,22 @@ struct DriverHighlight: Equatable {
     let fact: ArchetypeEvidence.Fact
 }
 
+enum DriverCardWidth: Equatable {
+    case full
+    case half
+}
+
+enum DriverCardLayout {
+    static func secondaryWidths(totalDrivers: Int) -> [DriverCardWidth] {
+        let secondaryCount = max(totalDrivers - 1, 0)
+        switch secondaryCount {
+        case 0: return []
+        case 1: return [.full]
+        default: return [.half, .half]
+        }
+    }
+}
+
 enum DriverHighlights {
     /// Facts arrive sorted descending by contribution; the first fact per
     /// dimension keeps the slot, ranked by overall position.
