@@ -163,12 +163,11 @@ struct TodayView: View {
     }
 
     private var listenerName: String {
-        guard let displayName = env.session.session?.displayName, !displayName.isEmpty else {
+        guard let displayName = env.session.session?.displayName,
+              let first = PersonName.firstName(from: displayName) else {
             return "there"
         }
-
-        let name = displayName.split(separator: "@").first.map(String.init) ?? displayName
-        return name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return first
     }
 
     private var returnSwipeGesture: some Gesture {

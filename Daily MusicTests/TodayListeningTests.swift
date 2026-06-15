@@ -48,3 +48,22 @@ struct ListenTrackerTests {
         #expect(tracker.accumulated == 10)
     }
 }
+
+struct PersonNameTests {
+    @Test func takesFirstWordOfAFullName() {
+        #expect(PersonName.firstName(from: "Max Smith") == "Max")
+    }
+
+    @Test func stripsEmailDomainThenFirstWord() {
+        #expect(PersonName.firstName(from: "max@example.com") == "max")
+    }
+
+    @Test func emptyOrWhitespaceYieldsNil() {
+        #expect(PersonName.firstName(from: "") == nil)
+        #expect(PersonName.firstName(from: "   ") == nil)
+    }
+
+    @Test func trimsSurroundingWhitespace() {
+        #expect(PersonName.firstName(from: "  Max  Smith ") == "Max")
+    }
+}
