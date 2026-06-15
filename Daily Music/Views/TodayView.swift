@@ -100,13 +100,17 @@ struct TodayView: View {
             }
             .fullScreenCover(isPresented: $showingListening) {
                 if let entry = loadedEntry {
-                    ListeningView(entry: entry, showsRevealIntro: listeningIsCeremony) {
-                        env.listensStore.markHeard(entry)
-                        showingListening = false
-                        // Reading mode is silent: moving to the story (or the clip
-                        // finishing) hands the room back — no audio left running.
-                        Task { await env.musicPlayer.stop() }
-                    }
+                    ListeningView(
+                        entry: entry,
+                        showsRevealIntro: false,
+                        onAdvance: {
+                            showingListening = false
+                            // Reading mode is silent: moving to the story (or the clip
+                            // finishing) hands the room back — no audio left running.
+                            Task { await env.musicPlayer.stop() }
+                        },
+                        onReachedListenThreshold: { env.listensStore.markHeard(entry) }
+                    )
                 }
             }
             .onChange(of: loadedEntry?.id) { _, _ in

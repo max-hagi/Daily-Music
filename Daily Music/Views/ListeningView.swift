@@ -32,6 +32,10 @@ struct ListeningView: View {
     /// Fired when the bottom button is tapped (and, on Today, when the clip ends).
     /// Last so trailing-closure call sites bind to it.
     var onAdvance: () -> Void
+    /// Today-only: fired ONCE when the listener crosses the collect threshold
+    /// (≥25s of playback, or the clip finishing). Vault/Favorites pass nil — their
+    /// collection semantics (open = caught up) are unchanged.
+    var onReachedListenThreshold: (() -> Void)? = nil
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -42,6 +46,9 @@ struct ListeningView: View {
     /// nil until onAppear decides; the computed `phase` covers the first frame.
     @State private var resolvedPhase: CeremonyPhase?
     @State private var introPulse = false
+    @State private var tracker = ListenTracker()
+    @State private var didReachThreshold = false
+    @State private var showingCollected = false
 
     private enum CeremonyPhase { case intro, player }
 
@@ -69,6 +76,27 @@ struct ListeningView: View {
         }
         .preferredColorScheme(.dark)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
+        // Separate task from the palette load above: ticks the listen accumulator
+        // while the player is open, so Today can collect the record once the
+        // listener has genuinely heard ~25s (or the clip ends). No-op elsewhere.
+        .task(id: entry.id) {
+            guard onReachedListenThreshold != nil else { return }
+            while !Task.isCancelled {
+                tracker.sample(isPlaying: player.state == .playing)
+                if !didReachThreshold,
+                   tracker.hasReachedThreshold(finished: player.state == .finished) {
+                    didReachThreshold = true
+                    Haptics.success()
+                    onReachedListenThreshold?()
+                    if !reduceMotion {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { showingCollected = true }
+                    } else {
+                        showingCollected = true
+                    }
+                }
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+        }
         .task {
             if phase == .player {
                 await startPlaybackIfNeeded()
@@ -223,6 +251,15 @@ struct ListeningView: View {
                 }
                 .frame(maxWidth: .infinity)
 
+                if showingCollected {
+                    Label("Collected — mint", systemImage: "checkmark.seal.fill")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(.white.opacity(0.18), in: Capsule())
+                        .transition(.scale.combined(with: .opacity))
+                        .accessibilityLabel("Collected as a mint record")
+                }
                 EqualizerBars(isPlaying: player.state == .playing)
                     .frame(height: 16)
 
