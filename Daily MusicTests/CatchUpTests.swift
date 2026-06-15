@@ -117,9 +117,21 @@ struct ListenStatusTests {
     }
 
     @Test func heardLaterIsCaughtUp() {
-        // Dropped 5 days ago, heard 2 days ago.
+        // Dropped 5 days ago, heard 2 days ago → 3 days late, inside the window.
         let status = ListenStatus.of(entryDate: day(-5), heardAt: day(-2), calendar: calendar, asOf: now)
         #expect(status == .caughtUp)
+    }
+
+    @Test func heardExactlyAtWindowEdgeIsCaughtUp() {
+        // Heard 7 days late (the window edge) → still a clean catch-up, not salvaged.
+        let status = ListenStatus.of(entryDate: day(-9), heardAt: day(-2), calendar: calendar, asOf: now)
+        #expect(status == .caughtUp)
+    }
+
+    @Test func heardAfterWindowClosedIsRescued() {
+        // Dropped 10 days ago, only heard yesterday → 9 days late, past the window.
+        let status = ListenStatus.of(entryDate: day(-10), heardAt: day(-1), calendar: calendar, asOf: now)
+        #expect(status == .rescued)
     }
 
     @Test func missedButStillInsideWindowIsRescuable() {
@@ -164,6 +176,10 @@ struct SleeveTreatmentTests {
 
     @Test func caughtUpIsSecondhand() {
         #expect(SleeveTreatment(.caughtUp) == .secondhand)
+    }
+
+    @Test func rescuedIsSalvaged() {
+        #expect(SleeveTreatment(.rescued) == .salvaged)
     }
 
     @Test func missedIsMissing() {

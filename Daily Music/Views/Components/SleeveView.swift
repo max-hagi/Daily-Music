@@ -41,6 +41,7 @@ struct SleeveView: View {
             case .pending:    pendingSleeve
             case .mint:       mintSleeve
             case .secondhand: secondhandSleeve
+            case .salvaged:   salvagedSleeve
             case .missing:    missingSleeve
             }
         }
@@ -65,9 +66,23 @@ struct SleeveView: View {
         ZStack {
             disc
             artCover
-                .overlay(roundedStroke(.primary.opacity(0.12), lineWidth: 0.5))
+                .overlay { mintGloss }                                  // a clean sheen — the reward
+                .overlay(roundedStroke(.white.opacity(0.55), lineWidth: 1))
+                .overlay(roundedStroke(.black.opacity(0.08), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.22), radius: size * 0.05, y: size * 0.02)
                 .offset(y: coverDrop)
         }
+    }
+
+    /// A diagonal glossy highlight sweeping across a mint cover, so a shelf of all
+    /// mint records reads as crisp and premium.
+    private var mintGloss: some View {
+        LinearGradient(
+            colors: [.white.opacity(0.35), .white.opacity(0.05), .clear],
+            startPoint: .topLeading, endPoint: .center
+        )
+        .blendMode(.softLight)
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
     }
 
     private var secondhandSleeve: some View {
@@ -235,12 +250,74 @@ struct SleeveView: View {
     }
 
     private var stamp: some View {
-        Text("2nd")
-            .font(.system(size: max(9, coverSide * 0.15), weight: .semibold))
+        Text("secondhand")
+            .font(.system(size: max(7, coverSide * 0.1), weight: .semibold))
+            .textCase(.uppercase)
+            .tracking(0.5)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(.ultraThinMaterial, in: Capsule())
             .padding(4)
+    }
+
+    // MARK: - Salvaged (rescued after the window closed — battered but reclaimed)
+
+    private var salvagedSleeve: some View {
+        artCover
+            .saturation(0.32)
+            .brightness(-0.08)
+            .overlay { ringWear }
+            .overlay { creases }                       // hard fold/crease lines
+            .overlay(alignment: .topLeading) { tape }  // a strip of repair tape
+            .overlay(alignment: .topTrailing) { dogEar }
+            .overlay(alignment: .bottom) { salvagedLabel }
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .rotationEffect(.degrees(-1.5))            // sits slightly askew in the sleeve
+            .offset(y: coverDrop)
+    }
+
+    /// Sharper, more numerous fold lines than secondhand's faint scuffs.
+    private var creases: some View {
+        ZStack {
+            Rectangle().fill(.black.opacity(0.16))
+                .frame(width: coverSide, height: 1)
+                .rotationEffect(.degrees(-24))
+                .offset(y: -coverSide * 0.12)
+            Rectangle().fill(.white.opacity(0.12))
+                .frame(width: coverSide, height: 1)
+                .rotationEffect(.degrees(-24))
+                .offset(y: -coverSide * 0.1)
+            Rectangle().fill(.black.opacity(0.14))
+                .frame(width: coverSide, height: 1)
+                .rotationEffect(.degrees(18))
+                .offset(x: coverSide * 0.05, y: coverSide * 0.2)
+        }
+    }
+
+    /// A strip of yellowed repair tape across the top-left corner.
+    private var tape: some View {
+        Rectangle()
+            .fill(Color(red: 0.85, green: 0.8, blue: 0.6).opacity(0.5))
+            .frame(width: coverSide * 0.4, height: coverSide * 0.12)
+            .rotationEffect(.degrees(-45))
+            .offset(x: -coverSide * 0.1, y: -coverSide * 0.06)
+    }
+
+    private var salvagedLabel: some View {
+        Text("salvaged")
+            .font(.system(size: max(7, coverSide * 0.1), weight: .bold))
+            .textCase(.uppercase)
+            .tracking(0.5)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(.black.opacity(0.55), in: Capsule())
+            .padding(.bottom, 4)
     }
 
     private var edgeLabel: some View {
@@ -258,7 +335,8 @@ struct SleeveView: View {
         let state: String
         switch status {
         case .heardSameDay: state = "collected"
-        case .caughtUp:     state = "caught up, second pressing"
+        case .caughtUp:     state = "caught up, secondhand"
+        case .rescued:      state = "salvaged after being missed"
         case .missed:       state = "missed"
         case .rescuable:    state = "still available"
         case .unheard:      state = "not yet heard"
@@ -286,6 +364,7 @@ extension ListenStatus {
         switch self {
         case .heardSameDay: .teal
         case .caughtUp: .orange
+        case .rescued: .brown
         case .rescuable: .orange.opacity(0.55)
         case .missed: .gray.opacity(0.45)
         case .unheard: .accentColor
