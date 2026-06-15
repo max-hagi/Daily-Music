@@ -185,6 +185,16 @@ struct SleeveTreatmentTests {
     @Test func missedIsMissing() {
         #expect(SleeveTreatment(.missed) == .missing)
     }
+
+    @Test func physicalConditionGradesKeepCollectedStatesSeparateFromRescue() {
+        // The physical condition redesign is visual-only. These mappings must stay
+        // stable so Rescue remains an invitation and collected states stay collected.
+        #expect(SleeveTreatment(.heardSameDay) == .mint)
+        #expect(SleeveTreatment(.caughtUp) == .secondhand)
+        #expect(SleeveTreatment(.rescued) == .salvaged)
+        #expect(SleeveTreatment(.missed) == .missing)
+        #expect(SleeveTreatment(.rescuable) == .pending)
+    }
 }
 
 struct VariantConfigTests {
