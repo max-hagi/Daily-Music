@@ -64,17 +64,6 @@ extension EntryDetailView {
         .padding(.horizontal)
     }
 
-    var primaryRatingControl: some View {
-        RatingBar(
-            entry: entry,
-            accent: palette.accent,
-            controlSize: 84,
-            symbolSize: 32,
-            spacing: 18,
-            isReadOnly: !allowsRating
-        )
-    }
-
     var compactActions: some View {
         HStack(spacing: 10) {
             compactHeartButton
@@ -126,7 +115,7 @@ extension EntryDetailView {
         }
     }
 
-    private func reactionButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
+    func reactionButton(controlSize: CGFloat, symbolSize: CGFloat) -> some View {
         Button {
             showingReactions = true
         } label: {

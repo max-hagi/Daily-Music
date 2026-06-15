@@ -270,8 +270,12 @@ struct EntryDetailView: View {
 
                     Spacer(minLength: 0)
 
-                    compactInfoButton
-                        .frame(width: 82, alignment: .trailing)
+                    // Right column: the quiet utilities — react + info.
+                    HStack(spacing: 8) {
+                        reactionButton(controlSize: 40, symbolSize: 16)
+                        compactInfoButton
+                    }
+                    .frame(width: 96, alignment: .trailing)
                 }
             }
         }

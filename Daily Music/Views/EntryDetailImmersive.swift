@@ -58,7 +58,6 @@ extension EntryDetailView {
                 .padding(.horizontal, albumArtHorizontalPadding)
             entryIdentityWithInlineControls(dateLabel: dateLabel)
             ratingExperience
-            inlineReactionsBar
             openInSectionWithRatingNudge
             Spacer(minLength: Theme.Spacing.sm)
             JournalPreviewDock(
@@ -86,29 +85,18 @@ extension EntryDetailView {
     }
 
     private var ratingExperience: some View {
-        VStack(spacing: 0) {
-            primaryRatingControl
-        }
+        RatingBar(
+            entry: entry,
+            accent: palette.accent,
+            controlSize: 48,
+            symbolSize: 22,
+            spacing: 14,
+            isReadOnly: !allowsRating
+        )
         .frame(maxWidth: 420)
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.top, Theme.Spacing.sm)
         .padding(.bottom, 2)
-    }
-
-    private var inlineReactionsBar: some View {
-        ReactionsBar(
-            entry: entry,
-            accent: palette.accent,
-            isReadOnly: !allowsEntryReaction,
-            spacing: 6,
-            emojiFont: .body,
-            countFont: .caption2.weight(.semibold),
-            horizontalPadding: 8,
-            verticalPadding: 5
-        )
-        .glassPillStyle(tint: palette.accent.opacity(0.12), horizontalInset: 9)
-        .opacity(0.86)
-        .padding(.top, 0)
     }
 
     // The tip stacks ABOVE the Open In buttons — never covering them — so the
