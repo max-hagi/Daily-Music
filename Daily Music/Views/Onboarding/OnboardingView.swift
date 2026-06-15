@@ -78,12 +78,13 @@ struct OnboardingView: View {
         }
         .fullScreenCover(isPresented: $showingTasteSeed) {
             TasteSeedView(displayName: displayName) { read in
-                startingMood = read.mood ?? ""
-                startingGenre = read.genre ?? ""
-                startingDecade = read.decade ?? ""
+                if startingReadIsEmpty {
+                    startingMood = read.mood ?? ""
+                    startingGenre = read.genre ?? ""
+                    startingDecade = read.decade ?? ""
+                }
                 tasteSeedDone = true
                 showingTasteSeed = false
-                env.launchIntoCeremony = true   // reveal's button promised today's song
                 advance()
             } onSkip: {
                 tasteSeedDone = true
@@ -96,6 +97,10 @@ struct OnboardingView: View {
     private var firstName: String {
         let n = displayName.split(separator: " ").first.map(String.init) ?? displayName
         return n.trimmingCharacters(in: .whitespaces)
+    }
+
+    private var startingReadIsEmpty: Bool {
+        startingMood.isEmpty && startingGenre.isEmpty && startingDecade.isEmpty
     }
 
     /// Shown after a successful Finish: one celebratory beat, then straight
@@ -113,7 +118,6 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
             Spacer()
             Button {
-                env.launchIntoCeremony = true
                 completedOnboardingVersion = OnboardingConfig.currentVersion
                 hasCompletedOnboarding = true   // flips RootView into the app
             } label: {

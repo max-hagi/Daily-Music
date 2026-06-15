@@ -48,11 +48,9 @@ final class AppEnvironment {
     let appleMusic: AppleMusicSession
     let spotify: SpotifySession
     let savedTracks: SavedTracksLog
-    /// Day-one handoff: set when the taste-seed reveal completes so TodayView
-    /// raises the first ceremony immediately (no settle beat). One-shot —
-    /// TodayView clears it after consuming.
-    var launchIntoCeremony = false
-
+    /// The four redesign taste-call choices (spec §11), one shared instance so the
+    /// live Vault reads the locked picks (and a debug gallery can bind to the same).
+    let variants = VariantConfig()
     /// Every connectable service, in priority order (Apple Music first; both
     /// can't grant saves simultaneously today — its flag is off).
     var musicServices: [any MusicServiceConnection] { [appleMusic, spotify] }

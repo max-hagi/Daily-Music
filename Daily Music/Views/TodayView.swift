@@ -18,9 +18,8 @@ struct TodayView: View {
     @State private var model: TodayViewModel?
     @State private var showingSettings = false   // drives the Settings sheet
     @State private var showingListening = false  // drives the immersive listen cover
-    /// True when the listen cover was auto-opened as today's first-listen
-    /// ceremony (gets the reveal intro); false for manual headphones taps.
-    @State private var listeningIsCeremony = false
+    @State private var showingNewDropPrompt = false
+    @State private var dismissedDropPromptThisSession = false
 
     var body: some View {
         // NavigationStack provides the nav bar + push/pop. Each tab has its own.
@@ -84,7 +83,6 @@ struct TodayView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        listeningIsCeremony = false   // direct intent → no intro beat
                         showingListening = true
                     } label: {
                         Image(systemName: "headphones")
@@ -113,21 +111,25 @@ struct TodayView: View {
                     )
                 }
             }
-            .onChange(of: loadedEntry?.id) { _, _ in
-                guard let entry = loadedEntry else { return }
-                guard ListeningCeremony.shouldAutoOpen(hasHeardToday: env.listensStore.isHeard(entry)) else { return }
-                // Normally Today settles for a beat before the ceremony rises; on
-                // day one (straight from the onboarding reveal) the beat is zero
-                // so the arc — rate songs → archetype → first song — is unbroken.
-                let fromOnboarding = env.launchIntoCeremony
-                env.launchIntoCeremony = false
-                listeningIsCeremony = true
-                Task {
-                    try? await Task.sleep(for: ListeningCeremony.autoOpenDelay(launchingFromOnboarding: fromOnboarding))
-                    guard loadedEntry?.id == entry.id else { return }
-                    showingListening = true
+            .onChange(of: loadedEntry?.id) { _, _ in evaluateNewDropPrompt() }
+            .onChange(of: env.listensStore.heardAt) { _, _ in evaluateNewDropPrompt() }
+            .overlay {
+                if showingNewDropPrompt, loadedEntry != nil {
+                    NewDropPrompt(
+                        dateText: todayString,
+                        onListen: {
+                            showingNewDropPrompt = false
+                            showingListening = true
+                        },
+                        onDismiss: {
+                            showingNewDropPrompt = false
+                            dismissedDropPromptThisSession = true
+                        }
+                    )
+                    .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.25), value: showingNewDropPrompt)
         }
         .task {
             // Build the VM once (guard against re-runs), then load.
@@ -139,7 +141,16 @@ struct TodayView: View {
                 )
             }
             await model?.load()
+            evaluateNewDropPrompt()
         }
+    }
+
+    private func evaluateNewDropPrompt() {
+        guard let entry = loadedEntry else { return }
+        showingNewDropPrompt = NewDropPromptRule.shouldShow(
+            isCollected: env.listensStore.isHeard(entry),
+            dismissedThisSession: dismissedDropPromptThisSession
+        )
     }
 
     private var loadingState: some View {
