@@ -108,20 +108,33 @@ extension EntryDetailView {
                     .padding(.horizontal)
             }
 
-            OpenInSection(
-                entry: entry,
-                accent: palette.accent,
-                rowState: openInRowState,
-                saveAction: saveToLibrary
-            )
-            .alert("Couldn't save this song", isPresented: $saveFailed) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(saveErrorMessage)
+            if isCollected || onRequestListen == nil {
+                OpenInSection(
+                    entry: entry,
+                    accent: palette.accent,
+                    rowState: openInRowState,
+                    saveAction: saveToLibrary
+                )
+                .alert("Couldn't save this song", isPresented: $saveFailed) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(saveErrorMessage)
+                }
+            } else {
+                Button { onRequestListen?() } label: {
+                    Label("Listen to collect", systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryActionButtonStyle(tint: palette.accent))
+                .padding(.horizontal)
             }
         }
         .padding(.top, Theme.Spacing.lg)
         .animation(ratingNudgeAnimation, value: shouldShowRatingNudge)
+    }
+
+    private var isCollected: Bool {
+        env.listensStore.isHeard(entry)
     }
 
     private var shouldShowRatingNudge: Bool {

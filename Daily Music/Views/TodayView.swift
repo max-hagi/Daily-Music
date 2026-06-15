@@ -36,7 +36,8 @@ struct TodayView: View {
                             preArtworkMessage: todayPrompt,
                             showsNavigationTitle: false,
                             albumArtHorizontalPadding: 28,
-                            usesImmersiveBackdrop: true
+                            usesImmersiveBackdrop: true,
+                            onRequestListen: { showingListening = true }
                         )
                         .simultaneousGesture(returnSwipeGesture)
 

@@ -50,6 +50,7 @@ struct OpenInSection: View {
                 .padding(.horizontal, Theme.Spacing.md)
             }
             .buttonStyle(PrimaryActionButtonStyle(tint: accent))
+            .contextMenu { alternateServiceButtons }   // long-press → other services
 
             if rowState.showsSaveButton {
                 Button(action: saveAction) {
@@ -64,24 +65,17 @@ struct OpenInSection: View {
                 .disabled(rowState.isSaveDisabled)
                 .accessibilityLabel(rowState.isSaved ? "Added to your Daily Music playlist" : "Save to your Daily Music playlist")
             }
-
-            Menu {
-                ForEach(StreamingService.allCases.filter { $0 != preferred }) { service in
-                    Button {
-                        if let url = service.url(for: entry) { openURL(url) }
-                    } label: {
-                        Label("Open in \(service.displayName)", systemImage: "arrow.up.forward.app")
-                    }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(accent)
-                    .frame(width: 48, height: 48)
-                    .glassEffect(.regular.interactive(), in: .circle)
-            }
-            .accessibilityLabel("More streaming services")
         }
         .padding(.horizontal)
+    }
+
+    @ViewBuilder private var alternateServiceButtons: some View {
+        ForEach(StreamingService.allCases.filter { $0 != preferred }) { service in
+            Button {
+                if let url = service.url(for: entry) { openURL(url) }
+            } label: {
+                Label("Open in \(service.displayName)", systemImage: "arrow.up.forward.app")
+            }
+        }
     }
 }

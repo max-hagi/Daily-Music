@@ -26,6 +26,9 @@ struct EntryDetailView: View {
     var reactionsAreReadOnly = false
     /// Daily taste signals only mutate for today's song; past entries keep the same controls read-only.
     var allowsDailyInteraction = true
+    /// Today supplies this so the "Listen to collect" button can open the player.
+    /// nil elsewhere (Vault/Favorites have their own listen entry points).
+    var onRequestListen: (() -> Void)? = nil
 
     @Environment(AppEnvironment.self) var env
     @Environment(\.accessibilityReduceMotion) var reduceMotion
