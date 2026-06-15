@@ -10,9 +10,20 @@
 
 import SwiftUI
 
+struct OpenInRowState: Equatable {
+    let canSaveToLibrary: Bool
+    let isSaved: Bool
+
+    var showsSaveButton: Bool { canSaveToLibrary }
+    var isSaveDisabled: Bool { isSaved }
+    var saveIconName: String { isSaved ? "checkmark.circle.fill" : "plus.circle" }
+}
+
 struct OpenInSection: View {
     let entry: DailyEntry
     var accent: Color = Theme.Brand.gradient[0]
+    var rowState = OpenInRowState(canSaveToLibrary: false, isSaved: false)
+    var saveAction: () -> Void = {}
 
     // Same UserDefaults key SettingsViewModel.Keys.preferredStreamingService writes.
     @AppStorage("settings.preferredStreamingService") private var preferredRaw = StreamingService.appleMusic.rawValue
@@ -39,6 +50,20 @@ struct OpenInSection: View {
                 .padding(.horizontal, Theme.Spacing.md)
             }
             .buttonStyle(PrimaryActionButtonStyle(tint: accent))
+
+            if rowState.showsSaveButton {
+                Button(action: saveAction) {
+                    Image(systemName: rowState.saveIconName)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(rowState.isSaved ? .green : accent)
+                        .frame(width: 48, height: 48)
+                        .symbolEffect(.bounce, value: rowState.isSaved)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .disabled(rowState.isSaveDisabled)
+                .accessibilityLabel(rowState.isSaved ? "Added to your Daily Music playlist" : "Save to your Daily Music playlist")
+            }
 
             Menu {
                 ForEach(StreamingService.allCases.filter { $0 != preferred }) { service in
