@@ -19,6 +19,15 @@ struct VaultView: View {
     @State private var selectedVaultEntryOpenedFromExternalSource = false
     // entryID → my reaction emoji, used to stamp the calendar days.
     @State private var reactions: [UUID: String] = [:]
+    // Which lens the hero shows: the Crate (browse) or the calendar (alternate lens).
+    @State private var lens: VaultLens = .crate
+    // Current streak, loaded from check-in history, for the milestone nudge.
+    @State private var streak: Streak?
+    // Collection share card presentation + pre-loaded covers.
+    @State private var showingCollectionShare = false
+    @State private var shareCovers: [UIImage] = []
+    // Drives the zoom transition: a tapped sleeve expands into the detail view.
+    @Namespace private var zoomNamespace
 
     init(
         entryToOpen: Binding<DailyEntry?> = .constant(nil),
@@ -57,6 +66,7 @@ struct VaultView: View {
             await model?.load()
             // Stamp the calendar with this user's reactions (best-effort; empty on failure).
             reactions = (try? await env.reactions.myReactions()) ?? [:]
+            streak = Streak.compute(from: (try? await env.checkIns.checkInDates()) ?? [])
             openPendingEntry()
         }
         .onChange(of: entryToOpen?.id) { _, _ in
@@ -64,34 +74,155 @@ struct VaultView: View {
         }
     }
 
-    // The loaded layout. Broken into named helper functions (vaultHero, etc.) that
-    // each take the entries and return a piece of the screen — keeps `body` readable.
+    // The loaded layout. The crate lens fills the screen (the dig is the hero);
+    // the calendar lens scrolls. The header (count, catch-up, toggle) is shared.
+    @ViewBuilder
     private func content(_ entries: [DailyEntry]) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                CollectionCountCard(
-                    total: env.listensStore.collectionCount,
-                    thisMonth: env.listensStore.collectedThisMonth()
-                )
-                vaultHero(entries)
-                calendarSection(entries)
-                recentSection(entries)
+        Group {
+            switch lens {
+            case .crate:
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                        vaultHeader(entries)
+                            .padding(.horizontal)
+                        crateSection(entries)
+                    }
+                    .padding(.vertical)
+                }
+                .refreshable {
+                    await model?.load()
+                    reactions = (try? await env.reactions.myReactions()) ?? [:]
+                    Haptics.tap()
+                }
+            case .calendar:
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                        vaultHeader(entries)
+                        calendarCard(entries)
+                    }
+                    .padding()
+                }
+                .refreshable {
+                    await model?.load()
+                    reactions = (try? await env.reactions.myReactions()) ?? [:]
+                    Haptics.tap()
+                }
             }
-            .padding()
         }
         .background(vaultBackground)
-        .refreshable {
-            await model?.load()
-            reactions = (try? await env.reactions.myReactions()) ?? [:]
-            Haptics.tap()
+        .toolbar {
+            // The Crate is the full browse, so search replaces the old "See all"
+            // entry point on the deleted Recent picks module.
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    VaultAllSongsView(entries: entries)
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+                .accessibilityLabel("Search the vault")
+            }
         }
-        
         // Tapping any Vault song presents a dedicated fullscreen detail instead of
-        // pushing inside this NavigationStack. This keeps the Vault list/calendar
-        // state intact while letting the song screen mimic Today's immersive layout.
+        // pushing inside this NavigationStack. The cover zooms out of the tapped
+        // sleeve (a square expanding) rather than sliding up from the bottom.
         .fullScreenCover(item: $selectedVaultEntry) { entry in
             VaultEntryDetail(entry: entry, onClose: closeSelectedVaultEntry)
+                .navigationTransition(.zoom(sourceID: entry.id, in: zoomNamespace))
         }
+        .sheet(isPresented: $showingCollectionShare) {
+            CollectionShareSheet(
+                count: env.listensStore.collectionCount,
+                subtitle: nudgeLine(entries),
+                covers: shareCovers
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func vaultHeader(_ entries: [DailyEntry]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("THE CRATE")
+                .font(.caption.weight(.semibold))
+                .tracking(2)
+                .foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Your collection")
+                    .font(.largeTitle.weight(.semibold))
+                Spacer()
+                shareButton(entries)
+            }
+            Text(nudgeLine(entries))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .contentTransition(.opacity)
+        }
+        lensHeader
+    }
+
+    /// Vault redesign §4 — the context-aware nudge under the title.
+    private func nudgeLine(_ entries: [DailyEntry]) -> String {
+        let rescuable = missedRecentEntries(entries).count
+        let collectedToday = env.listensStore.collectedThisMonth() > 0
+            && Calendar.current.isDate(
+                env.listensStore.heardAt.values.max() ?? .distantPast,
+                inSameDayAs: Date()
+            )
+        let started = env.listensStore.heardAt.values.min()
+            .map { Calendar.current.dateInterval(of: .month, for: $0)?.start ?? $0 }
+        return VaultNudge.line(
+            total: env.listensStore.collectionCount,
+            rescuable: rescuable,
+            collectedToday: collectedToday,
+            daysToNextMilestone: streak?.daysToNextMilestone,
+            startedMonth: started
+        )
+    }
+
+    /// Vault redesign §4 — the Shelf / Month lens toggle.
+    private var lensHeader: some View {
+        Picker("Lens", selection: $lens) {
+            Text("Shelf").tag(VaultLens.crate)
+            Text("Month").tag(VaultLens.calendar)
+        }
+        .pickerStyle(.segmented)
+        .padding(.top, Theme.Spacing.xs)
+    }
+
+    private func shareButton(_ entries: [DailyEntry]) -> some View {
+        Button {
+            Task { await prepareAndShowShare(entries) }
+        } label: {
+            Image(systemName: "square.and.arrow.up")
+                .font(.title3)
+        }
+        .accessibilityLabel("Share your collection")
+    }
+
+    /// Pre-load up to 9 recent collected covers, then present the share sheet.
+    private func prepareAndShowShare(_ entries: [DailyEntry]) async {
+        let collected = entries.filter { env.listensStore.isHeard($0) }
+        let urls = collected.prefix(9).compactMap(\.albumArtURL)
+        var images: [UIImage] = []
+        for url in urls {
+            if let (data, _) = try? await URLSession.shared.data(from: url),
+               let image = UIImage(data: data) {
+                images.append(image)
+            }
+        }
+        shareCovers = images
+        showingCollectionShare = true
+    }
+
+    /// The Crate: a vertical scroll of month shelves (Vault redesign §1).
+    private func crateSection(_ entries: [DailyEntry]) -> some View {
+        MonthShelvesView(
+            entries: entries,
+            missingVariant: env.variants.missingSleeve,
+            secondhandVariant: env.variants.secondhand,
+            status: { env.listensStore.status(for: $0) },
+            onSelect: { openVaultEntry($0) },
+            namespace: zoomNamespace
+        )
     }
 
     private var vaultBackground: some View {
@@ -113,109 +244,16 @@ struct VaultView: View {
         )
     }
 
-    // Data-driven hero: same gradient stage, but the copy reflects THIS user's
-    // week — N drops to catch up on, or a small win when they caught them all.
-    // Static marketing copy goes stale by visit three; a mirror never does.
-    private func vaultHero(_ entries: [DailyEntry]) -> some View {
-        let missed = missedRecentEntries(entries)
-
-        return HeroCard(
-            icon: missed.isEmpty ? "checkmark.seal.fill" : "archivebox.fill",
-            eyebrow: missed.isEmpty ? "ALL CAUGHT UP" : "CATCH-UP MODE",
-            title: heroTitle(missedCount: missed.count),
-            subtitle: heroSubtitle(missedCount: missed.count),
-            gradient: Theme.Surface.vaultHero
-        ) {
-            if let featured = missed.first ?? entries.first {
-                Button {
-                    openVaultEntry(featured)
-                } label: {
-                    VaultTintedEntryRow(entry: featured, eyebrow: heroRowEyebrow(for: featured, isMissed: !missed.isEmpty))
-                }
-                .buttonStyle(PressableCardButtonStyle())
-            }
+    // §10.1.4 / §10.4 — the calendar as an alternate lens, behind the toggle.
+    private func calendarCard(_ entries: [DailyEntry]) -> some View {
+        CalendarMonthView(entries: entries, reactions: reactions,
+                          status: { env.listensStore.status(for: $0) },
+                          missingVariant: env.variants.missingSleeve,
+                          secondhandVariant: env.variants.secondhand) { entry in
+            openVaultEntry(entry)
         }
-    }
-
-    private func heroTitle(missedCount: Int) -> String {
-        switch missedCount {
-        case 0: "You caught every drop this week"
-        case 1: "One drop slipped past you"
-        default: "\(missedCount) drops slipped past you"
-        }
-    }
-
-    private func heroSubtitle(missedCount: Int) -> String {
-        missedCount == 0
-            ? "Every pick from the past week, heard. The Vault keeps the older ones ready whenever you want to dig."
-            : "The live moment belongs to Today — but this week's missed picks are still right here, waiting."
-    }
-
-    private func heroRowEyebrow(for entry: DailyEntry, isMissed: Bool) -> String {
-        guard isMissed else { return "Latest archive pick" }
-        let weekday = entry.date.formatted(.dateTime.weekday(.wide))
-        return "\(weekday)'s pick — tap to catch up"
-    }
-
-    private func calendarSection(_ entries: [DailyEntry]) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Archive calendar")
-                        .font(.dmTitle())
-                    Text("Dots mark days with a published pick.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "circle.grid.3x3.fill")
-                    .foregroundStyle(.teal)
-            }
-
-            CalendarMonthView(entries: entries, reactions: reactions,
-                              status: { env.listensStore.status(for: $0) }) { entry in
-                openVaultEntry(entry)
-            }
-        }
-        .padding(Theme.Spacing.lg)
+        .padding(Theme.Spacing.md)
         .glassCardStyle(tint: .teal.opacity(0.08))
-    }
-
-    private func recentSection(_ entries: [DailyEntry]) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Recent picks")
-                    .font(.dmTitle())
-
-                Spacer()
-
-                // The archive's browse/search entry point — without it, anything
-                // older than the five rows below is only reachable date-by-date
-                // through the calendar.
-                NavigationLink {
-                    VaultAllSongsView(entries: entries)
-                } label: {
-                    HStack(spacing: 3) {
-                        Text("See all")
-                        Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.bold))
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.teal)
-                }
-            }
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12) {
-                ForEach(Array(entries.prefix(12))) { entry in
-                    Button {
-                        openVaultEntry(entry)
-                    } label: {
-                        SleeveView(entry: entry, status: env.listensStore.status(for: entry), size: 72)
-                    }
-                    .buttonStyle(PressableCardButtonStyle())
-                }
-            }
-        }
     }
 
     private func openVaultEntry(_ entry: DailyEntry, openedFromExternalSource: Bool = false) {
@@ -238,13 +276,14 @@ struct VaultView: View {
         onReturnFromOpenedEntry?()
     }
 
-    private func releaseDateLabel(for entry: DailyEntry) -> String {
-        "Released \(entry.date.formatted(.dateTime.month(.wide).day().year()))"
-    }
+}
+
+private enum VaultLens {
+    case crate, calendar
 }
 
 /// Every published entry, searchable by title, artist, genre, or mood — the
-/// "where's that song from a while ago?" screen. Pushed from Recent picks.
+/// "where's that song from a while ago?" screen. Reached from the Vault search.
 struct VaultAllSongsView: View {
     let entries: [DailyEntry]
 
@@ -418,72 +457,6 @@ struct VaultToolbarListenedBadge: View {
         .glassPillStyle(tint: .red.opacity(0.08))
         .accessibilityLabel("\(count) people opened the app that day")
         .onAppear { isPulsing = !reduceMotion }
-    }
-}
-
-private struct VaultTintedEntryRow: View {
-    let entry: DailyEntry
-    var eyebrow: String?
-
-    @Environment(AppEnvironment.self) private var env
-    @State private var palette = ArtworkPalette()
-
-    // Reactive: reads from the shared RatingsStore — updates instantly when any
-    // other view (e.g. CategorySongsSheet) writes a new value.
-    private var myRating: Int? { env.ratingsStore.rating(for: entry.id) }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.chip)
-                .frame(width: 56, height: 56)
-
-            VStack(alignment: .leading, spacing: 2) {
-                if let eyebrow {
-                    Text(eyebrow)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                }
-
-                Text(entry.title)
-                    .font(.headline)
-                    .lineLimit(1)
-
-                Text(entry.artist)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                Text(entry.date.formatted(.dateTime.month().day().year()))
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-
-            Spacer()
-
-            if let r = myRating {
-                Text(r > 0 ? "👍" : "👎")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(palette.accent.opacity(0.72))
-        }
-        .padding(Theme.Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCardStyle(
-            tint: palette.accent.opacity(palette.isLoaded ? 0.16 : 0.06),
-            in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-        )
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(palette.accent.opacity(palette.isLoaded ? 0.58 : 0.22))
-                .frame(width: 3)
-                .padding(.vertical, 14)
-        }
-        .animation(.easeInOut(duration: 0.35), value: palette.accent)
-        .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
     }
 }
 
