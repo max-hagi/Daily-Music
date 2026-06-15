@@ -37,7 +37,10 @@ struct TodayView: View {
                             showsNavigationTitle: false,
                             albumArtHorizontalPadding: 28,
                             usesImmersiveBackdrop: true,
-                            onRequestListen: { showingListening = true }
+                            onRequestListen: { showingListening = true },
+                            greetingAccessory: model.streak.flatMap { streak in
+                                streak.current > 0 ? AnyView(TodayToolbarStreakBadge(streak: streak)) : nil
+                            }
                         )
                         .simultaneousGesture(returnSwipeGesture)
 
@@ -73,23 +76,7 @@ struct TodayView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    if let streak = model?.streak, streak.current > 0 {
-                        TodayToolbarStreakBadge(streak: streak)
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
                     TodayToolbarLiveBadge(count: model?.listenersToday)
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingListening = true
-                    } label: {
-                        Image(systemName: "headphones")
-                    }
-                    .accessibilityLabel("Listen")
-                    .disabled(loadedEntry == nil)
                 }
             }
             // `.sheet(isPresented:)` shows a modal when the bound Bool is true.

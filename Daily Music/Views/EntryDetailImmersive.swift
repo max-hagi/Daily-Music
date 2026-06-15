@@ -46,12 +46,21 @@ extension EntryDetailView {
 
     private func songZone(openJournal: @escaping () -> Void) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
-            if let preArtworkMessage {
-                Text(preArtworkMessage)
-                    .font(.caption.weight(.semibold))   // shrunk greeting
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .padding(.top, Theme.Spacing.sm)
+            if preArtworkMessage != nil || greetingAccessory != nil {
+                HStack(spacing: Theme.Spacing.sm) {
+                    if let preArtworkMessage {
+                        Text(preArtworkMessage)
+                            .font(.caption.weight(.semibold))   // shrunk greeting
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    if let greetingAccessory {
+                        greetingAccessory
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.top, Theme.Spacing.sm)
             } else {
                 Color.clear
                     .frame(height: 16)

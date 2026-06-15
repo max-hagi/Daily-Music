@@ -29,6 +29,9 @@ struct EntryDetailView: View {
     /// Today supplies this so the "Listen to collect" button can open the player.
     /// nil elsewhere (Vault/Favorites have their own listen entry points).
     var onRequestListen: (() -> Void)? = nil
+    /// Optional trailing chip shown in the immersive greeting row (Today's streak).
+    /// Type-erased so callers pass any small view; nil on Vault/Favorites.
+    var greetingAccessory: AnyView? = nil
 
     @Environment(AppEnvironment.self) var env
     @Environment(\.accessibilityReduceMotion) var reduceMotion
