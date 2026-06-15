@@ -59,19 +59,26 @@ extension EntryDetailView {
     private func songZone(openJournal: @escaping () -> Void) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
             if onRequestListen != nil {
-                Label(isCollected ? "pull down to replay" : "pull down to listen",
-                      systemImage: "chevron.down")
-                    .labelStyle(.titleAndIcon)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .opacity(0.65)
-                    .padding(.top, 4)
-            }
-            if preArtworkMessage != nil || greetingAccessory != nil {
+                // Today: one compact top row — the replay cue centered, streak
+                // trailing. No greeting line, so the cover sits higher.
+                ZStack {
+                    Label(isCollected ? "pull down to replay" : "pull down to listen",
+                          systemImage: "chevron.down")
+                        .labelStyle(.titleAndIcon)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .opacity(0.65)
+                    if let greetingAccessory {
+                        HStack { Spacer(minLength: 0); greetingAccessory }
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.top, 6)
+            } else if preArtworkMessage != nil || greetingAccessory != nil {
                 HStack(spacing: Theme.Spacing.sm) {
                     if let preArtworkMessage {
                         Text(preArtworkMessage)
-                            .font(.caption.weight(.semibold))   // shrunk greeting
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }

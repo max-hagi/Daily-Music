@@ -33,7 +33,6 @@ struct TodayView: View {
                         EntryDetailView(
                             entry: entry,
                             dateLabel: todayString,
-                            preArtworkMessage: todayPrompt,
                             showsNavigationTitle: false,
                             albumArtHorizontalPadding: 28,
                             usesImmersiveBackdrop: true,
@@ -155,18 +154,6 @@ struct TodayView: View {
 
     private var todayString: String {
         Date().formatted(.dateTime.weekday(.wide).month().day())
-    }
-
-    private var todayPrompt: String {
-        "Hey \(listenerName), today's song is ready."
-    }
-
-    private var listenerName: String {
-        guard let displayName = env.session.session?.displayName,
-              let first = PersonName.firstName(from: displayName) else {
-            return "there"
-        }
-        return first
     }
 
     private var returnSwipeGesture: some Gesture {
@@ -303,9 +290,9 @@ private struct TodayToolbarStreakBadge: View {
             Haptics.select()
             showingDetail = true
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Image(systemName: "flame.fill")
-                    .font(.caption.weight(.semibold))
+                    .font(.subheadline.weight(.bold))
                     .foregroundStyle(.orange)
                     .scaleEffect(flaring && !reduceMotion ? 1.5 : 1)
                     .overlay {
@@ -318,12 +305,12 @@ private struct TodayToolbarStreakBadge: View {
                     }
 
                 Text(label)
-                    .font(.caption.weight(.semibold))
+                    .font(.subheadline.weight(.bold))
                     .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     .contentTransition(.numericText())
             }
-            .glassPillStyle(tint: .orange.opacity(streak.isMilestoneToday ? 0.22 : 0))
+            .glassPillStyle(tint: .orange.opacity(streak.isMilestoneToday ? 0.22 : 0.08))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)

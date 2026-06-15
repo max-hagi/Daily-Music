@@ -75,6 +75,9 @@ struct ListeningView: View {
             }
         }
         .preferredColorScheme(.dark)
+        // Swipe up to send the player back down to Today — the mirror of Today's
+        // pull-down-to-listen. Simultaneous so it never blocks the transport/scrub.
+        .simultaneousGesture(swipeUpToReturnGesture)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
         // Separate task from the palette load above: ticks the listen accumulator
         // while the player is open, so Today can collect the record once the
@@ -454,6 +457,16 @@ struct ListeningView: View {
         }
         .shadow(color: .black.opacity(0.22), radius: 18, y: 8)
         .padding(.top, 4)
+    }
+
+    /// An upward swipe dismisses the player back to Today (the inverse of the
+    /// pull-down that opened it). Vertical-only so a horizontal scrub can't trip it.
+    private var swipeUpToReturnGesture: some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { value in
+                guard value.translation.height < -80, abs(value.translation.width) < 60 else { return }
+                onAdvance()
+            }
     }
 
     private func scrubGesture(width: CGFloat) -> some Gesture {
