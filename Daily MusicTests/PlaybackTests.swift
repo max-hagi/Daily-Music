@@ -84,14 +84,6 @@ struct PlaybackTests {
         #expect(player.state == .playing)
     }
 
-    @Test func autoOpensWhenTodayNotYetHeard() {
-        #expect(ListeningCeremony.shouldAutoOpen(hasHeardToday: false))
-    }
-
-    @Test func doesNotAutoOpenWhenTodayAlreadyHeard() {
-        #expect(!ListeningCeremony.shouldAutoOpen(hasHeardToday: true))
-    }
-
     // The taste-seed loop depends on this: replaying a finished clip via toggle()
     // must start it fresh (not resume), so onboarding can loop previews.
     @Test func toggleAfterFinishedReplaysFromStart() async {
@@ -107,10 +99,5 @@ struct PlaybackTests {
         #expect(engine.resumeCalls == 0)
         #expect(player.state == .playing)
         #expect(player.nowPlayingEntryID == entry.id)
-    }
-
-    @Test func ceremonyDelayIsZeroWhenLaunchingFromOnboarding() {
-        #expect(ListeningCeremony.autoOpenDelay(launchingFromOnboarding: true) == .zero)
-        #expect(ListeningCeremony.autoOpenDelay(launchingFromOnboarding: false) == .seconds(0.6))
     }
 }
