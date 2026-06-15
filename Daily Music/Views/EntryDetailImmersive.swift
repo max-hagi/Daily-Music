@@ -38,6 +38,18 @@ extension EntryDetailView {
             } action: { _, fade in
                 journalDockFade = fade
             }
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top   // negative when pulled past the top
+            } action: { _, offset in
+                guard onRequestListen != nil else { return }
+                if offset < -80, !pullTriggered {
+                    pullTriggered = true
+                    Haptics.tap()
+                    onRequestListen?()
+                } else if offset >= -8 {
+                    pullTriggered = false   // re-arm once released back near the top
+                }
+            }
         }
     }
 
@@ -46,6 +58,15 @@ extension EntryDetailView {
 
     private func songZone(openJournal: @escaping () -> Void) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
+            if onRequestListen != nil {
+                Label(isCollected ? "pull down to replay" : "pull down to listen",
+                      systemImage: "chevron.down")
+                    .labelStyle(.titleAndIcon)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .opacity(0.65)
+                    .padding(.top, 4)
+            }
             if preArtworkMessage != nil || greetingAccessory != nil {
                 HStack(spacing: Theme.Spacing.sm) {
                     if let preArtworkMessage {
