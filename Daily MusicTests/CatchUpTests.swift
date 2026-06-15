@@ -109,6 +109,13 @@ struct ListenStatusTests {
         #expect(status == .heardSameDay)
     }
 
+    @Test func todaysDropHeardTodayIsHeardSameDay() {
+        // Today's drop, played today → mint. Guards the same-day `<=` boundary the
+        // spec's mint rule calls out (today's same-day listen counts as full credit).
+        let status = ListenStatus.of(entryDate: day(0), heardAt: day(0), calendar: calendar, asOf: now)
+        #expect(status == .heardSameDay)
+    }
+
     @Test func heardLaterIsCaughtUp() {
         // Dropped 5 days ago, heard 2 days ago.
         let status = ListenStatus.of(entryDate: day(-5), heardAt: day(-2), calendar: calendar, asOf: now)
@@ -134,6 +141,63 @@ struct ListenStatusTests {
     @Test func daysLateIsTheGapBetweenDropAndListen() {
         #expect(ListenStatus.daysLate(entryDate: day(-5), heardAt: day(-2), calendar: calendar) == 3)
         #expect(ListenStatus.daysLate(entryDate: day(-2), heardAt: day(-2), calendar: calendar) == 0)
+    }
+}
+
+struct SleeveTreatmentTests {
+    // The sleeve renders 4 treatments (§10.3); ListenStatus has 5 cases. This is
+    // the collapse: the two "invitation" states both render pending.
+
+    @Test func todaysUnheardDropIsPending() {
+        #expect(SleeveTreatment(.unheard) == .pending)
+    }
+
+    @Test func rescuableRendersAsPendingNotAGap() {
+        // Spec §1: still inside the window → pending-styled "still available",
+        // never an empty/missing sleeve.
+        #expect(SleeveTreatment(.rescuable) == .pending)
+    }
+
+    @Test func heardSameDayIsMint() {
+        #expect(SleeveTreatment(.heardSameDay) == .mint)
+    }
+
+    @Test func caughtUpIsSecondhand() {
+        #expect(SleeveTreatment(.caughtUp) == .secondhand)
+    }
+
+    @Test func missedIsMissing() {
+        #expect(SleeveTreatment(.missed) == .missing)
+    }
+}
+
+struct VariantConfigTests {
+    @Test func defaultsMatchLockedPicks() {
+        // Guards the shipped product decision (spec §11 defaults + the user's
+        // one change: moment = playful). Changing a default must break this.
+        let c = VariantConfig()
+        #expect(c.missingSleeve == .blank)
+        #expect(c.secondhand == .wornCornerStamp)
+        #expect(c.crateFeel == .centerTilt)
+        #expect(c.momentTiming == .playful)
+    }
+}
+
+struct CrateLayoutTests {
+    @Test func countLabelPluralisesAndShowsMonth() {
+        #expect(CrateLayout.collectionCountLabel(total: 3, thisMonth: 3) == "3 records · 3 this month")
+    }
+
+    @Test func countLabelSingularRecord() {
+        #expect(CrateLayout.collectionCountLabel(total: 1, thisMonth: 1) == "1 record · 1 this month")
+    }
+
+    @Test func countLabelDropsMonthClauseWhenZero() {
+        #expect(CrateLayout.collectionCountLabel(total: 5, thisMonth: 0) == "5 records")
+    }
+
+    @Test func countLabelHandlesEmptyCollection() {
+        #expect(CrateLayout.collectionCountLabel(total: 0, thisMonth: 0) == "0 records")
     }
 }
 
@@ -223,5 +287,37 @@ struct ListensStoreTests {
         store.markHeard(entry())
         #expect(store.collectedThisMonth() == 2)
         #expect(store.collectedThisMonth(asOf: .distantFuture) == 0)
+    }
+}
+
+struct CrateMonthSectionTests {
+    private let calendar = Calendar(identifier: .gregorian)
+
+    private func entry(_ y: Int, _ m: Int, _ d: Int) -> DailyEntry {
+        let date = calendar.date(from: DateComponents(year: y, month: m, day: d))!
+        return DailyEntry(id: UUID(), date: date, title: "S", artist: "A",
+                          albumArtURL: nil, journalMarkdown: "", appleMusicID: "1",
+                          spotifyURI: "spotify:track:1")
+    }
+
+    @Test func groupsEntriesByMonthNewestFirst() {
+        let jun2 = entry(2026, 6, 2)
+        let jun20 = entry(2026, 6, 20)
+        let may = entry(2026, 5, 9)
+        let sections = CrateLayout.monthSections(
+            for: [jun20, jun2, may], calendar: calendar   // already newest-first
+        )
+        #expect(sections.count == 2)
+        #expect(sections[0].entries.map(\.id) == [jun20.id, jun2.id])  // June, newest-first
+        #expect(sections[1].entries.map(\.id) == [may.id])             // then May
+    }
+
+    @Test func monthSectionTitleIsMonthAndYear() {
+        let sections = CrateLayout.monthSections(for: [entry(2026, 6, 2)], calendar: calendar)
+        #expect(sections[0].title == "June 2026")
+    }
+
+    @Test func emptyInputYieldsNoSections() {
+        #expect(CrateLayout.monthSections(for: [], calendar: calendar).isEmpty)
     }
 }
