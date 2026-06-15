@@ -20,6 +20,8 @@ struct CalendarMonthView: View {
     private let reactionsByEntry: [UUID: String]
     // entryID → its ListenStatus, used to colour the day marker (optional).
     private let statusForEntry: ((DailyEntry) -> ListenStatus)?
+    private let missingVariant: MissingSleeveVariant
+    private let secondhandVariant: SecondhandVariant
     // Which month is on screen. @State so the chevrons can change it and redraw.
     @State private var month: Date
     private let calendar = Calendar.current
@@ -28,6 +30,8 @@ struct CalendarMonthView: View {
     // input and seed @State from a computed value.
     init(entries: [DailyEntry], reactions: [UUID: String] = [:],
          status: ((DailyEntry) -> ListenStatus)? = nil,
+         missingVariant: MissingSleeveVariant = .dusty,
+         secondhandVariant: SecondhandVariant = .wornCornerStamp,
          onSelect: ((DailyEntry) -> Void)? = nil) {
         let cal = Calendar.current
         var dict: [Date: DailyEntry] = [:]
@@ -37,6 +41,8 @@ struct CalendarMonthView: View {
         self.entriesByDay = dict
         self.reactionsByEntry = reactions
         self.statusForEntry = status
+        self.missingVariant = missingVariant
+        self.secondhandVariant = secondhandVariant
         self.onSelect = onSelect
 
         // Open on the current month so today's date is visible on first load.
@@ -123,7 +129,7 @@ struct CalendarMonthView: View {
                 if let day {
                     dayCell(day)            // a real day
                 } else {
-                    Color.clear.frame(height: 44)   // leading blank to align the 1st
+                    Color.clear.frame(height: 60)   // leading blank to align the 1st
                 }
             }
         }
@@ -139,35 +145,35 @@ struct CalendarMonthView: View {
             Button {
                 onSelect?(entry)
             } label: {
-                VStack(spacing: 0) {
-                    Text("\(number)")
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(Color.primary)
-                        .frame(width: 32, height: 22)
-                        .overlay {
-                            if isToday(day) {
-                                Circle().stroke(.secondary, lineWidth: 1)
-                            }
-                        }
-
-                    // Marker: the emoji you reacted with, else the accent dot. Emoji
-                    // glyphs can render taller than their font size, so reserve a
-                    // little more vertical room while keeping every cell 40pt tall.
-                    Group {
+                VStack(spacing: 2) {
+                    SleeveView(
+                        entry: entry,
+                        status: statusForEntry?(entry) ?? .heardSameDay,
+                        size: 40,
+                        missingVariant: missingVariant,
+                        secondhandVariant: secondhandVariant
+                    )
+                    .overlay(alignment: .topTrailing) {
                         if let emoji = reactionsByEntry[entry.id] {
                             Text(emoji)
-                                .font(.system(size: 12))
-                                .lineLimit(1)
-                                .fixedSize()
-                        } else {
-                            Circle()
-                                .fill((statusForEntry?(entry).indicatorColor) ?? Color.accentColor)
-                                .frame(width: 5, height: 5)
+                                .font(.system(size: 11))
+                                .padding(1)
+                                .background(Color(.systemBackground).opacity(0.85), in: Circle())
+                                .offset(x: 4, y: -4)
                         }
                     }
-                    .frame(height: 18)
+                    .overlay {
+                        if isToday(day) {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(Color.accentColor, lineWidth: 2)
+                                .frame(width: 46, height: 46)
+                        }
+                    }
+                    Text("\(number)")
+                        .font(.caption2)
+                        .foregroundStyle(isToday(day) ? Color.primary : Color.secondary)
                 }
-                .frame(width: 40, height: 40)
+                .frame(width: 46, height: 60)
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
@@ -245,7 +251,7 @@ struct CalendarMonthView: View {
 
     private func gridHeight(for visibleMonth: Date) -> CGFloat {
         let rowCount = ceil(Double(days(for: visibleMonth).count) / 7.0)
-        return CGFloat(rowCount) * 40 + CGFloat(max(rowCount - 1, 0)) * 8
+        return CGFloat(rowCount) * 60 + CGFloat(max(rowCount - 1, 0)) * 8
     }
 
     private static func months(from start: Date, through end: Date, calendar: Calendar) -> [Date] {
