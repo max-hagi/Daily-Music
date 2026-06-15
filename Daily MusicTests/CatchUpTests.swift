@@ -321,3 +321,68 @@ struct CrateMonthSectionTests {
         #expect(CrateLayout.monthSections(for: [], calendar: calendar).isEmpty)
     }
 }
+
+struct VaultNudgeTests {
+    private let calendar = Calendar(identifier: .gregorian)
+    private func month(_ y: Int, _ m: Int) -> Date {
+        calendar.date(from: DateComponents(year: y, month: m, day: 1))!
+    }
+
+    @Test func rescuableTakesTopPriority() {
+        let line = VaultNudge.line(
+            total: 47, rescuable: 2, collectedToday: true,
+            daysToNextMilestone: 1, startedMonth: month(2026, 4), calendar: calendar
+        )
+        #expect(line == "2 waiting to be rescued")
+    }
+
+    @Test func rescuableSingularGrammar() {
+        let line = VaultNudge.line(
+            total: 47, rescuable: 1, collectedToday: false,
+            daysToNextMilestone: nil, startedMonth: month(2026, 4), calendar: calendar
+        )
+        #expect(line == "1 waiting to be rescued")
+    }
+
+    @Test func milestoneProximityWhenNothingRescuable() {
+        let line = VaultNudge.line(
+            total: 47, rescuable: 0, collectedToday: true,
+            daysToNextMilestone: 2, startedMonth: month(2026, 4), calendar: calendar
+        )
+        #expect(line == "2 days to your next pressing")
+    }
+
+    @Test func milestoneProximitySingularDay() {
+        let line = VaultNudge.line(
+            total: 47, rescuable: 0, collectedToday: true,
+            daysToNextMilestone: 1, startedMonth: month(2026, 4), calendar: calendar
+        )
+        #expect(line == "1 day to your next pressing")
+    }
+
+    @Test func defaultIsCountAndProvenance() {
+        let line = VaultNudge.line(
+            total: 47, rescuable: 0, collectedToday: false,
+            daysToNextMilestone: nil, startedMonth: month(2026, 4), calendar: calendar
+        )
+        #expect(line == "47 records · started April 2026")
+    }
+
+    @Test func defaultSingularRecordNoProvenanceWhenStartUnknown() {
+        let line = VaultNudge.line(
+            total: 1, rescuable: 0, collectedToday: false,
+            daysToNextMilestone: nil, startedMonth: nil, calendar: calendar
+        )
+        #expect(line == "1 record")
+    }
+
+    @Test func milestoneProximityIgnoredWhenNotCollectedToday() {
+        // Only nudge toward the next pressing on a day you've collected — otherwise
+        // fall through to the default count line.
+        let line = VaultNudge.line(
+            total: 47, rescuable: 0, collectedToday: false,
+            daysToNextMilestone: 2, startedMonth: month(2026, 4), calendar: calendar
+        )
+        #expect(line == "47 records · started April 2026")
+    }
+}

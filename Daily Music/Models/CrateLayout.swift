@@ -48,3 +48,31 @@ enum CrateLayout {
         }
     }
 }
+
+/// The Vault header's secondary line — a context-aware nudge chosen by priority.
+/// Pure and unit-tested; the view passes in counts/dates and renders the string.
+enum VaultNudge {
+    static func line(
+        total: Int,
+        rescuable: Int,
+        collectedToday: Bool,
+        daysToNextMilestone: Int?,
+        startedMonth: Date?,
+        calendar: Calendar = .current
+    ) -> String {
+        // 1. Something to reclaim wins — it's the strongest pull back in.
+        if rescuable > 0 {
+            return "\(rescuable) waiting to be rescued"
+        }
+        // 2. On a day you've collected, nudge toward the next streak pressing.
+        if collectedToday, let days = daysToNextMilestone, days > 0 {
+            let noun = days == 1 ? "day" : "days"
+            return "\(days) \(noun) to your next pressing"
+        }
+        // 3. Default: the hero count, with provenance when we know the start month.
+        let recordNoun = total == 1 ? "record" : "records"
+        guard let startedMonth else { return "\(total) \(recordNoun)" }
+        let month = startedMonth.formatted(.dateTime.month(.wide).year())
+        return "\(total) \(recordNoun) · started \(month)"
+    }
+}
