@@ -140,23 +140,22 @@ struct VaultView: View {
 
     @ViewBuilder
     private func vaultHeader(_ entries: [DailyEntry]) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("THE CRATE")
-                .font(.caption.weight(.semibold))
-                .tracking(2)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Your collection")
-                    .font(.largeTitle.weight(.semibold))
+                    .font(.title.weight(.semibold))
                 Spacer()
                 shareButton(entries)
             }
-            Text(nudgeLine(entries))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .contentTransition(.opacity)
+            HStack(spacing: Theme.Spacing.md) {
+                Text(nudgeLine(entries))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .contentTransition(.opacity)
+                Spacer(minLength: Theme.Spacing.sm)
+                lensHeader
+            }
         }
-        lensHeader
     }
 
     /// Vault redesign §4 — the context-aware nudge under the title.
@@ -178,14 +177,15 @@ struct VaultView: View {
         )
     }
 
-    /// Vault redesign §4 — the Shelf / Month lens toggle.
+    /// Vault redesign §4 — the compact Shelf / Month lens toggle.
     private var lensHeader: some View {
         Picker("Lens", selection: $lens) {
-            Text("Shelf").tag(VaultLens.crate)
-            Text("Month").tag(VaultLens.calendar)
+            Image(systemName: "rectangle.stack").tag(VaultLens.crate)
+            Image(systemName: "calendar").tag(VaultLens.calendar)
         }
         .pickerStyle(.segmented)
-        .padding(.top, Theme.Spacing.xs)
+        .labelsHidden()
+        .frame(width: 92)
     }
 
     private func shareButton(_ entries: [DailyEntry]) -> some View {
