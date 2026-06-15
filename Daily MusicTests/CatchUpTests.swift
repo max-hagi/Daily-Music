@@ -176,7 +176,7 @@ struct VariantConfigTests {
         // Guards the shipped product decision (spec §11 defaults + the user's
         // one change: moment = playful). Changing a default must break this.
         let c = VariantConfig()
-        #expect(c.missingSleeve == .blank)
+        #expect(c.missingSleeve == .dusty)
         #expect(c.secondhand == .wornCornerStamp)
         #expect(c.crateFeel == .centerTilt)
         #expect(c.momentTiming == .playful)
