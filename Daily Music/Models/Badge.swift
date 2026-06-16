@@ -77,3 +77,51 @@ enum BadgeMath {
         )
     }
 }
+
+/// The static catalogue of every badge. IDs are stable (used as seen-keys), so
+/// never rename an id once shipped.
+enum BadgeCatalog {
+    // Tiered — counts
+    static let dailyStreak = BadgeDefinition(
+        id: "streak", title: "Daily Streak", subtitle: "Days in a row",
+        symbol: "🔥", tint: .orange, kind: .tiered(thresholds: [3, 7, 14, 30, 100]))
+    static let mint = BadgeDefinition(
+        id: "mint", title: "Mint Collector", subtitle: "Heard on its drop day",
+        symbol: "💿", tint: .teal, kind: .tiered(thresholds: [5, 25, 50, 100, 250]))
+    static let crate = BadgeDefinition(
+        id: "crate", title: "Crate Digger", subtitle: "Songs collected",
+        symbol: "🗄️", tint: .indigo, kind: .tiered(thresholds: [10, 50, 100, 250]))
+    static let saved = BadgeDefinition(
+        id: "saved", title: "Kept Forever", subtitle: "Songs saved",
+        symbol: "❤️", tint: .pink, kind: .tiered(thresholds: [5, 25, 50, 100]))
+    static let critic = BadgeDefinition(
+        id: "critic", title: "Critic", subtitle: "Songs rated",
+        symbol: "⚖️", tint: .yellow, kind: .tiered(thresholds: [10, 50, 100, 250]))
+    static let rescuer = BadgeDefinition(
+        id: "rescuer", title: "Rescuer", subtitle: "Salvaged missed drops",
+        symbol: "🛟", tint: .purple, kind: .tiered(thresholds: [1, 5, 10, 25]))
+
+    // Moments — one-time, hidden until earned
+    static let firstPress = BadgeDefinition(
+        id: "firstPress", title: "First Press", subtitle: "Your first mint song",
+        symbol: "✨", tint: .teal, kind: .moment)
+    static let perfectWeek = BadgeDefinition(
+        id: "perfectWeek", title: "Perfect Week", subtitle: "7 same-day pickups in a row",
+        symbol: "🗓️", tint: .orange, kind: .moment)
+    static let comeback = BadgeDefinition(
+        id: "comeback", title: "Comeback", subtitle: "Rebuilt a streak to a week",
+        symbol: "🌱", tint: .green, kind: .moment)
+    static let nightOwl = BadgeDefinition(
+        id: "nightOwl", title: "Night Owl", subtitle: "Caught a drop after midnight",
+        symbol: "🦉", tint: .indigo, kind: .moment)
+    static let flawlessMonth = BadgeDefinition(
+        id: "flawlessMonth", title: "Flawless Month", subtitle: "A month with no misses",
+        symbol: "🌕", tint: .yellow, kind: .moment)
+    static let revealed = BadgeDefinition(
+        id: "revealed", title: "Revealed", subtitle: "Unlocked your archetype",
+        symbol: "🔮", tint: .purple, kind: .moment)
+
+    static let tiered: [BadgeDefinition] = [dailyStreak, mint, crate, saved, critic, rescuer]
+    static let moments: [BadgeDefinition] = [firstPress, perfectWeek, comeback, nightOwl, flawlessMonth, revealed]
+    static let all: [BadgeDefinition] = tiered + moments
+}

@@ -43,4 +43,26 @@ struct BadgeTests {
         #expect(p.isMaxed)
         #expect(p.progressToNext == 1.0)
     }
+
+    // MARK: - Catalogue
+
+    @Test func catalogueHasSixTieredAndSixMoments() {
+        #expect(BadgeCatalog.tiered.count == 6)
+        #expect(BadgeCatalog.moments.count == 6)
+        #expect(BadgeCatalog.all.count == 12)
+    }
+
+    @Test func catalogueIDsAreUnique() {
+        let ids = BadgeCatalog.all.map(\.id)
+        #expect(Set(ids).count == ids.count)
+    }
+
+    @Test func tieredBadgesAreTieredAndMomentsAreMoments() {
+        for def in BadgeCatalog.tiered {
+            if case .tiered = def.kind {} else { Issue.record("\(def.id) not tiered") }
+        }
+        for def in BadgeCatalog.moments {
+            #expect(def.kind == .moment)
+        }
+    }
 }
