@@ -44,6 +44,20 @@ struct InsightsView: View {
             .navigationTitle("Insights")
             .toolbarBackground(.hidden, for: .navigationBar)
             .background(wash)
+            .overlay {
+                if let badge = celebrating {
+                    Color.black.opacity(0.45).ignoresSafeArea()
+                        .transition(.opacity)
+                        .onTapGesture { dismissCelebration() }
+                    BadgeCelebrationCard(
+                        badge: badge,
+                        accent: badge.definition.tint,
+                        onDismiss: { dismissCelebration() }
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: celebrating)
             .fullScreenCover(isPresented: $showingWrapped) {
                 WrappedView(favoriteIDs: env.favoritesStore.ids, targetMonth: wrappedMonth)
             }
@@ -94,6 +108,8 @@ struct InsightsView: View {
         }
         return TasteProfile.theShapeshifter.colors
     }
+
+    private var celebrating: EarnedBadge? { badges?.newlyEarned.first }
 
     private var revealBinding: Binding<ArchetypeRevealRequest?> {
         Binding(
@@ -397,6 +413,11 @@ struct InsightsView: View {
         // Tapped from the 1st-of-month notification → last month's story.
         let month = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
         openWrapped(for: month)
+    }
+
+    private func dismissCelebration() {
+        badges?.acknowledgeCelebrations()
+        Haptics.success()
     }
 
 }
