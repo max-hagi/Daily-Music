@@ -49,6 +49,8 @@ struct ListeningView: View {
     @State private var tracker = ListenTracker()
     @State private var didReachThreshold = false
     @State private var showingCollected = false
+    /// Drives the gentle up-and-down nudge on the "swipe up" return hint.
+    @State private var swipeHintBob = false
 
     private enum CeremonyPhase { case intro, player }
 
@@ -190,14 +192,36 @@ struct ListeningView: View {
 
     private var playerStage: some View {
         VStack(spacing: 34) {
+            swipeUpHint
             Spacer(minLength: 0)
             artwork
             controlDeck
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 18)
-        .padding(.top, 34)
+        .padding(.top, 18)
         .padding(.bottom, 22)
+    }
+
+    /// Mirrors Today's "pull down to listen" cue: a small upward chevron telling
+    /// the listener the screen swipes up to leave. A slow bob draws the eye; the
+    /// gesture itself lives on the root ZStack. Decorative — hidden from VoiceOver
+    /// (the labeled advance button is the accessible exit).
+    private var swipeUpHint: some View {
+        VStack(spacing: 1) {
+            Image(systemName: "chevron.up")
+                .font(.system(size: 13, weight: .bold))
+            Text("Swipe up to close")
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(.white.opacity(0.55))
+        .offset(y: swipeHintBob ? -4 : 0)
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: 1.1).repeatForever(autoreverses: true),
+            value: swipeHintBob
+        )
+        .accessibilityHidden(true)
+        .onAppear { swipeHintBob = true }
     }
 
     // MARK: background — the song's own color, blooming

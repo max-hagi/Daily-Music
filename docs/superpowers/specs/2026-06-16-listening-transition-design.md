@@ -101,6 +101,12 @@ entire frame is hit-testable, eliminating the transparent `Spacer` dead zones.
 gesture itself is unchanged (vertical-only, `translation.height < -80`,
 `abs(width) < 60`).
 
+A discoverability cue mirrors Today's "pull down to listen": a small upward
+chevron + "Swipe up to close" at the top of the player stage, with a slow
+vertical bob (disabled under `reduceMotion`). Context-neutral wording because the
+view is shared by Today (returns to Today), Favorites, and Vault (dismiss). It is
+`.accessibilityHidden` — the labeled advance button is the accessible exit.
+
 ### 3. Animated return
 
 Falls out of #1 with no extra code: `onAdvance()` sets `showingListening = false`,
