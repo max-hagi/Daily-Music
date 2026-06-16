@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct FavoritesView: View {
     @Environment(AppEnvironment.self) private var env
@@ -15,17 +16,25 @@ struct FavoritesView: View {
     @State private var selectedEntry: DailyEntry?
     @State private var recentlyRemoved: DailyEntry?
 
+    // Collection state
+    @State private var orderStore = FavoritesOrderStore()
+    @State private var arranged: [DailyEntry] = []   // ordered, pre-filter
+    @State private var filter = FavoritesFilter()
+    @State private var isRearranging = false
+    @State private var showingFilterSheet = false
+    @State private var draggingEntry: DailyEntry?
+
+    /// The list actually shown: manual order, then narrowed by search/filter.
+    private var displayed: [DailyEntry] { arranged.filter(filter.matches) }
+
     var body: some View {
         NavigationStack {
             Group {
                 if let model {
-                    // Unlike the other screens (which use LoadStateView), this one
-                    // switches the state by hand so each case gets its own bespoke,
-                    // on-brand layout instead of the generic placeholders.
                     switch model.state {
-                    case .loaded(let entries): loaded(entries)
-                    case .empty: emptyState
-                    case .failed: failedState
+                    case .loaded:  loadedContent
+                    case .empty:   emptyState
+                    case .failed:  failedState
                     case .loading: loadingState
                     }
                 } else {
@@ -34,6 +43,12 @@ struct FavoritesView: View {
             }
             .navigationTitle("Favorites")
             .toolbarBackground(.hidden, for: .navigationBar)
+            .searchable(text: $filter.query, prompt: "Search favorites")
+            .toolbar { toolbarContent }
+            .sheet(isPresented: $showingFilterSheet) {
+                FavoritesFilterSheet(filter: $filter, facets: favoritesFacets(in: arranged))
+                    .presentationDetents([.medium, .large])
+            }
             .overlay(alignment: .bottom) {
                 if recentlyRemoved != nil {
                     UndoBanner(message: "Removed from favorites") { undoRemove() }
@@ -42,24 +57,40 @@ struct FavoritesView: View {
                 }
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.85), value: recentlyRemoved)
-            // Auto-dismiss the undo banner ~4s after the most recent removal.
             .task(id: recentlyRemoved) {
                 guard recentlyRemoved != nil else { return }
                 try? await Task.sleep(for: .seconds(4))
                 recentlyRemoved = nil
             }
         }
-        // KEY: `.task(id: env.favoritesStore.ids)` re-runs whenever the favorites
-        // SET changes. So un-hearting a song on the detail screen flips the shared
-        // store, which changes `ids`, which re-runs this task → the list updates
-        // live without any manual refresh wiring.
+        // Re-runs whenever the favorites SET changes (hearting/un-hearting anywhere).
         .task(id: env.favoritesStore.ids) {
             if model == nil { model = FavoritesViewModel(entries: env.entries) }
             await model?.load(favoriteIDs: env.favoritesStore.ids)
+            if case .loaded(let entries) = model?.state {
+                arranged = orderStore.arranged(entries)
+            }
         }
         .fullScreenCover(item: $selectedEntry) { entry in
-            FavoriteEntryDetail(entry: entry) {
-                selectedEntry = nil
+            FavoriteEntryDetail(entry: entry) { selectedEntry = nil }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            if isRearranging {
+                Button("Done") {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { isRearranging = false }
+                }
+                .fontWeight(.semibold)
+            } else {
+                Button { showingFilterSheet = true } label: {
+                    Image(systemName: filter.hasFacetFilters
+                          ? "line.3.horizontal.decrease.circle.fill"
+                          : "line.3.horizontal.decrease.circle")
+                }
+                .accessibilityLabel("Filter")
             }
         }
     }
@@ -79,12 +110,23 @@ struct FavoritesView: View {
             .background(background)
     }
 
-    private func loaded(_ entries: [DailyEntry]) -> some View {
+    // .loaded can briefly hold entries before `arranged` syncs in the task; while
+    // not narrowing, an empty `displayed` means that one-frame gap → show loading.
+    @ViewBuilder
+    private var loadedContent: some View {
+        if displayed.isEmpty {
+            if filter.isActive { noMatchesState } else { loadingState }
+        } else {
+            wall
+        }
+    }
+
+    private var wall: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                header(count: entries.count)
+                header(count: arranged.count)
                     .padding(.horizontal, Theme.Spacing.md)
-                ForEach(shelfRows(entries), id: \.self) { row in
+                ForEach(shelfRows(displayed), id: \.self) { row in
                     shelf(row)
                 }
             }
@@ -108,62 +150,80 @@ struct FavoritesView: View {
     private func shelf(_ row: [DailyEntry]) -> some View {
         VStack(spacing: 6) {
             HStack(alignment: .bottom, spacing: Theme.Spacing.md) {
-                ForEach(row) { entry in
-                    framedRecord(entry)
-                }
+                ForEach(row) { entry in recordCell(entry) }
                 ForEach(0 ..< (3 - row.count), id: \.self) { _ in
                     Spacer().frame(maxWidth: .infinity)
                 }
             }
             .padding(.horizontal, Theme.Spacing.md)
-            // The shelf ledge.
+            // The shelf ledge — fades while rearranging so records "lift off".
             Rectangle()
                 .fill(.primary.opacity(0.12))
                 .frame(height: 2)
                 .padding(.horizontal, Theme.Spacing.sm)
+                .opacity(isRearranging ? 0 : 1)
         }
     }
 
-    private func framedRecord(_ entry: DailyEntry) -> some View {
-        Button { selectedEntry = entry } label: {
-            VStack(spacing: 6) {
-                AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.chip)
-                    .aspectRatio(1, contentMode: .fit)
-                    .padding(6)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                            .stroke(.white.opacity(0.25), lineWidth: 0.5)
-                    )
-                VStack(spacing: 1) {
-                    Text(entry.title).font(.caption.weight(.semibold)).lineLimit(1)
-                    Text(entry.artist).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                }
+    private func recordCell(_ entry: DailyEntry) -> some View {
+        let cell = VStack(spacing: 6) {
+            SleeveView(entry: entry,
+                       status: env.listensStore.status(for: entry),
+                       size: 104,
+                       missingVariant: env.variants.missingSleeve,
+                       secondhandVariant: env.variants.secondhand)
+            VStack(spacing: 1) {
+                Text(entry.title).font(.caption.weight(.semibold)).lineLimit(1)
+                Text(entry.artist).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
             }
-            .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.plain)
-        .contextMenu {
-            Button { selectedEntry = entry } label: {
-                Label("Open Entry", systemImage: "arrow.up.forward.app")
+        .frame(maxWidth: .infinity)
+        .modifier(Jiggle(active: isRearranging, seed: entry.id.hashValue))
+
+        return Group {
+            if isRearranging {
+                cell
+                    .opacity(draggingEntry == entry ? 0 : 1)
+                    .onDrag {
+                        draggingEntry = entry
+                        return NSItemProvider(object: entry.id.uuidString as NSString)
+                    }
+                    .onDrop(of: [.text], delegate: FavoriteReorderDelegate(
+                        item: entry,
+                        items: $arranged,
+                        dragging: $draggingEntry,
+                        onCommit: { orderStore.commit(arranged.map(\.id)) }
+                    ))
+            } else {
+                Button { selectedEntry = entry } label: { cell }
+                    .buttonStyle(.plain)
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        guard arranged.count >= 2, !filter.isActive else { return }
+                        Haptics.tap()
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                            isRearranging = true
+                        }
+                    }
+                    .contextMenu {
+                        Button { selectedEntry = entry } label: {
+                            Label("Open Entry", systemImage: "arrow.up.forward.app")
+                        }
+                        Button(role: .destructive) { removeFavorite(entry) } label: {
+                            Label("Remove Favorite", systemImage: "heart.slash.fill")
+                        }
+                    } preview: {
+                        FavoriteEntryPeek(entry: entry)
+                    }
             }
-            Button(role: .destructive) { removeFavorite(entry) } label: {
-                Label("Remove Favorite", systemImage: "heart.slash.fill")
-            }
-        } preview: {
-            FavoriteEntryPeek(entry: entry)
         }
     }
 
-    // Compact header instead of a gradient hero: the count is trivia, so the
-    // songs themselves stay the visual lead of the screen.
     private func header(count: Int) -> some View {
         HStack(spacing: Theme.Spacing.md) {
             Image(systemName: "heart.fill")
                 .font(.headline.weight(.bold))
                 .foregroundStyle(.pink)
             VStack(alignment: .leading, spacing: 2) {
-                // Inline ternary handles singular/plural ("1 favorite" vs "3 favorites").
                 Text("\(count) \(count == 1 ? "favorite" : "favorites")")
                     .font(.dmTitle())
                 Text("The songs that stopped you in your tracks.")
@@ -195,9 +255,30 @@ struct FavoritesView: View {
         .background(background)
     }
 
+    private var noMatchesState: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 48))
+                .foregroundStyle(.pink.opacity(0.7))
+            VStack(spacing: Theme.Spacing.sm) {
+                Text("No matches")
+                    .font(.dmTitle())
+                Text("No favorites match your search or filters.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            Button("Clear filters") {
+                withAnimation { filter = FavoritesFilter() }
+            }
+            .buttonStyle(.bordered)
+            .tint(.pink)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(background)
+    }
+
     private var failedState: some View {
-        // The label/actions closure form of ContentUnavailableView lets us add a
-        // custom Retry button alongside the standard "empty" presentation.
         ContentUnavailableView {
             Label("Couldn't load favorites", systemImage: "exclamationmark.triangle")
         } actions: {
@@ -214,16 +295,17 @@ struct FavoritesView: View {
 
     private func removeFavorite(_ entry: DailyEntry) {
         Haptics.thud()
-        model?.remove(id: entry.id)                       // animate the row out now
-        recentlyRemoved = entry                           // show the Undo banner
-        Task { await env.favoritesStore.toggle(entry) }   // persist the un-favorite
+        model?.remove(id: entry.id)
+        arranged.removeAll { $0.id == entry.id }
+        recentlyRemoved = entry
+        Task { await env.favoritesStore.toggle(entry) }
     }
 
     private func undoRemove() {
         guard let entry = recentlyRemoved else { return }
         Haptics.tap()
         recentlyRemoved = nil
-        Task { await env.favoritesStore.toggle(entry) }   // re-favorite → list reloads it back
+        Task { await env.favoritesStore.toggle(entry) }
     }
 }
 
