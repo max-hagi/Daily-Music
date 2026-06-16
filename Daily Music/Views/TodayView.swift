@@ -10,6 +10,7 @@ import SwiftUI
 
 struct TodayView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var onReturnToPreviousScreen: (() -> Void)? = nil
 
     // The VM is OPTIONAL and built lazily in `.task` below. Why not just create it
@@ -22,114 +23,119 @@ struct TodayView: View {
     @State private var dismissedDropPromptThisSession = false
 
     var body: some View {
-        // NavigationStack provides the nav bar + push/pop. Each tab has its own.
-        NavigationStack {
-            // `Group` is a transparent container — it lets us attach the toolbar/
-            // sheet/task modifiers once to whichever branch (model vs spinner) shows.
-            Group {
-                if let model {
-                    switch model.state {
-                    case .loaded(let entry):
-                        EntryDetailView(
-                            entry: entry,
-                            dateLabel: todayString,
-                            showsNavigationTitle: false,
-                            albumArtHorizontalPadding: 28,
-                            usesImmersiveBackdrop: true,
-                            onRequestListen: { showingListening = true },
-                            greetingAccessory: model.streak.flatMap { streak in
-                                streak.current > 0 ? AnyView(TodayToolbarStreakBadge(streak: streak)) : nil
-                            }
-                        )
-                        .simultaneousGesture(returnSwipeGesture)
+        ZStack {
+            // NavigationStack provides the nav bar + push/pop. Each tab has its own.
+            NavigationStack {
+                // `Group` is a transparent container — it lets us attach the toolbar/
+                // sheet/task modifiers once to whichever branch (model vs spinner) shows.
+                Group {
+                    if let model {
+                        switch model.state {
+                        case .loaded(let entry):
+                            EntryDetailView(
+                                entry: entry,
+                                dateLabel: todayString,
+                                showsNavigationTitle: false,
+                                albumArtHorizontalPadding: 28,
+                                usesImmersiveBackdrop: true,
+                                onRequestListen: { showingListening = true },
+                                greetingAccessory: model.streak.flatMap { streak in
+                                    streak.current > 0 ? AnyView(TodayToolbarStreakBadge(streak: streak)) : nil
+                                }
+                            )
+                            .simultaneousGesture(returnSwipeGesture)
 
-                    case .empty:
-                        NewDropIncomingView(onRefresh: { await model.load() })
+                        case .empty:
+                            NewDropIncomingView(onRefresh: { await model.load() })
 
-                    case .failed:
-                        TodayErrorView(onRetry: { await model.load() })
+                        case .failed:
+                            TodayErrorView(onRetry: { await model.load() })
 
-                    case .loading:
+                        case .loading:
+                            loadingState
+                        }
+                    } else {
                         loadingState
                     }
-                } else {
-                    loadingState
                 }
-            }
-            // `.toolbar` adds bar buttons. Placement chooses the side.
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if let onReturnToPreviousScreen {
-                        Button(action: onReturnToPreviousScreen) {
-                            Image(systemName: "chevron.left")
+                // `.toolbar` adds bar buttons. Placement chooses the side.
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        if let onReturnToPreviousScreen {
+                            Button(action: onReturnToPreviousScreen) {
+                                Image(systemName: "chevron.left")
+                            }
+                            .accessibilityLabel("Back")
+                        } else {
+                            Button {
+                                showingSettings = true   // flip the @State → presents the sheet
+                            } label: {
+                                Image(systemName: "gearshape")
+                            }
+                            .accessibilityLabel("Settings")   // VoiceOver reads this (icon has no text)
                         }
-                        .accessibilityLabel("Back")
-                    } else {
-                        Button {
-                            showingSettings = true   // flip the @State → presents the sheet
-                        } label: {
-                            Image(systemName: "gearshape")
-                        }
-                        .accessibilityLabel("Settings")   // VoiceOver reads this (icon has no text)
+                    }
+
+                    ToolbarItem(placement: .topBarTrailing) {
+                        TodayToolbarLiveBadge(count: model?.listenersToday)
                     }
                 }
+                // `.sheet(isPresented:)` shows a modal when the bound Bool is true.
+                // `$showingSettings` passes a two-way BINDING so dismissing flips it back.
+                .sheet(isPresented: $showingSettings) {
+                    SettingsView()
+                }
+                .onChange(of: loadedEntry?.id) { _, _ in evaluateNewDropPrompt() }
+                .onChange(of: env.listensStore.heardAt) { _, _ in evaluateNewDropPrompt() }
+                .overlay {
+                    if showingNewDropPrompt, loadedEntry != nil {
+                        NewDropPrompt(
+                            dateText: todayString,
+                            onListen: {
+                                showingNewDropPrompt = false
+                                showingListening = true
+                            },
+                            onDismiss: {
+                                showingNewDropPrompt = false
+                                dismissedDropPromptThisSession = true
+                            }
+                        )
+                        .transition(.opacity)
+                    }
+                }
+                .animation(.easeInOut(duration: 0.25), value: showingNewDropPrompt)
+            }
+            .task {
+                // Build the VM once (guard against re-runs), then load.
+                if model == nil {
+                    model = TodayViewModel(
+                        entries: env.entries,
+                        checkIns: env.checkIns,
+                        sharedStats: env.sharedStats
+                    )
+                }
+                await model?.load()
+                evaluateNewDropPrompt()
+            }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    TodayToolbarLiveBadge(count: model?.listenersToday)
-                }
-            }
-            // `.sheet(isPresented:)` shows a modal when the bound Bool is true.
-            // `$showingSettings` passes a two-way BINDING so dismissing flips it back.
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
-            }
-            .fullScreenCover(isPresented: $showingListening) {
-                if let entry = loadedEntry {
-                    ListeningView(
-                        entry: entry,
-                        showsRevealIntro: false,
-                        onAdvance: {
-                            showingListening = false
-                            // Reading mode is silent: moving to the story (or the clip
-                            // finishing) hands the room back — no audio left running.
-                            Task { await env.musicPlayer.stop() }
-                        },
-                        onReachedListenThreshold: { env.listensStore.markHeard(entry) }
-                    )
-                }
-            }
-            .onChange(of: loadedEntry?.id) { _, _ in evaluateNewDropPrompt() }
-            .onChange(of: env.listensStore.heardAt) { _, _ in evaluateNewDropPrompt() }
-            .overlay {
-                if showingNewDropPrompt, loadedEntry != nil {
-                    NewDropPrompt(
-                        dateText: todayString,
-                        onListen: {
-                            showingNewDropPrompt = false
-                            showingListening = true
-                        },
-                        onDismiss: {
-                            showingNewDropPrompt = false
-                            dismissedDropPromptThisSession = true
-                        }
-                    )
-                    .transition(.opacity)
-                }
-            }
-            .animation(.easeInOut(duration: 0.25), value: showingNewDropPrompt)
-        }
-        .task {
-            // Build the VM once (guard against re-runs), then load.
-            if model == nil {
-                model = TodayViewModel(
-                    entries: env.entries,
-                    checkIns: env.checkIns,
-                    sharedStats: env.sharedStats
+            if showingListening, let entry = loadedEntry {
+                ListeningView(
+                    entry: entry,
+                    showsRevealIntro: false,
+                    onAdvance: {
+                        showingListening = false
+                        // Reading mode is silent: moving to the story (or the clip
+                        // finishing) hands the room back — no audio left running.
+                        Task { await env.musicPlayer.stop() }
+                    },
+                    onReachedListenThreshold: { env.listensStore.markHeard(entry) }
                 )
+                .transition(reduceMotion ? .opacity : .move(edge: .top))
+                .zIndex(1)
             }
-            await model?.load()
-            evaluateNewDropPrompt()
         }
+        .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.86),
+                   value: showingListening)
     }
 
     private func evaluateNewDropPrompt() {
