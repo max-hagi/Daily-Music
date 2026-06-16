@@ -20,6 +20,8 @@
 		1D3B9F1A07190484C0A87E3D /* TasteMirrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */; };
 		2B3C4D5E6F708192A3B4C5D7 /* ReminderCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */; };
 		3C4D5E6F708192A3B4C5D6E8 /* CatchUpTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */; };
+		FA0FA0FA0FA0FA0FA0FA00B1 /* FavoritesOrderStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0FA0FA0FA0FA0FA0FA00F1 /* FavoritesOrderStoreTests.swift */; };
+		FA0FA0FA0FA0FA0FA0FA00B2 /* FavoritesFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */; };
 		757406A9EE882CBC5E185CA4 /* ArchetypeSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D413F7473F6C57E546C1EA /* ArchetypeSnapshotTests.swift */; };
 		78F3EE0454C3E5EB3825C97D /* TasteSeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9081430FDF0723184251C1F3 /* TasteSeedTests.swift */; };
 		89D4107636FC55A192B171A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1C88CA3CCE154F540A6D0EE /* Foundation.framework */; };
@@ -86,6 +88,8 @@
 		1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreakTests.swift; sourceTree = "<group>"; };
 		2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReminderCopyTests.swift; sourceTree = "<group>"; };
 		3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatchUpTests.swift; sourceTree = "<group>"; };
+		FA0FA0FA0FA0FA0FA0FA00F1 /* FavoritesOrderStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FavoritesOrderStoreTests.swift; sourceTree = "<group>"; };
+		FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FavoritesFilterTests.swift; sourceTree = "<group>"; };
 		57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteMirrorTests.swift; sourceTree = "<group>"; };
 		5BD93DFCBD69276F616E276C /* PlaybackTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackTests.swift; sourceTree = "<group>"; };
 		9081430FDF0723184251C1F3 /* TasteSeedTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteSeedTests.swift; sourceTree = "<group>"; };
@@ -205,6 +209,8 @@
 				0B0B0B0B0B0B0B0B0B0B00F3 /* SpotifySessionTests.swift */,
 				0B0B0B0B0B0B0B0B0B0B00F4 /* SpotifyLibraryAPITests.swift */,
 				FF00112233445566778899AA /* TodayListeningTests.swift */,
+				FA0FA0FA0FA0FA0FA0FA00F1 /* FavoritesOrderStoreTests.swift */,
+				FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -418,6 +424,8 @@
 				2B3C4D5E6F708192A3B4C5D7 /* ReminderCopyTests.swift in Sources */,
 				3C4D5E6F708192A3B4C5D6E8 /* CatchUpTests.swift in Sources */,
 				FF00112233445566778899BB /* TodayListeningTests.swift in Sources */,
+				FA0FA0FA0FA0FA0FA0FA00B1 /* FavoritesOrderStoreTests.swift in Sources */,
+				FA0FA0FA0FA0FA0FA0FA00B2 /* FavoritesFilterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
