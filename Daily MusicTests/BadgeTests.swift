@@ -270,6 +270,20 @@ struct BadgeTests {
         #expect(!(BadgeDeriver().deriveAll(from: inputs).first { $0.id == "flawlessMonth" }!.isEarned))
     }
 
+    @Test func flawlessMonthDefersWhileAPriorMonthDropIsStillRescuable() {
+        // Viewed from July 2: a June 28 drop, unheard, is 4 days old → within the
+        // 7-day window → .rescuable. June must NOT yet count as flawless.
+        let now = Self.cal.date(from: DateComponents(year: 2026, month: 7, day: 2, hour: 12))!
+        let e = UUID()
+        let june28 = Self.cal.date(from: DateComponents(year: 2026, month: 6, day: 28, hour: 12))!
+        let entry = DailyEntry(id: e, date: june28, title: "T", artist: "A", albumArtURL: nil,
+                               journalMarkdown: "", appleMusicID: "", spotifyURI: "")
+        let inputs = BadgeInputs(
+            entries: [entry], heardAt: [:], favoriteIDs: [], ratings: [:], checkInDays: [],
+            hasRevealedArchetype: false, now: now, calendar: Self.cal)
+        #expect(!(BadgeDeriver().deriveAll(from: inputs).first { $0.id == "flawlessMonth" }!.isEarned))
+    }
+
     @Test func revealedTracksFlag() {
         let on = Self.mintInputs(daysAgo: [], reveal: true)
         #expect(BadgeDeriver().deriveAll(from: on).first { $0.id == "revealed" }!.isEarned)

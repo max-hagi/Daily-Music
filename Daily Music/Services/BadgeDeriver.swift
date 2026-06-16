@@ -33,6 +33,8 @@ struct BadgeDeriver {
             return Streak.compute(from: i.checkInDays, calendar: i.calendar, asOf: i.now).best
         case "mint":
             return i.entries.filter { status($0, i) == .heardSameDay }.count
+        // crate counts every listen in heardAt (the collection metric), even ids
+        // with no matching catalogue entry — unlike mint/rescuer which scan entries.
         case "crate":
             return i.heardAt.count
         case "saved":
@@ -91,7 +93,8 @@ struct BadgeDeriver {
     }
 
     /// True if any completed month (strictly before the current month) had at least
-    /// one drop and none of its drops were missed.
+    /// one drop, all of its drops have settled (none still inside the catch-up
+    /// window), and none were missed.
     private func hasFlawlessMonth(_ i: BadgeInputs) -> Bool {
         let currentMonth = i.calendar.dateInterval(of: .month, for: i.now)?.start
         let byMonth = Dictionary(grouping: i.entries) {
@@ -101,8 +104,11 @@ struct BadgeDeriver {
             if let currentMonth,
                i.calendar.isDate(month, equalTo: currentMonth, toGranularity: .month) { continue }
             guard !entries.isEmpty else { continue }
-            let anyMissed = entries.contains { status($0, i) == .missed }
-            if !anyMissed { return true }
+            let statuses = entries.map { status($0, i) }
+            // A drop still inside the catch-up window could yet flip to missed, so
+            // the month isn't decidable as flawless until every drop has settled.
+            if statuses.contains(.rescuable) || statuses.contains(.unheard) { continue }
+            if !statuses.contains(.missed) { return true }
         }
         return false
     }
