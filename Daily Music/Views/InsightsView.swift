@@ -14,6 +14,7 @@ struct InsightsView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: InsightsViewModel?
+    @State private var badges: BadgesViewModel?
     @State private var showingWrapped = false
     /// Which month the Wrapped sheet shows; the new-month moment passes last month.
     @State private var wrappedMonth = Date()
@@ -59,6 +60,16 @@ struct InsightsView: View {
                 model = InsightsViewModel(entries: env.entries, ratings: env.ratings)
             }
             await model?.load(favoriteIDs: env.favoritesStore.ids, startingRead: startingRead)
+            if badges == nil {
+                badges = BadgesViewModel(
+                    entries: env.entries,
+                    listensStore: env.listensStore,
+                    favoritesStore: env.favoritesStore,
+                    ratingsStore: env.ratingsStore,
+                    checkIns: env.checkIns
+                )
+            }
+            await badges?.load()
         }
     }
 
@@ -109,6 +120,7 @@ struct InsightsView: View {
                     onReplay: mirror.isArchetypeUnlocked ? { model?.replayReveal() } : nil,
                     revealCountdownText: countdownText(for: mirror)
                 )
+                badgesSummaryCard(accent: accent)
                 historySummaryCard(accent: accent)
                 tasteArcCard(accent: accent)
                 wrappedButton(accent)
@@ -171,6 +183,55 @@ struct InsightsView: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
         }
         .buttonStyle(PressableCardButtonStyle())
+    }
+
+    @ViewBuilder
+    private func badgesSummaryCard(accent: Color) -> some View {
+        if let summary = badges?.summary, let list = badges?.badges {
+            NavigationLink {
+                BadgesView(badges: list, accent: accent)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "rosette")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(accent)
+                        .frame(width: 42, height: 42)
+                        .glassEffect(.regular.tint(accent.opacity(0.14)), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("YOUR BADGES")
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(.secondary)
+                        Text("\(summary.earnedCount) earned · \(summary.closeCount) close")
+                            .font(.subheadline.weight(.heavy))
+                            .foregroundStyle(.primary)
+                        if let goal = summary.nearestGoal, let tier = goal.tier, let next = tier.nextThreshold {
+                            Text("\(goal.definition.title) — \(max(0, next - goal.value)) to go")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
+
+                    Spacer(minLength: 8)
+
+                    HStack(spacing: -8) {
+                        ForEach(summary.peek) { badge in
+                            Text(badge.isEarned ? badge.definition.symbol : "·")
+                                .font(.system(size: 16))
+                                .frame(width: 28, height: 28)
+                                .background(.regularMaterial, in: Circle())
+                                .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
+                                .opacity(badge.isEarned ? 1 : 0.45)
+                        }
+                    }
+                }
+                .padding(Theme.Spacing.md)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+            }
+            .buttonStyle(PressableCardButtonStyle())
+        }
     }
 
     private func historySummaryDetail(_ entries: [HistoryEntry]) -> String {
