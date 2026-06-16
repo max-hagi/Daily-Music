@@ -163,4 +163,117 @@ struct BadgeTests {
         #expect(saved.tier?.nextThreshold == 25)
         #expect(saved.isEarned)
     }
+
+    // MARK: - Deriver: moments
+
+    private static func mintInputs(daysAgo: [Int], checkIns: Set<Date> = [], reveal: Bool = false,
+                                   heardOverride: [Int: Int] = [:]) -> BadgeInputs {
+        // Each entry dropped `daysAgo` is heard same-day unless overridden via
+        // heardOverride[daysAgo] = listenDaysAgo.
+        var entries: [DailyEntry] = []
+        var heardAt: [UUID: Date] = [:]
+        for d in daysAgo {
+            let id = UUID()
+            entries.append(BadgeTests.entry(id, daysAgo: d))
+            let listen = heardOverride[d] ?? d
+            heardAt[id] = BadgeTests.day(-listen)
+        }
+        return BadgeInputs(
+            entries: entries, heardAt: heardAt, favoriteIDs: [], ratings: [:],
+            checkInDays: checkIns, hasRevealedArchetype: reveal,
+            now: BadgeTests.refNow, calendar: BadgeTests.cal)
+    }
+
+    @Test func firstPressEarnedWithOneMint() {
+        let badges = BadgeDeriver().deriveAll(from: Self.mintInputs(daysAgo: [1]))
+        #expect(badges.first { $0.id == "firstPress" }!.isEarned)
+    }
+
+    @Test func firstPressNotEarnedWithNoMint() {
+        let badges = BadgeDeriver().deriveAll(from: Self.mintInputs(daysAgo: []))
+        #expect(!(badges.first { $0.id == "firstPress" }!.isEarned))
+    }
+
+    @Test func perfectWeekNeedsSevenConsecutiveSameDay() {
+        let seven = BadgeDeriver().deriveAll(from: Self.mintInputs(daysAgo: Array(0...6)))
+        #expect(seven.first { $0.id == "perfectWeek" }!.isEarned)
+
+        let six = BadgeDeriver().deriveAll(from: Self.mintInputs(daysAgo: Array(0...5)))
+        #expect(!(six.first { $0.id == "perfectWeek" }!.isEarned))
+    }
+
+    @Test func perfectWeekBrokenByAGap() {
+        // 0,1,2,3,4,5 then skip 6, then 7 → longest run of mint days is 6, not 7
+        let badges = BadgeDeriver().deriveAll(from: Self.mintInputs(daysAgo: [0,1,2,3,4,5,7]))
+        #expect(!(badges.first { $0.id == "perfectWeek" }!.isEarned))
+    }
+
+    @Test func comebackNeedsAWeekRunAfterAnEarlierBreak() {
+        // Earlier short run (days -20,-19), gap, then a fresh 7-day run ending today.
+        let recent = (0...6).map { Self.day(-$0) }
+        let earlier = [Self.day(-20), Self.day(-19)]
+        let inputs = BadgeInputs(
+            entries: [], heardAt: [:], favoriteIDs: [], ratings: [:],
+            checkInDays: Set(recent + earlier), hasRevealedArchetype: false,
+            now: Self.refNow, calendar: Self.cal)
+        #expect(BadgeDeriver().deriveAll(from: inputs).first { $0.id == "comeback" }!.isEarned)
+    }
+
+    @Test func comebackNotEarnedForAFirstUnbrokenRun() {
+        let inputs = BadgeInputs(
+            entries: [], heardAt: [:], favoriteIDs: [], ratings: [:],
+            checkInDays: Set((0...9).map { Self.day(-$0) }), // one long first run, no earlier break
+            hasRevealedArchetype: false, now: Self.refNow, calendar: Self.cal)
+        #expect(!(BadgeDeriver().deriveAll(from: inputs).first { $0.id == "comeback" }!.isEarned))
+    }
+
+    @Test func nightOwlEarnedForAfterMidnightListen() {
+        let e = UUID()
+        let lateNight = Self.cal.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 1))!
+        let inputs = BadgeInputs(
+            entries: [Self.entry(e, daysAgo: 6)], heardAt: [e: lateNight],
+            favoriteIDs: [], ratings: [:], checkInDays: [], hasRevealedArchetype: false,
+            now: Self.refNow, calendar: Self.cal)
+        #expect(BadgeDeriver().deriveAll(from: inputs).first { $0.id == "nightOwl" }!.isEarned)
+    }
+
+    @Test func flawlessMonthEarnedWhenAPastMonthHasNoMisses() {
+        // May 2026: two drops, both heard same day → no misses in a completed month.
+        let e1 = UUID(); let e2 = UUID()
+        let may1 = Self.cal.date(from: DateComponents(year: 2026, month: 5, day: 3, hour: 12))!
+        let may2 = Self.cal.date(from: DateComponents(year: 2026, month: 5, day: 18, hour: 12))!
+        let mkEntry: (UUID, Date) -> DailyEntry = { id, d in
+            DailyEntry(id: id, date: d, title: "T", artist: "A", albumArtURL: nil,
+                       journalMarkdown: "", appleMusicID: "", spotifyURI: "")
+        }
+        let inputs = BadgeInputs(
+            entries: [mkEntry(e1, may1), mkEntry(e2, may2)],
+            heardAt: [e1: may1, e2: may2],
+            favoriteIDs: [], ratings: [:], checkInDays: [], hasRevealedArchetype: false,
+            now: Self.refNow, calendar: Self.cal)
+        #expect(BadgeDeriver().deriveAll(from: inputs).first { $0.id == "flawlessMonth" }!.isEarned)
+    }
+
+    @Test func flawlessMonthNotEarnedWithAMiss() {
+        let e1 = UUID(); let e2 = UUID()
+        let may1 = Self.cal.date(from: DateComponents(year: 2026, month: 5, day: 3, hour: 12))!
+        let may2 = Self.cal.date(from: DateComponents(year: 2026, month: 5, day: 18, hour: 12))!
+        let mkEntry: (UUID, Date) -> DailyEntry = { id, d in
+            DailyEntry(id: id, date: d, title: "T", artist: "A", albumArtURL: nil,
+                       journalMarkdown: "", appleMusicID: "", spotifyURI: "")
+        }
+        let inputs = BadgeInputs(
+            entries: [mkEntry(e1, may1), mkEntry(e2, may2)],
+            heardAt: [e1: may1], // e2 never heard → missed
+            favoriteIDs: [], ratings: [:], checkInDays: [], hasRevealedArchetype: false,
+            now: Self.refNow, calendar: Self.cal)
+        #expect(!(BadgeDeriver().deriveAll(from: inputs).first { $0.id == "flawlessMonth" }!.isEarned))
+    }
+
+    @Test func revealedTracksFlag() {
+        let on = Self.mintInputs(daysAgo: [], reveal: true)
+        #expect(BadgeDeriver().deriveAll(from: on).first { $0.id == "revealed" }!.isEarned)
+        let off = Self.mintInputs(daysAgo: [], reveal: false)
+        #expect(!(BadgeDeriver().deriveAll(from: off).first { $0.id == "revealed" }!.isEarned))
+    }
 }
