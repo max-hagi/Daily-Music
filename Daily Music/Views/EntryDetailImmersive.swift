@@ -61,15 +61,22 @@ extension EntryDetailView {
             if onRequestListen != nil {
                 // Today: one compact top row — the replay cue centered, streak
                 // trailing. No greeting line, so the cover sits higher.
-                ZStack {
+                // HStack (not a ZStack overlay) so the cue and the streak badge each
+                // reserve their own space and never overlap. The balancing spacers
+                // keep the cue centered when there's no streak, and centered in the
+                // space left of the badge when there is one.
+                HStack(spacing: Theme.Spacing.sm) {
+                    Spacer(minLength: 0)
                     Label(isCollected ? "pull down to replay" : "pull down to listen",
                           systemImage: "chevron.down")
                         .labelStyle(.titleAndIcon)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .opacity(0.65)
+                        .layoutPriority(1)
+                    Spacer(minLength: 0)
                     if let greetingAccessory {
-                        HStack { Spacer(minLength: 0); greetingAccessory }
+                        greetingAccessory
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
