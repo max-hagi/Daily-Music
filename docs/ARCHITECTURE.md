@@ -304,6 +304,23 @@ archetype per app session. The hero absorbs Insights' replay button and reveal c
 year-in-review `Recap`. Both read history + ratings; Wrapped also reads
 check-ins for streaks. See [InsightsView](Daily%20Music/Views/InsightsView.swift) · [InsightsViewModel](Daily%20Music/ViewModels/InsightsViewModel.swift) · [ArchetypeAffinity](Daily%20Music/Models/ArchetypeAffinity.swift) · [TasteMirror](Daily%20Music/Models/TasteMirror.swift) · [ArchetypeRevealView](Daily%20Music/Views/Components/ArchetypeRevealView.swift) · [ArchetypeSnapshotStore](Daily%20Music/Services/ArchetypeSnapshotStore.swift) · [ArchetypeSnapshot](Daily%20Music/Models/ArchetypeSnapshot.swift) · [ArchetypeRevealFlare](Daily%20Music/Models/ArchetypeRevealFlare.swift) · [WrappedView](Daily%20Music/Views/WrappedView.swift) · [TasteMirrorBoard](Daily%20Music/Views/Components/TasteMirrorBoard.swift).
 
+**Badges (gamification).** A habit-reward layer on Insights, fully *derived*
+from data already synced — no backend table (spec Approach C: a `BadgeService`
+protocol seam reserves a future Supabase/friend-profile source). Data flow:
+the live stores → a `BadgeInputs` snapshot → the pure `BadgeDeriver` →
+`[EarnedBadge]` → `BadgesViewModel` → an Insights summary card / the full
+`BadgesView`. Six **tiered** badges (streak, mint, crate, saves, ratings,
+rescues — each with a threshold ladder + progress) and six one-time **moment**
+badges (first mint, perfect week, comeback, night owl, flawless month, archetype
+revealed — hidden as "?" until earned). `BadgeDeriver` reuses `Streak.compute`
+and `ListenStatus.of` rather than re-deriving state, so it stays pure and
+fixture-tested ([BadgeTests](Daily%20MusicTests/BadgeTests.swift)).
+`BadgeSeenStore` (UserDefaults) records already-celebrated badge+tier keys to
+drive a lightweight earn celebration ([BadgeCelebrationCard](Daily%20Music/Views/Components/BadgeCelebrationCard.swift),
+one card at a time); it baselines silently on first run so existing users aren't
+spammed, and it never affects whether a badge is *earned* — only whether it's
+celebrated. See [Badge](Daily%20Music/Models/Badge.swift) · [BadgeInputs](Daily%20Music/Models/BadgeInputs.swift) · [BadgeDeriver](Daily%20Music/Services/BadgeDeriver.swift) · [BadgeService](Daily%20Music/Services/BadgeService.swift) · [BadgeSeenStore](Daily%20Music/Services/BadgeSeenStore.swift) · [BadgesViewModel](Daily%20Music/ViewModels/BadgesViewModel.swift) · [BadgesView](Daily%20Music/Views/BadgesView.swift).
+
 ### 3.6 Entry detail (the shared content card)
 
 This is the most-reused screen — opened from Today, Vault, Favorites, and the
