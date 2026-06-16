@@ -334,6 +334,23 @@ struct BadgeTests {
         #expect(newly.map(\.id) == ["mint"])
     }
 
+    @Test func acknowledgingOneBadgeStillReportsTheOthers() {
+        let defaults = Self.suiteDefaults()
+        let store = BadgeSeenStore(defaults: defaults)
+        let a = Self.earned("mint", tier: 1)
+        let b = Self.earned("crate", tier: 1)
+        _ = store.newlyEarned(in: []) // baseline empty
+
+        // Both newly earned.
+        let newly = store.newlyEarned(in: [a, b])
+        #expect(Set(newly.map(\.id)) == ["mint", "crate"])
+
+        // Acknowledge ONLY the first (mimics dismissing one card).
+        store.markSeen([a.seenKey])
+        let remaining = store.newlyEarned(in: [a, b])
+        #expect(remaining.map(\.id) == ["crate"]) // the other still surfaces
+    }
+
     // MARK: - Summary
 
     @Test func summaryCountsEarnedAndClose() {

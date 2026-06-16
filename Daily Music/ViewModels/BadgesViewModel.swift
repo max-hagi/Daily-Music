@@ -74,10 +74,12 @@ final class BadgesViewModel {
         newlyEarned = seenStore.newlyEarned(in: all)
     }
 
-    /// Mark the current celebrations as seen and clear them.
-    func acknowledgeCelebrations() {
-        seenStore.markSeen(newlyEarned.map(\.seenKey))
-        newlyEarned = []
+    /// Dismiss the currently-shown celebration: mark just that badge seen and
+    /// drop it, so the next newly-earned badge (if any) surfaces next.
+    func acknowledgeCelebration() {
+        guard let shown = newlyEarned.first else { return }
+        seenStore.markSeen([shown.seenKey])
+        newlyEarned.removeFirst()
     }
 
     // MARK: - Pure summary builder

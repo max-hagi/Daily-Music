@@ -416,7 +416,7 @@ struct InsightsView: View {
     }
 
     private func dismissCelebration() {
-        badges?.acknowledgeCelebrations()
+        badges?.acknowledgeCelebration()
         Haptics.success()
     }
 
