@@ -333,4 +333,48 @@ struct BadgeTests {
         let newly = store.newlyEarned(in: [Self.earned("mint", tier: 2)]) // climbed a tier
         #expect(newly.map(\.id) == ["mint"])
     }
+
+    // MARK: - Summary
+
+    @Test func summaryCountsEarnedAndClose() {
+        let badges: [EarnedBadge] = [
+            Self.tieredFixture("mint", value: 50, thresholds: [5, 25, 50, 100]),   // earned, mid
+            Self.tieredFixture("saved", value: 4, thresholds: [5, 25]),            // not earned, close (4/5)
+            Self.tieredFixture("crate", value: 1, thresholds: [10, 50]),           // not earned, far
+        ]
+        let summary = BadgesViewModel.makeSummary(badges)
+        #expect(summary.earnedCount == 1)
+        #expect(summary.closeCount == 1) // only "saved" is ≥ 0.5 to next and not maxed
+    }
+
+    @Test func summaryNearestGoalIsHighestProgressUnmaxed() {
+        let badges: [EarnedBadge] = [
+            Self.tieredFixture("saved", value: 4, thresholds: [5]),     // 4/5 = 0.8
+            Self.tieredFixture("crate", value: 1, thresholds: [10]),    // 0.1
+            Self.tieredFixture("mint", value: 5, thresholds: [5]),      // maxed → excluded
+        ]
+        let summary = BadgesViewModel.makeSummary(badges)
+        #expect(summary.nearestGoal?.id == "saved")
+    }
+
+    @Test func summaryPeekPutsEarnedFirstAndCapsAtFive() {
+        let badges: [EarnedBadge] = [
+            Self.tieredFixture("a", value: 0, thresholds: [5]),
+            Self.tieredFixture("b", value: 5, thresholds: [5]), // earned
+            Self.tieredFixture("c", value: 0, thresholds: [5]),
+            Self.tieredFixture("d", value: 5, thresholds: [5]), // earned
+            Self.tieredFixture("e", value: 0, thresholds: [5]),
+            Self.tieredFixture("f", value: 0, thresholds: [5]),
+        ]
+        let peek = BadgesViewModel.makeSummary(badges).peek
+        #expect(peek.count == 5)
+        #expect(peek.prefix(2).map(\.id) == ["b", "d"]) // earned first, original order preserved
+    }
+
+    private static func tieredFixture(_ id: String, value: Int, thresholds: [Int]) -> EarnedBadge {
+        let def = BadgeDefinition(id: id, title: id, subtitle: "", symbol: "", tint: .gray,
+                                  kind: .tiered(thresholds: thresholds))
+        let p = BadgeMath.tierProgress(value: value, thresholds: thresholds)
+        return EarnedBadge(definition: def, value: value, isEarned: p.isEarned, tier: p)
+    }
 }
