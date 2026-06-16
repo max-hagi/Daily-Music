@@ -77,6 +77,7 @@ struct ListeningView: View {
         .preferredColorScheme(.dark)
         // Swipe up to send the player back down to Today — the mirror of Today's
         // pull-down-to-listen. Simultaneous so it never blocks the transport/scrub.
+        .contentShape(Rectangle())
         .simultaneousGesture(swipeUpToReturnGesture)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
         // Separate task from the palette load above: ticks the listen accumulator
