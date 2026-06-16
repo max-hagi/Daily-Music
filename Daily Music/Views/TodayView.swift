@@ -118,24 +118,30 @@ struct TodayView: View {
                 evaluateNewDropPrompt()
             }
 
-            if showingListening, let entry = loadedEntry {
-                ListeningView(
-                    entry: entry,
-                    showsRevealIntro: false,
-                    onAdvance: {
-                        showingListening = false
-                        // Reading mode is silent: moving to the story (or the clip
-                        // finishing) hands the room back — no audio left running.
-                        Task { await env.musicPlayer.stop() }
-                    },
-                    onReachedListenThreshold: { env.listensStore.markHeard(entry) }
-                )
-                .transition(reduceMotion ? .opacity : .move(edge: .top))
-                .zIndex(1)
+            // The player gets its own animated container so the slide transition
+            // only ever moves the player. Keeping the spring off the outer ZStack
+            // means the Today toolbar behind it doesn't get swept into the
+            // animation as the player covers/uncovers the nav bar.
+            ZStack {
+                if showingListening, let entry = loadedEntry {
+                    ListeningView(
+                        entry: entry,
+                        showsRevealIntro: false,
+                        onAdvance: {
+                            showingListening = false
+                            // Reading mode is silent: moving to the story (or the clip
+                            // finishing) hands the room back — no audio left running.
+                            Task { await env.musicPlayer.stop() }
+                        },
+                        onReachedListenThreshold: { env.listensStore.markHeard(entry) }
+                    )
+                    .transition(reduceMotion ? .opacity : .move(edge: .top))
+                }
             }
+            .zIndex(1)
+            .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.86),
+                       value: showingListening)
         }
-        .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.86),
-                   value: showingListening)
     }
 
     private func evaluateNewDropPrompt() {
