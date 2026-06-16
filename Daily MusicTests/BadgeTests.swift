@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SwiftUI
 import Testing
 @testable import Daily_Music
 
@@ -289,5 +290,47 @@ struct BadgeTests {
         #expect(BadgeDeriver().deriveAll(from: on).first { $0.id == "revealed" }!.isEarned)
         let off = Self.mintInputs(daysAgo: [], reveal: false)
         #expect(!(BadgeDeriver().deriveAll(from: off).first { $0.id == "revealed" }!.isEarned))
+    }
+
+    // MARK: - Seen store
+
+    private static func suiteDefaults() -> UserDefaults {
+        let name = "badge.tests.\(UUID().uuidString)"
+        return UserDefaults(suiteName: name)!
+    }
+
+    private static func earned(_ id: String, tier: Int?) -> EarnedBadge {
+        let def = BadgeDefinition(id: id, title: id, subtitle: "", symbol: "", tint: .gray,
+                                  kind: tier == nil ? .moment : .tiered(thresholds: [1]))
+        let progress = tier.map { TierProgress(unlockedTier: $0, nextThreshold: nil, progressToNext: 1) }
+        return EarnedBadge(definition: def, value: tier ?? 1, isEarned: true, tier: progress)
+    }
+
+    @Test func firstLoadBaselinesWithoutCelebrating() {
+        let store = BadgeSeenStore(defaults: Self.suiteDefaults())
+        let newly = store.newlyEarned(in: [Self.earned("mint", tier: 2)])
+        #expect(newly.isEmpty) // baseline run never celebrates pre-existing badges
+    }
+
+    @Test func laterEarnsAreReportedOnce() {
+        let defaults = Self.suiteDefaults()
+        let store = BadgeSeenStore(defaults: defaults)
+        _ = store.newlyEarned(in: [Self.earned("mint", tier: 1)]) // baseline
+
+        let newly = store.newlyEarned(in: [Self.earned("mint", tier: 1), Self.earned("crate", tier: 1)])
+        #expect(newly.map(\.id) == ["crate"])
+
+        store.markSeen(newly.map(\.seenKey))
+        let after = store.newlyEarned(in: [Self.earned("mint", tier: 1), Self.earned("crate", tier: 1)])
+        #expect(after.isEmpty)
+    }
+
+    @Test func higherTierCelebratesAgain() {
+        let defaults = Self.suiteDefaults()
+        let store = BadgeSeenStore(defaults: defaults)
+        _ = store.newlyEarned(in: [Self.earned("mint", tier: 1)]) // baseline at tier 1
+
+        let newly = store.newlyEarned(in: [Self.earned("mint", tier: 2)]) // climbed a tier
+        #expect(newly.map(\.id) == ["mint"])
     }
 }
