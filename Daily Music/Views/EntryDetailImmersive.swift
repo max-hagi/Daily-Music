@@ -61,26 +61,17 @@ extension EntryDetailView {
             if onRequestListen != nil {
                 // Today: one compact top row — the replay cue centered, streak
                 // trailing. No greeting line, so the cover sits higher.
-                // HStack (not a ZStack overlay) so the cue and the streak badge each
-                // reserve their own space and never overlap. The balancing spacers
-                // keep the cue centered when there's no streak, and centered in the
-                // space left of the badge when there is one.
-                HStack(spacing: Theme.Spacing.sm) {
-                    Spacer(minLength: 0)
-                    Label(isCollected ? "pull down to replay" : "pull down to listen",
-                          systemImage: "chevron.down")
-                        .labelStyle(.titleAndIcon)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .opacity(0.65)
-                        .layoutPriority(1)
-                    Spacer(minLength: 0)
-                    if let greetingAccessory {
-                        greetingAccessory
-                    }
-                }
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.top, 6)
+                // Just the centered cue — the streak moved to the Today toolbar, so
+                // nothing competes for this row anymore.
+                Label(isCollected ? "pull down to replay" : "pull down to listen",
+                      systemImage: "chevron.down")
+                    .labelStyle(.titleAndIcon)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .opacity(0.65)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.top, 6)
             } else if preArtworkMessage != nil || greetingAccessory != nil {
                 HStack(spacing: Theme.Spacing.sm) {
                     if let preArtworkMessage {
@@ -150,9 +141,9 @@ extension EntryDetailView {
         RatingBar(
             entry: entry,
             accent: palette.accent,
-            controlSize: 48,
-            symbolSize: 22,
-            spacing: 14,
+            controlSize: 64,
+            symbolSize: 28,
+            spacing: 18,
             isReadOnly: !allowsRating
         )
         .frame(maxWidth: 420)
@@ -191,7 +182,7 @@ extension EntryDetailView {
                 .padding(.horizontal)
             }
         }
-        .padding(.top, Theme.Spacing.lg)
+        .padding(.top, Theme.Spacing.xl)
         .animation(ratingNudgeAnimation, value: shouldShowRatingNudge)
     }
 

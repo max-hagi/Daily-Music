@@ -38,10 +38,7 @@ struct TodayView: View {
                                 showsNavigationTitle: false,
                                 albumArtHorizontalPadding: 28,
                                 usesImmersiveBackdrop: true,
-                                onRequestListen: { showingListening = true },
-                                greetingAccessory: model.streak.flatMap { streak in
-                                    streak.current > 0 ? AnyView(TodayToolbarStreakBadge(streak: streak)) : nil
-                                }
+                                onRequestListen: { showingListening = true }
                             )
                             .simultaneousGesture(returnSwipeGesture)
 
@@ -73,6 +70,15 @@ struct TodayView: View {
                                 Image(systemName: "gearshape")
                             }
                             .accessibilityLabel("Settings")   // VoiceOver reads this (icon has no text)
+                        }
+                    }
+
+                    // The streak lives here as its own pill (was inline on the song
+                    // zone, where it crowded the pull-down cue). Renders nothing until
+                    // there's an active streak.
+                    ToolbarItem(placement: .topBarLeading) {
+                        if let streak = model?.streak, streak.current > 0 {
+                            TodayToolbarStreakBadge(streak: streak)
                         }
                     }
 
