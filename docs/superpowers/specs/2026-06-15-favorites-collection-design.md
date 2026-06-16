@@ -25,7 +25,7 @@ This is a single-screen, focused change. No backend schema changes.
 | Order storage | **Local-only (UserDefaults).** No Supabase migration. |
 | Default order | **Newest-first** until the user drags. Manual order takes over after the first reorder. New hearts land **on top**; un-hearted songs drop out. |
 | Reorder trigger | **Long-press → rearrange mode → drag → Done.** |
-| Reorder layout | **"Lift off the shelves"** — browse as the shelf wall; while editing, records lift into a uniform 3-column grid, then settle back on Done. |
+| Reorder layout | **"Lift off the shelves"** — the shelf wall is kept; entering rearrange fades the ledges and jiggles the records (single layout, native drag/drop reorder). |
 | Filter dimensions | **Genre, Decade, Mood** (metadata). Condition-grade filtering is out of scope. |
 | Search | **Free-text over title + artist.** |
 
@@ -134,15 +134,17 @@ hearts in/out; `arranged` keeps new ones on top and drops removed ones.
   when active) → presents a **filter sheet**: sections for Genre / Decade / Mood, each a
   list of toggleable facets from `availableFacets`, plus a **Clear** action.
 
-**Rearrange mode:**
-- Ledges fade out; records lift into a uniform **3-column `LazyVGrid`** and **jiggle**
-  (±~1.5° autoreversing wobble, phase-offset per record).
-- Each record glides between wall ↔ grid via `matchedGeometryEffect(id: entry.id)`.
-- Tap-to-open and context menu are **disabled**.
+**Rearrange mode:** (implementation note — this realizes the "lift off the shelves"
+intent with a simpler, more robust mechanism than a literal container swap: the shelf-wall
+layout is kept in both modes; the ledges fade and records jiggle rather than re-flowing
+into a separate grid. Decided during planning and approved.)
+- The shelf wall stays; the decorative ledges **fade out** and records **jiggle**
+  (±~1.3° autoreversing wobble, phase-offset per record via the `Jiggle` modifier).
+- Tap-to-open and context menu are **disabled** (records become drag sources only).
 - Toolbar shows **Done**; tapping the background also exits.
-- **Drag:** long-press-drag in the grid tracks the lifted record (raised z-index, slight
-  scale-up + shadow) and maps the finger position → target grid index from the uniform
-  cell metrics (`GeometryReader`). `arranged` reshuffles live with animation. On release,
+- **Drag:** native `.onDrag` / `.onDrop` with a `FavoriteReorderDelegate` (a `DropDelegate`).
+  As the dragged record hovers another, the two swap so `arranged` reshuffles live with
+  animation; the dragged cell is hidden under the drag preview. On drop,
   `orderStore.commit(arranged.map(\.id))`.
 
 **Search/filter ⇄ rearrange interaction:**
@@ -182,7 +184,7 @@ no UI tests).
 - `availableFacets` returns distinct, non-empty values only.
 
 **Manual / visual:** sleeve treatment matches the Vault, long-press enters rearrange,
-records lift into the grid and jiggle, drag reorders smoothly, Done settles them onto the
+ledges fade and records jiggle, drag reorders smoothly, Done settles them onto the
 shelves in the new order, order persists across app launches, search + filter narrow live,
 rearrange is blocked while narrowing.
 
