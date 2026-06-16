@@ -118,10 +118,11 @@ struct TodayView: View {
                 evaluateNewDropPrompt()
             }
 
-            // The player gets its own animated container so the slide transition
-            // only ever moves the player. Keeping the spring off the outer ZStack
-            // means the Today toolbar behind it doesn't get swept into the
-            // animation as the player covers/uncovers the nav bar.
+            // The player gets its own animated container so the cross-dissolve only
+            // ever fades the player in/out — no sliding, so the heavy blurred bloom
+            // never has to reposition (which dropped frames). Keeping the animation
+            // off the outer ZStack also means the Today toolbar behind it doesn't get
+            // swept into the transition as the player covers/uncovers the nav bar.
             ZStack {
                 if showingListening, let entry = loadedEntry {
                     ListeningView(
@@ -135,11 +136,11 @@ struct TodayView: View {
                         },
                         onReachedListenThreshold: { env.listensStore.markHeard(entry) }
                     )
-                    .transition(reduceMotion ? .opacity : .move(edge: .top))
+                    .transition(.opacity)
                 }
             }
             .zIndex(1)
-            .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.86),
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25),
                        value: showingListening)
         }
     }

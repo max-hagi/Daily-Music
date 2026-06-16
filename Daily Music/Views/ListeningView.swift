@@ -466,6 +466,7 @@ struct ListeningView: View {
         DragGesture(minimumDistance: 30)
             .onEnded { value in
                 guard value.translation.height < -80, abs(value.translation.width) < 60 else { return }
+                Haptics.tap()   // confirm the swipe, then the screen cross-dissolves back
                 onAdvance()
             }
     }

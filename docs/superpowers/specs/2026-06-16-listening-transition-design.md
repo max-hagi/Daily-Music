@@ -36,38 +36,51 @@ The transition is built from two mismatched *discrete* mechanisms:
 ## Decisions
 
 - **Scope:** targeted fixes, not a full interactive (finger-following) rewrite.
-- **Motion:** the transition tracks the gesture direction — pull down → player
-  enters from the top; swipe up → player exits upward, revealing Today.
+- **Motion (revised 2026-06-16):** a directional slide (`.move(edge: .top)`) was
+  tried first but did not feel fluid — sliding the full-screen blurred `bloom`
+  (`blur(radius: 90)` + glass effects) repositions an expensive layer every
+  frame and drops frames. Replaced with a **crisp cross-dissolve**: the swipe
+  fires a haptic tap, then the player fades in/out over ~0.25s. Nothing
+  repositions, so there is no jank. `reduceMotion` → instant cut.
 
 ## Design
 
 ### 1. Replace `fullScreenCover` with a custom top-edge transition — `TodayView.swift`
 
 Wrap the existing `NavigationStack` in a `ZStack` and present `ListeningView` as
-a conditional sibling above it instead of a modal cover:
+a conditional sibling above it instead of a modal cover. The player lives in its
+**own** inner `ZStack` so the animation is scoped to it alone — otherwise the
+implicit `.animation(value:)` sweeps the Today toolbar (in the sibling
+`NavigationStack`) into the transition as the player covers/uncovers the nav bar.
 
 ```swift
 ZStack {
     NavigationStack { … }   // unchanged: toolbar, .sheet(settings), .task, NewDropPrompt overlay
-    if showingListening, let entry = loadedEntry {
-        ListeningView(entry: entry, …)   // same params as today
-            .transition(reduceMotion ? .opacity : .move(edge: .top))
-            .zIndex(1)
+
+    ZStack {                // dedicated, animation-scoped container for the player
+        if showingListening, let entry = loadedEntry {
+            ListeningView(entry: entry, …)   // same params as today
+                .transition(.opacity)        // crisp cross-dissolve
+        }
     }
+    .zIndex(1)
+    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: showingListening)
 }
-.animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.86),
-           value: showingListening)
 ```
 
-- **Insert** (pull-down opens it) → player slides down from the top, matching the
-  pull.
-- **Remove** (swipe-up / advance) → player slides up off-screen, revealing Today,
-  matching the swipe.
-- The outer `ZStack` guarantees the player covers the nav bar; `ListeningView`'s
+- **Insert / remove** → the player cross-dissolves in/out over ~0.25s. No layer
+  repositions, so the heavy blurred `bloom` never causes the jank a slide did.
+- The inner `ZStack` guarantees the player covers the nav bar; `ListeningView`'s
   `bloom` already `.ignoresSafeArea()`.
-- Add `@Environment(\.accessibilityReduceMotion)` to `TodayView`.
-- The single `.animation(_:value:)` drives **both** directions, so neither the
-  open trigger nor `onAdvance` needs its own `withAnimation`.
+- Add `@Environment(\.accessibilityReduceMotion)` to `TodayView`; `reduceMotion`
+  → `nil` animation (instant cut).
+- The single `.animation(_:value:)` on the inner container drives **both**
+  directions, so neither the open trigger nor `onAdvance` needs its own
+  `withAnimation`.
+- **Haptic:** the open already fires `Haptics.tap()` at the overscroll trigger
+  (`EntryDetailImmersive.swift`). The return swipe (`swipeUpToReturnGesture` in
+  `ListeningView`) fires `Haptics.tap()` too, so both directions feel like a
+  decisive, confirmed page swap.
 - Lifecycle is equivalent to the cover: the view is inserted/removed from the
   hierarchy, so `.task` / `.onAppear` fire and cancel as before — playback
   start/stop is unchanged.
@@ -91,16 +104,16 @@ gesture itself is unchanged (vertical-only, `translation.height < -80`,
 ### 3. Animated return
 
 Falls out of #1 with no extra code: `onAdvance()` sets `showingListening = false`,
-and the `ZStack`'s `.animation(value:)` runs the `.move(edge: .top)` removal.
-The audio-stop in `onAdvance` is unchanged. Clip-finish auto-advance and the
-"Read today's story" button get the same animated exit for free.
+and the inner container's `.animation(value:)` runs the `.opacity` cross-dissolve
+removal. The audio-stop in `onAdvance` is unchanged. Clip-finish auto-advance and
+the "Read today's story" button get the same cross-dissolve for free.
 
 ## Scope
 
 - **Files changed:** `TodayView.swift`, `ListeningView.swift`. Read
   `EntryDetailImmersive.swift` to confirm no change is required there.
 - No new dependencies.
-- `reduceMotion` falls back to a cross-fade (`.opacity`, no spring).
+- `reduceMotion` falls back to an instant cut (`nil` animation).
 
 ## Out of scope
 
@@ -116,10 +129,13 @@ The audio-stop in `onAdvance` is unchanged. Clip-finish auto-advance and the
 
 UI animation/gesture work — verified by hand on the simulator/device:
 
-1. Pull down on Today → player descends from the top, no refresh-style stall.
-2. Swipe up *anywhere* on the player (not just over a button) → returns to Today
-   with an upward slide.
-3. Transport buttons (play/pause, restart, favorite) and the scrub bar still
+1. Pull down on Today → haptic tap, then the player **cross-dissolves** in
+   (no refresh-style stall, no sliding/jank).
+2. Swipe up *anywhere* on the player (not just over a button) → haptic tap, then
+   cross-dissolves back to Today.
+3. The Today toolbar buttons (gear, live badge, streak) stay put during the
+   transition — they are not swept into the animation.
+4. Transport buttons (play/pause, restart, favorite) and the scrub bar still
    respond — the swipe gesture doesn't block them.
-4. Enable Reduce Motion → both directions cross-fade instead of sliding.
-5. Let a clip finish → auto-advance back to Today animates the same way.
+5. Enable Reduce Motion → both directions are an instant cut (no fade).
+6. Let a clip finish → auto-advance back to Today cross-dissolves the same way.
