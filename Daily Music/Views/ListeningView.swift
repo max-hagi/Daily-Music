@@ -16,9 +16,14 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ListeningView: View {
     let entry: DailyEntry
+    /// Artwork already loaded by the presenter (Today), so the bloom shows the
+    /// album-art bleed from the first frame instead of a gray flash while this
+    /// view's own palette downloads. nil → fall back to the palette load.
+    var initialArtwork: UIImage? = nil
     /// Bottom-button label. Today flows into the journal ("Read today's story");
     /// Vault/Favorites just dismiss ("Done").
     var advanceLabel: String = "Read today's story"
@@ -299,8 +304,9 @@ struct ListeningView: View {
             Color.black   // opaque base so Today never bleeds through the takeover
 
             // The artwork bleed only joins once the song is revealed, so the intro
-            // doesn't leak the album's colors ahead of the moment.
-            if phase == .player, let image = palette.image {
+            // doesn't leak the album's colors ahead of the moment. Use the handed-in
+            // artwork until this view's own palette finishes loading (no gray flash).
+            if phase == .player, let image = palette.image ?? initialArtwork {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()

@@ -95,7 +95,9 @@ extension EntryDetailView {
                     .labelStyle(.titleAndIcon)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .opacity(0.65)
+                    // Fade out as the pull arms so the cue swaps with the ring
+                    // indicator instead of overlapping it.
+                    .opacity(0.65 * max(0, 1 - listenArm * 1.6))
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.top, 6)

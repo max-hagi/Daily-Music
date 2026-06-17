@@ -22,6 +22,9 @@ struct TodayView: View {
     @State private var presentation: Double = 0  // player slide: 0 = off-screen above, 1 = covering
     @State private var enterArm: Double = 0      // 0…1 arming progress during the pull-down
     @State private var viewHeight: CGFloat = 1   // slide distance for the opaque takeover
+    // Pre-loads today's artwork so the player's bloom shows it the instant it opens
+    // (no gray flash while the player's own palette downloads).
+    @State private var artwork = ArtworkPalette()
     @State private var showingNewDropPrompt = false
     @State private var dismissedDropPromptThisSession = false
 
@@ -142,6 +145,9 @@ struct TodayView: View {
             }
             .ignoresSafeArea()
         }
+        .task(id: loadedEntry?.id) {
+            await artwork.load(from: loadedEntry?.albumArtURL)
+        }
     }
 
     private func evaluateNewDropPrompt() {
@@ -205,6 +211,7 @@ struct TodayView: View {
             if showingListening, let entry = loadedEntry {
                 ListeningView(
                     entry: entry,
+                    initialArtwork: artwork.image,
                     showsAdvanceButton: false,
                     showsRevealIntro: false,
                     presentation: $presentation,
