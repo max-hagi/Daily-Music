@@ -188,11 +188,26 @@ struct TodayView: View {
         }
     }
 
-    /// Tear down after the player has animated away (or immediately under Reduce Motion).
+    /// Dismiss the player. The interactive swipe already animated `presentation`
+    /// to 0 before calling this (so we just tear down); the bottom button and the
+    /// clip-finished auto-advance arrive with it still up, so we animate it away
+    /// first, then unmount. Reduce Motion skips straight to teardown.
     private func finishListening() {
+        pullProgress = 0
+        if reduceMotion || presentation == 0 {
+            teardownListening()
+        } else {
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                presentation = 0
+            } completion: {
+                teardownListening()
+            }
+        }
+    }
+
+    private func teardownListening() {
         showingListening = false
         presentation = 0
-        pullProgress = 0
         // Reading mode is silent: handing the room back leaves no audio running.
         Task { await env.musicPlayer.stop() }
     }
