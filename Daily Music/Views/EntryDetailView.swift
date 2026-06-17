@@ -36,6 +36,9 @@ struct EntryDetailView: View {
     /// Optional trailing chip shown in the immersive greeting row (Today's streak).
     /// Type-erased so callers pass any small view; nil on Vault/Favorites.
     var greetingAccessory: AnyView? = nil
+    /// Today binds this to the immersive snap position so the listening transition
+    /// can reveal the journal instead of the compact song/action zone underneath.
+    var immersiveScrollPosition: Binding<ImmersiveSection?> = .constant(nil)
 
     @Environment(AppEnvironment.self) var env
     @Environment(\.accessibilityReduceMotion) var reduceMotion
@@ -152,7 +155,7 @@ struct EntryDetailView: View {
 
     private var backdrop: some View {
         ZStack {
-            if usesImmersiveBackdrop, let image = palette.image {
+            if usesImmersiveBackdrop, let image = backdropImage {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -173,8 +176,22 @@ struct EntryDetailView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: palette.didFinishLoading)
     }
 
+    /// Backdrop artwork, preferring this view's palette but falling back to the
+    /// process cache so a fresh palette (built on every remount — the immersive
+    /// transition remounts Today) themes its FIRST frame instead of blanking to the
+    /// loading screen before `palette.load` re-runs.
+    private var backdropImage: UIImage? {
+        palette.image ?? ArtworkPalette.cached(for: entry.albumArtURL)?.image
+    }
+
+    private var backdropAccent: Color {
+        if palette.isLoaded { return palette.accent }
+        return ArtworkPalette.cached(for: entry.albumArtURL)?.accent ?? palette.accent
+    }
+
     private var isWaitingForArtwork: Bool {
         usesImmersiveBackdrop && !palette.didFinishLoading
+            && ArtworkPalette.cached(for: entry.albumArtURL) == nil
     }
 
     var allowsEntryReaction: Bool {
@@ -187,15 +204,15 @@ struct EntryDetailView: View {
     var allowsRating: Bool { allowsDailyInteraction }
 
     private var standardBackdropColors: [Color] {
-        [palette.accent.opacity(0.45), palette.accent.opacity(0)]
+        [backdropAccent.opacity(0.45), backdropAccent.opacity(0)]
     }
 
     private var immersiveBackdropColors: [Color] {
         [
-            palette.accent.opacity(0.62),
-            palette.accent.opacity(0.28),
+            backdropAccent.opacity(0.62),
+            backdropAccent.opacity(0.28),
             Color(.systemBackground).opacity(0.9),
-            palette.accent.opacity(0.18)
+            backdropAccent.opacity(0.18)
         ]
     }
 

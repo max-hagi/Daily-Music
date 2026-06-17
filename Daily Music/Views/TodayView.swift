@@ -22,6 +22,7 @@ struct TodayView: View {
     @State private var presentation: Double = 0  // player slide: 0 = off-screen above, 1 = covering
     @State private var enterArm: Double = 0      // 0…1 arming progress during the pull-down
     @State private var viewHeight: CGFloat = 1   // slide distance for the opaque takeover
+    @State private var immersiveScrollPosition: ImmersiveSection?
     // Pre-loads today's artwork so the player's bloom shows it the instant it opens
     // (no gray flash while the player's own palette downloads).
     @State private var artwork = ArtworkPalette()
@@ -45,7 +46,8 @@ struct TodayView: View {
                                 albumArtHorizontalPadding: 28,
                                 usesImmersiveBackdrop: true,
                                 onRequestListen: { beginListening() },
-                                onListenArm: { enterArm = $0 }
+                                onListenArm: { enterArm = $0 },
+                                immersiveScrollPosition: $immersiveScrollPosition
                             )
                             .scaleEffect(todayRecedeScale)
                             .opacity(todayRecedeOpacity)
@@ -222,6 +224,7 @@ struct TodayView: View {
     }
 
     private func beginListening() {
+        immersiveScrollPosition = TodayListeningTransitionPolicy.backingSection(for: .enteringListening)
         showingListening = true
         if reduceMotion {
             presentation = 1
@@ -243,6 +246,7 @@ struct TodayView: View {
     /// first, then unmount. Reduce Motion skips straight to teardown.
     private func finishListening() {
         guard showingListening else { return }   // ignore a second dismiss from a finish/swipe race
+        immersiveScrollPosition = TodayListeningTransitionPolicy.backingSection(for: .dismissingListening)
         enterArm = 0
         if reduceMotion || presentation == 0 {
             teardownListening()

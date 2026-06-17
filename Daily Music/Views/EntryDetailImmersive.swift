@@ -29,6 +29,7 @@ extension EntryDetailView {
                 .scrollTargetLayout()
             }
             .scrollTargetBehavior(StorySnapScrollTargetBehavior())
+            .scrollPosition(id: immersiveScrollPosition)
             // Drive the dock's opacity from scroll position so it reads as part
             // of the journal: gone while reading, back when the song zone returns.
             .onScrollGeometryChange(for: CGFloat.self) { geometry in
@@ -311,11 +312,6 @@ extension EntryDetailView {
                 .offset(y: shouldReduceMotion ? 0 : (phase.isIdentity ? 0 : 40))
         }
     }
-}
-
-private enum ImmersiveSection: Hashable {
-    case song
-    case journal
 }
 
 private struct JournalPreviewDock: View {

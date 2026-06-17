@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		BADADADADADADADADADAD002 /* BadgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BADADADADADADADADADAD001 /* BadgeTests.swift */; };
 		08F041F74042C7B42FE29DCB /* PlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD93DFCBD69276F616E276C /* PlaybackTests.swift */; };
 		0A0A0A0A0A0A0A0A0A0A00B1 /* AppleMusicSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F1 /* AppleMusicSessionTests.swift */; };
 		0A0A0A0A0A0A0A0A0A0A00B2 /* MusicPlayerRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A00F2 /* MusicPlayerRoutingTests.swift */; };
@@ -34,6 +33,7 @@
 		AC0D3E5F7890ABCDEF123456 /* Daily Music/Models/TodayDropTimelineSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0D3E5F7890ABCDEF123455 /* Daily Music/Models/TodayDropTimelineSchedule.swift */; };
 		B2C3D4E5F6A1B2C3D4E5F6A1 /* CatalogInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */; };
 		B6F8A1D4C5E7401FA6B8D912 /* LiquidGlassStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F8A1D4C5E7401FA6B8D913 /* LiquidGlassStyleTests.swift */; };
+		BADADADADADADADADADAD002 /* BadgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BADADADADADADADADADAD001 /* BadgeTests.swift */; };
 		BB22CC33DD44EE55FF6611AA /* StatsCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF6610AA /* StatsCopyTests.swift */; };
 		C3D4E5F6A1B2C3D4E5F6A1B2 /* AvatarStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A1B2C3D4E5F6A1B3 /* AvatarStyleTests.swift */; };
 		C7F0B6A12E7D4C11A9E0A001 /* SessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F0B6A12E7D4C11A9E0A002 /* SessionStoreTests.swift */; };
@@ -87,7 +87,6 @@
 		0B0B0B0B0B0B0B0B0B0B00F3 /* SpotifySessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpotifySessionTests.swift; sourceTree = "<group>"; };
 		0B0B0B0B0B0B0B0B0B0B00F4 /* SpotifyLibraryAPITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpotifyLibraryAPITests.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F708192A3B4C5 /* StreakTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreakTests.swift; sourceTree = "<group>"; };
-		BADADADADADADADADADAD001 /* BadgeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BadgeTests.swift; sourceTree = "<group>"; };
 		2B3C4D5E6F708192A3B4C5D6 /* ReminderCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReminderCopyTests.swift; sourceTree = "<group>"; };
 		3C4D5E6F708192A3B4C5D6E7 /* CatchUpTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatchUpTests.swift; sourceTree = "<group>"; };
 		57EB88C28BF31E5154BE4AF1 /* TasteMirrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteMirrorTests.swift; sourceTree = "<group>"; };
@@ -103,6 +102,7 @@
 		B2C3D4E5F6A1B2C3D4E5F6A2 /* CatalogInfoTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogInfoTests.swift; sourceTree = "<group>"; };
 		B6F8A1D4C5E7401FA6B8D913 /* LiquidGlassStyleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiquidGlassStyleTests.swift; sourceTree = "<group>"; };
 		B7B501C622830FDCCDFA988E /* ArchetypeRevealTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArchetypeRevealTests.swift; sourceTree = "<group>"; };
+		BADADADADADADADADADAD001 /* BadgeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BadgeTests.swift; sourceTree = "<group>"; };
 		BB22CC33DD44EE55FF6610AA /* StatsCopyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsCopyTests.swift; sourceTree = "<group>"; };
 		C3D4E5F6A1B2C3D4E5F6A1B3 /* AvatarStyleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AvatarStyleTests.swift; sourceTree = "<group>"; };
 		C7F0B6A12E7D4C11A9E0A002 /* SessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionStoreTests.swift; sourceTree = "<group>"; };

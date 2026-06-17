@@ -130,3 +130,13 @@ struct TransitionMathTests {
         #expect(TransitionMath.armProgress(forDrag: span * 2, height: h) == 1)
     }
 }
+
+struct TodayListeningTransitionPolicyTests {
+    @Test func enteringListeningPreparesJournalAsBackingSection() {
+        #expect(TodayListeningTransitionPolicy.backingSection(for: .enteringListening) == .journal)
+    }
+
+    @Test func dismissingListeningRevealsJournalAsBackingSection() {
+        #expect(TodayListeningTransitionPolicy.backingSection(for: .dismissingListening) == .journal)
+    }
+}

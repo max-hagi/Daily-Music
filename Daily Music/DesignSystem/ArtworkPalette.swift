@@ -22,11 +22,13 @@ import CoreImage    // Apple's image-processing framework — used here for the 
 @MainActor
 @Observable
 final class ArtworkPalette {
+    /// Default accent before any artwork resolves. Neutral so the screen never
+    /// flashes the brand purple before fading to the album's real color.
+    static let defaultAccent = Color(red: 0.42, green: 0.45, blue: 0.5)
+
     // `private(set)` = readable from anywhere, but only THIS class can assign it.
     // Views observe these; the loading logic owns the writes.
-    // Neutral until artwork loads, so the screen never flashes the brand purple
-    // before fading to the album's real color.
-    private(set) var accent: Color = Color(red: 0.42, green: 0.45, blue: 0.5)
+    private(set) var accent: Color = ArtworkPalette.defaultAccent
     /// The loaded artwork itself, kept so features like the share card can embed
     /// it (ImageRenderer can't wait on an async AsyncImage).
     private(set) var image: UIImage?
@@ -37,9 +39,23 @@ final class ArtworkPalette {
     // `.task { await palette.load(...) }`, which ties the work to the view's
     // lifetime (auto-cancelled if the view disappears).
     func load(from url: URL?) async {
+        // Cache hit → hydrate synchronously and return WITHOUT first blanking the
+        // state. A fresh palette is built on every remount (and the immersive
+        // transition remounts Today), so resetting to the un-loaded state here
+        // flashed the bare loading screen back in before the bloom reappeared.
+        // Seeding from the process cache means the first frame is already themed.
+        if let cached = ArtworkPalette.cached(for: url) {
+            image = cached.image
+            accent = cached.accent
+            isLoaded = true
+            didFinishLoading = true
+            return
+        }
+
         didFinishLoading = false
         isLoaded = false
         image = nil
+        accent = ArtworkPalette.defaultAccent
 
         // `guard let url else { … }` is the early-exit idiom: if `url` is nil we
         // bail now (marking loading done so the UI doesn't hang on the fallback).
@@ -63,11 +79,33 @@ final class ArtworkPalette {
 
         self.image = image
         // Only override the brand accent if we actually extracted a color.
-        if let color = image.dominantVibrantColor() {
-            accent = Color(color)        // bridge UIColor → SwiftUI Color
-        }
+        let resolvedAccent = image.dominantVibrantColor().map(Color.init) ?? ArtworkPalette.defaultAccent
+        accent = resolvedAccent
         isLoaded = true
         didFinishLoading = true
+        ArtworkPalette.cacheBox.setObject(CacheBox(image: image, accent: resolvedAccent), forKey: url as NSURL)
+    }
+
+    // MARK: - Process-wide cache
+
+    /// One decoded artwork + its extracted accent. NSCache needs a class value.
+    private final class CacheBox {
+        let image: UIImage
+        let accent: Color
+        init(image: UIImage, accent: Color) { self.image = image; self.accent = accent }
+    }
+
+    /// Process-wide cache keyed by URL. Mirrors `AlbumArtCache` (foreground art) so
+    /// the immersive *backdrop* survives the remounts the Today↔Listening transition
+    /// triggers — no re-download, no flash. NSCache self-evicts under memory pressure,
+    /// so this stays a cache, not a leak.
+    private static let cacheBox = NSCache<NSURL, CacheBox>()
+
+    /// Synchronous peek for views that want to theme their first frame from a prior
+    /// load (e.g. gate a loading screen, seed a backdrop) before `load` re-runs.
+    static func cached(for url: URL?) -> (image: UIImage, accent: Color)? {
+        guard let url, let box = cacheBox.object(forKey: url as NSURL) else { return nil }
+        return (box.image, box.accent)
     }
 }
 

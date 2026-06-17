@@ -12,6 +12,25 @@
 
 import CoreGraphics
 
+enum ImmersiveSection: Hashable {
+    case song
+    case journal
+}
+
+enum TodayListeningTransitionPhase {
+    case enteringListening
+    case dismissingListening
+}
+
+enum TodayListeningTransitionPolicy {
+    static func backingSection(for phase: TodayListeningTransitionPhase) -> ImmersiveSection {
+        switch phase {
+        case .enteringListening, .dismissingListening:
+            return .journal
+        }
+    }
+}
+
 enum TransitionOutcome: Equatable {
     case commit   // finish the takeover
     case cancel   // snap back

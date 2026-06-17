@@ -130,7 +130,15 @@ struct ListeningView: View {
                 .allowsHitTesting(false)
             }
         }
-        .preferredColorScheme(.dark)
+        // Scope the dark appearance to the player's OWN subtree. `.preferredColorScheme`
+        // would escape to the enclosing window — and on Today the player is mounted as an
+        // inline sibling layer (not a sheet/cover), so it flipped Today underneath into dark
+        // mode too. During the enter/exit slide, Today is briefly visible while the player is
+        // still mounted, which rendered Today's immersive backdrop on a black `systemBackground`
+        // (the "old listening view" flash). Scoping with the environment keeps the player dark
+        // while Today keeps following the system scheme. (Vault/Favorites present in a
+        // fullScreenCover, so they were never affected.)
+        .environment(\.colorScheme, .dark)
         // Swipe UP to send the player back to Today: it slid down from above to cover
         // Today, so the natural inverse is pushing it back up. Simultaneous so it
         // never blocks the transport/scrub.

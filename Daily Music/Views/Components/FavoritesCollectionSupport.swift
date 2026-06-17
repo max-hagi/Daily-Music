@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// A gentle continuous wobble used to signal "rearrange mode" (like the iOS home
 /// screen). `seed` phase-offsets each record so the wall doesn't wobble in sync.
@@ -30,31 +29,12 @@ struct Jiggle: ViewModifier {
     }
 }
 
-/// Live drag-to-reorder for the favorites wall. As the dragged record hovers over
-/// another, the two swap immediately so the wall reshuffles under the finger; the
-/// new order is committed on drop.
-struct FavoriteReorderDelegate: DropDelegate {
-    let item: DailyEntry
-    @Binding var items: [DailyEntry]
-    @Binding var dragging: DailyEntry?
-    let onCommit: () -> Void
-
-    func dropEntered(info: DropInfo) {
-        guard let dragging, dragging != item,
-              let from = items.firstIndex(of: dragging),
-              let to = items.firstIndex(of: item) else { return }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-            items.move(fromOffsets: IndexSet(integer: from),
-                       toOffset: to > from ? to + 1 : to)
-        }
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
-
-    func performDrop(info: DropInfo) -> Bool {
-        dragging = nil
-        onCommit()
-        return true
+/// Collects each record's frame (in the wall's coordinate space) so the custom
+/// drag-to-reorder can hit-test the finger against cells and size the lifted one.
+struct FavoriteCellFrameKey: PreferenceKey {
+    static let defaultValue: [UUID: CGRect] = [:]
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
 
