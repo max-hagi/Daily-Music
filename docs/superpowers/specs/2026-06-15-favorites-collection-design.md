@@ -102,7 +102,7 @@ struct FavoritesFilter: Equatable {
 func availableFacets(in favorites: [DailyEntry]) -> (genres: [String], decades: [String], moods: [String])
 ```
 
-`DailyEntry.genre/decade/mood` are optional strings (already used by `FavoriteEntryPeek`).
+`DailyEntry.genre/decade/mood` are optional strings on the model.
 `matches` ignores `nil`/empty values when building facets and treats a `nil` dimension
 value as "does not match" when that dimension is constrained.
 
@@ -126,7 +126,10 @@ hearts in/out; `arranged` keeps new ones on top and drops removed ones.
 
 **Browse mode (default):**
 - The existing shelf wall — rows of 3 + decorative ledges — now rendering `SleeveView`s.
-- Tap opens the entry (`selectedEntry`). Context menu (Open / Remove favorite) unchanged.
+- Tap opens the entry (`selectedEntry`). There is **no context menu** on Favorites
+  records — long-press is reserved for rearrange (below), so the two don't conflict.
+  Un-favoriting happens from the opened entry's heart toggle. The Open-entry +
+  favorite-toggle context menu lives on the **Vault** sleeves (`MonthShelvesView`) instead.
 - **Long-press (~0.4s)** on a record → `isRearranging = true` + haptic. Only enterable
   with **≥2 favorites and no active search/filter** (see below).
 - **`.searchable`** bound to `filter.query` (over title + artist).
@@ -140,7 +143,7 @@ layout is kept in both modes; the ledges fade and records jiggle rather than re-
 into a separate grid. Decided during planning and approved.)
 - The shelf wall stays; the decorative ledges **fade out** and records **jiggle**
   (±~1.3° autoreversing wobble, phase-offset per record via the `Jiggle` modifier).
-- Tap-to-open and context menu are **disabled** (records become drag sources only).
+- Tap-to-open is **disabled** (records become drag sources only).
 - Toolbar shows **Done**; tapping the background also exits.
 - **Drag:** native `.onDrag` / `.onDrop` with a `FavoriteReorderDelegate` (a `DropDelegate`).
   As the dragged record hovers another, the two swap so `arranged` reshuffles live with
