@@ -201,11 +201,12 @@ struct TodayView: View {
         }
     }
 
-    private var playerOffsetY: CGFloat { -(1 - CGFloat(presentation)) * viewHeight }
+    private var revealHeight: CGFloat { max(0, CGFloat(presentation)) * viewHeight }
 
-    // Opaque vertical takeover: the player slides DOWN from above to cover Today
-    // (presentation 1) and back UP to leave (0). No opacity fade — the destination
-    // fully takes over. The bloom moves only during this brief committed slide.
+    // Opaque "curtain" takeover: the player sits full-screen IN PLACE and is
+    // uncovered top-to-bottom as `presentation` grows (and re-covered on close).
+    // Nothing slides through frame, so content never scrambles and there's no
+    // half-positioned "weird screen" — it just reveals like a blind.
     @ViewBuilder private var playerLayer: some View {
         ZStack {
             if showingListening, let entry = loadedEntry {
@@ -220,7 +221,10 @@ struct TodayView: View {
                 )
             }
         }
-        .offset(y: playerOffsetY)
+        .ignoresSafeArea()
+        .mask(alignment: .top) {
+            Color.black.frame(height: revealHeight)
+        }
         .zIndex(1)
     }
 
