@@ -23,6 +23,9 @@ struct ListeningView: View {
     /// Vault/Favorites just dismiss ("Done").
     var advanceLabel: String = "Read today's story"
     var advanceSystemImage: String = "arrow.down"
+    /// Today hides the bottom advance button — swipe-up is the exit there and the
+    /// journal is one swipe away. Vault/Favorites keep it as their "Done" button.
+    var showsAdvanceButton: Bool = true
     /// Today auto-advances to the journal when the clip ends. Archive contexts
     /// stay put so the listener can replay or close on their own terms.
     var autoAdvanceOnFinish: Bool = true
@@ -135,6 +138,9 @@ struct ListeningView: View {
             }
         }
         .simultaneousGesture(dismissGesture)
+        // The swipe is decorative/hidden from VoiceOver; with the visible advance
+        // button gone on Today, this keeps an accessible way out.
+        .accessibilityAction(named: Text("Close")) { onAdvance() }
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
         // Separate task from the palette load above: ticks the listen accumulator
         // while the player is open, so Today can collect the record once the
@@ -362,7 +368,9 @@ struct ListeningView: View {
                 scrubBar
 
                 transportRow
-                advanceButton
+                if showsAdvanceButton {
+                    advanceButton
+                }
             }
             .foregroundStyle(.white)
             .frame(maxWidth: contentMaxWidth)   // align the control column with the album art

@@ -44,8 +44,8 @@ struct TodayView: View {
                                 onRequestListen: { beginListening() },
                                 onListenArm: { enterArm = $0 }
                             )
-                            .scaleEffect(reduceMotion ? 1 : 1 - 0.04 * enterArm)
-                            .opacity(1 - 0.15 * enterArm)
+                            .scaleEffect(todayRecedeScale)
+                            .opacity(todayRecedeOpacity)
                             .simultaneousGesture(returnSwipeGesture)
 
                         case .empty:
@@ -130,42 +130,9 @@ struct TodayView: View {
                 evaluateNewDropPrompt()
             }
 
-            // Enter arming ring: fills as the user pulls Today down; the EntryDetail
-            // "pull down to listen" cue recedes beneath it (scale/dim) so they swap
-            // rather than overlap. Gone once the player mounts.
-            if !showingListening {
-                VStack {
-                    PullArmingRing(
-                        progress: enterArm,
-                        armed: enterArm >= 1,
-                        label: enterArm >= 1 ? "Release to listen" : "Keep pulling…",
-                        tint: Theme.Brand.gradient[0],
-                        pointsUp: false
-                    )
-                    .padding(.top, 100)   // below the nav bar — in the main view, not straddling the toolbar
-                    Spacer()
-                }
-                .allowsHitTesting(false)
-                .zIndex(0.5)
-            }
+            enterRingOverlay
 
-            // Opaque vertical takeover: the player slides DOWN from above to cover
-            // Today (presentation 1) and back UP to leave (0). No opacity fade — the
-            // destination fully takes over (no see-through). The heavy bloom moves
-            // only during this brief committed slide, never under the finger.
-            ZStack {
-                if showingListening, let entry = loadedEntry {
-                    ListeningView(
-                        entry: entry,
-                        showsRevealIntro: false,
-                        presentation: $presentation,
-                        onAdvance: { finishListening() },
-                        onReachedListenThreshold: { env.listensStore.markHeard(entry) }
-                    )
-                }
-            }
-            .offset(y: -(1 - presentation) * viewHeight)
-            .zIndex(1)
+            playerLayer
         }
         .background {
             GeometryReader { geo in
@@ -202,6 +169,54 @@ struct TodayView: View {
     }
 
     /// Commit the listen ceremony: mount the player and spring it up.
+    // The Today song zone recedes slightly as the pull arms (extracted so the
+    // view builder type-checks quickly).
+    private var todayRecedeScale: CGFloat { reduceMotion ? 1 : CGFloat(1 - 0.04 * enterArm) }
+    private var todayRecedeOpacity: Double { 1 - 0.15 * enterArm }
+
+    // Enter arming ring: fills as the user pulls Today down; the EntryDetail
+    // "pull down to listen" cue recedes beneath it so they swap rather than
+    // overlap. Gone once the player mounts.
+    @ViewBuilder private var enterRingOverlay: some View {
+        if !showingListening {
+            VStack {
+                PullArmingRing(
+                    progress: enterArm,
+                    armed: enterArm >= 1,
+                    label: enterArm >= 1 ? "Release to listen" : "Keep pulling…",
+                    tint: .primary,
+                    pointsUp: false
+                )
+                .padding(.top, 100)   // below the nav bar — in the main view, not the toolbar
+                Spacer()
+            }
+            .allowsHitTesting(false)
+            .zIndex(0.5)
+        }
+    }
+
+    private var playerOffsetY: CGFloat { -(1 - CGFloat(presentation)) * viewHeight }
+
+    // Opaque vertical takeover: the player slides DOWN from above to cover Today
+    // (presentation 1) and back UP to leave (0). No opacity fade — the destination
+    // fully takes over. The bloom moves only during this brief committed slide.
+    @ViewBuilder private var playerLayer: some View {
+        ZStack {
+            if showingListening, let entry = loadedEntry {
+                ListeningView(
+                    entry: entry,
+                    showsAdvanceButton: false,
+                    showsRevealIntro: false,
+                    presentation: $presentation,
+                    onAdvance: { finishListening() },
+                    onReachedListenThreshold: { env.listensStore.markHeard(entry) }
+                )
+            }
+        }
+        .offset(y: playerOffsetY)
+        .zIndex(1)
+    }
+
     private func beginListening() {
         showingListening = true
         if reduceMotion {
