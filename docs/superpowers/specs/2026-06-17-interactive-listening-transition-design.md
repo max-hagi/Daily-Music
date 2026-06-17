@@ -29,51 +29,51 @@ Moving between Today and the immersive Listening player feels clunky. Two root c
 
 ## Design
 
-### Single source of truth
+### Two state values
 
-One progress value drives the entire transition:
+The player can't be mounted during a tentative enter-pull: mounting `ListeningView` auto-starts audio (`startPlaybackIfNeeded()`). So we use two values, not one:
 
 ```
-progress: Double   // 0 = Today, 1 = player fully presented
+presentation: Double  // 0 = player absent, 1 = player fully presented. Drives the mounted player container.
+pullProgress: Double  // 0…1 enter-only feedback on TODAY's content during the over-pull (player not yet mounted).
 ```
 
-Everything else is derived from `progress`, so enter and exit are the same interaction run forward/backward and are fully reversible mid-gesture.
+- The **player** mounts only when `presentation > 0` (i.e. at/after commit). `presentation` is the single driver of the player container and is fully reversible mid-gesture during the exit drag.
+- `pullProgress` is purely the live "something is responding" feedback on Today while the user is still deciding, before any mount/audio.
 
-### What progress drives
+### What `presentation` drives (the mounted player)
 
 | Layer | Mapping | Why |
 |---|---|---|
-| Bloom (`blur(radius:90)`) | **opacity = progress only** | Repositioning this layer dropped frames before. Opacity is cheap. Never translate it. |
-| Foreground content (artwork, transport, text) | opacity = progress; scale = `0.96 + 0.04·progress`; vertical offset (see below) | Cheap to move; carries the spatial feel. |
+| Bloom (`blur(radius:90)`) | **opacity = presentation only** | Repositioning this layer dropped frames before. Opacity is cheap. Never translate it. |
+| Foreground content (artwork, transport, text) | opacity = presentation; scale = `0.96 + 0.04·presentation`; vertical offset = `(1 − presentation) · dismissTravel` (downward) | Cheap to move; carries the "falls away downward" dismiss feel. |
 
-**Reduce Motion:** opacity only — no scale, no offset.
+**Reduce Motion:** opacity only — no scale, no offset (both enter feedback and exit drag).
 
-### Offset behaviour differs by gesture surface (intentional)
+### What `pullProgress` drives (Today, enter-only)
 
-- **Enter (finger on the journal scroll, not the player):** small offset only (content settles in from a slight displacement, ~16–24pt). A large 1:1 player translation would be wrong because the finger isn't on the player.
-- **Exit (finger on the player):** foreground content **tracks the finger downward ~1:1** over a meaningful distance and falls away, while the bloom only fades behind it. Reads like the player dropping away over a dissolving backdrop.
-
-This asymmetry is correct: each direction matches where the finger actually is.
+Today's song zone recedes slightly as the user over-pulls — `scale = 1 − 0.04·pullProgress`, `opacity = 1 − 0.25·pullProgress` — so the pull has continuous feedback before the player springs in. Resets to 0 if the user releases without committing.
 
 ### Enter — pull down (ceremony preserved, made live)
 
 In the existing `onScrollGeometryChange` over-pull handler (`EntryDetailImmersive.swift`):
 
-- Map live over-pull onto progress: `0pt → progress 0`, `~-160pt → progress 1` (clamped).
-- Drive the player presentation continuously from that progress as the user pulls.
-- On release (scroll returns toward 0): **commit** (spring progress → 1, set `showingListening = true`) if `progress > ~0.4` OR pull velocity was high; otherwise spring → 0 and the player fades back out as the scroll settles.
+- Map live over-pull onto `pullProgress`: `0pt → 0`, `~160pt → 1` (clamped), reported up via a new `onListenPullProgress: (Double) -> Void` closure. Today's song zone recedes live (above).
+- **Commit** the instant `pullProgress` crosses `~0.4` during the pull (latched by the existing `pullTriggered` guard): haptic + `onRequestListen?()`. This is the same latch mechanism as today, but at a feedback-backed ~64pt instead of a blind 80pt — the user *sees* Today recede as they approach commit.
+- On commit, `TodayView` mounts the player and springs `presentation` 0 → 1 (a connected spring, not a flat 0.25s fade).
+- If the user releases before commit, the scroll bounces back, `pullProgress` returns to 0, and Today settles — no mount, no audio.
 - Keep the "pull down to listen / pull down to replay" cue copy.
 
-Constraint acknowledged: the scroll view owns its own rubber-band, so live tracking is good but not perfectly 1:1. Acceptable for the enter direction.
+Constraint acknowledged: the scroll view owns its own rubber-band, so this is "live feedback + threshold commit," not a 1:1 finger-tracked mount. That is the correct trade for the enter direction given the audio lifecycle; the fully finger-tracked interaction is the exit.
 
 ### Exit — swipe down to dismiss (new)
 
-Replace `swipeUpToReturnGesture` (up, `.onEnded`-only) with a downward interactive drag on the player:
+Replace `swipeUpToReturnGesture` (up, `.onEnded`-only) with a downward interactive drag bound to `presentation` (a `@Binding` passed in from `TodayView`):
 
-- `.onChanged`: as the user drags down, decrease `progress` from 1 toward 0; foreground content tracks the finger down + fades + scales; bloom fades. Rubber-band past the ends.
-- `.onEnded`: commit via **distance AND velocity** — a fast downward flick dismisses even on a short drag; a weak/short drag springs back up. Animate the remainder with an `interactiveSpring` whose initial velocity matches the throw.
+- `.onChanged`: as the user drags down by `d` points, set `presentation = 1 − TransitionMath.dismissFraction(forDrag: d, height:)`; the player's foreground tracks the finger down + fades + scales; bloom fades. (Upward drag clamps at `presentation = 1`, i.e. rubber-bands closed.)
+- `.onEnded`: feed the released `dismissFraction` and the gesture's vertical velocity into `TransitionResolver.resolve`. **commit** → spring `presentation` to 0, then call `onAdvance()`; **cancel** → spring `presentation` back to 1. A fast downward flick commits even on a short drag; a weak/short drag springs back up.
 - Vertical-down only, with a horizontal-width guard, attached via `simultaneousGesture` so the horizontal scrubber keeps working. Guard by initial drag direction so a downward dismiss and a horizontal scrub never fight.
-- Copy: "swipe up to close" → **"swipe down to close"** (`ListeningView.swift` swipeUpHint); flip the hint bob direction accordingly.
+- Copy: "swipe up to close" → **"swipe down to close"** (`ListeningView.swift` swipeUpHint); chevron `chevron.up` → `chevron.down`; flip the hint bob direction (`+4` instead of `−4`).
 
 ### The one testable unit (pure, no view)
 
@@ -83,46 +83,55 @@ A small pure helper file so the easy-to-get-wrong math is unit-tested independen
 enum TransitionOutcome { case commit, cancel }
 
 enum TransitionResolver {
-    /// Decide whether a released gesture should complete or snap back.
-    static func resolve(progress: Double, velocity: Double) -> TransitionOutcome
+    /// committedFraction: 0 = at the start of the gesture's intent, 1 = intent fully achieved.
+    /// velocity: points/sec, positive = moving toward the intent.
+    /// Decide whether a released gesture should complete (commit) or snap back (cancel).
+    static func resolve(committedFraction: Double, velocity: Double) -> TransitionOutcome
 }
 
 enum TransitionMath {
-    /// Clamped 0...1 mapping from journal over-pull distance.
+    /// Clamped 0...1 mapping from journal over-pull distance (points, positive = pulled down).
     static func progress(forPull pull: Double) -> Double
-    /// Clamped 0...1 mapping from downward dismiss-drag distance.
-    static func progress(forDismissDrag drag: Double, height: CGFloat) -> Double
+    /// Clamped 0...1 dismissal fraction from a downward dismiss-drag (points, positive = down),
+    /// scaled to a fraction of screen height so it feels consistent across devices.
+    static func dismissFraction(forDrag drag: Double, height: CGFloat) -> Double
 }
 ```
 
-Exact thresholds (commit ~0.4, the velocity cutoff, the 160pt pull span, dismiss travel) are tunable constants; final values verified on device.
+Exact constants (commit fraction ~0.4, the velocity cutoff ~800, the ~160pt pull span, the ~0.35·height dismiss span) are tunable; final values verified on device.
+
+For the **enter** direction, `resolve` is not needed — the commit is the `pullProgress ≥ 0.4` latch in the scroll handler. `resolve` is used by the **exit** drag, which has a real `DragGesture` velocity.
 
 ## Components & footprint
 
-- **New:** `ListeningTransition.swift` — the pure `TransitionResolver` + `TransitionMath` helpers. Plus a test file.
-- **`TodayView`** — owns `progress` as `@State` alongside `showingListening`; derives the player container's opacity/scale/offset from it; threads a binding to `ListeningView` for the exit drag.
-- **`EntryDetailImmersive`** — enter mapping in the existing scroll handler (live progress instead of threshold fire).
-- **`ListeningView`** — swipe-down interactive dismiss gesture; updated hint copy + bob direction.
+- **New:** `Daily Music/Views/Components/ListeningTransition.swift` — the pure `TransitionResolver` + `TransitionMath` helpers. Auto-compiles (app target is a file-system-synchronized group).
+- **Tests:** appended to the existing `Daily MusicTests/TodayListeningTests.swift` (the test target is **not** auto-synced, so reusing a registered file avoids editing `project.pbxproj`).
+- **`TodayView`** — owns `presentation` and `pullProgress` as `@State`; mounts the player when `presentation > 0`; derives the player container's opacity/scale/offset from `presentation`; passes `$presentation` to `ListeningView` for the exit drag; springs `presentation` 0 → 1 on `onRequestListen`.
+- **`EntryDetailView` / `EntryDetailImmersive`** — new `onListenPullProgress: (Double) -> Void` prop; the scroll handler reports live `pullProgress` and applies the recede to the song zone; commit latch unchanged in spirit (now at the `0.4` fraction).
+- **`ListeningView`** — `@Binding var presentation: Double`; swipe-down interactive dismiss gesture replacing `swipeUpToReturnGesture`; updated hint copy/chevron/bob.
 
 ## Data flow
 
 ```
-Enter:  journal over-pull → TransitionMath.progress(forPull:) → progress → player opacity/scale/offset (live)
-        release → TransitionResolver.resolve → spring to 0 or 1 (sets showingListening)
+Enter:  journal over-pull → TransitionMath.progress(forPull:) → pullProgress → Today song-zone recede (live)
+        pullProgress ≥ 0.4 → latch → Haptics.tap() + onRequestListen()
+        onRequestListen → mount player + spring presentation 0 → 1
 
-Exit:   downward drag on player → TransitionMath.progress(forDismissDrag:) → progress (live)
-        release → TransitionResolver.resolve → spring to 1 (stay) or 0 (dismiss → onAdvance/stop)
+Exit:   downward drag on player → TransitionMath.dismissFraction(forDrag:height:) → presentation = 1 − fraction (live)
+        release → TransitionResolver.resolve(committedFraction: fraction, velocity:)
+                → commit: spring presentation → 0, onAdvance()  |  cancel: spring presentation → 1
 ```
 
 ## Error / edge handling
 
-- Mid-gesture reversal works for free because progress is the single source of truth.
+- Mid-gesture reversal during exit works for free because `presentation` is the single driver of the mounted player.
 - Horizontal scrub vs vertical dismiss disambiguated by initial drag direction; `simultaneousGesture` preserves transport controls.
 - Reduce Motion: opacity-only path, same commit/cancel logic.
 - Dismiss still calls the existing `onAdvance()` (stops audio) on commit — no change to listen-tracking or collection.
+- If the user releases the enter-pull before the `0.4` latch, no player is mounted and no audio starts.
 
 ## Testing
 
-- **Unit (`TransitionResolver`):** commits above the progress threshold; commits on high velocity below threshold; cancels on slow + short.
-- **Unit (`TransitionMath`):** clamping at both ends; correct endpoints for pull and dismiss mappings.
-- **On device:** enter pull feel, swipe-down dismiss feel, mid-gesture reversal, scrubber unaffected, Reduce Motion.
+- **Unit (`TransitionResolver`):** commits at/above the commit fraction with zero velocity; commits on high positive velocity below the fraction; cancels on high negative velocity above the fraction; cancels on low fraction + low velocity.
+- **Unit (`TransitionMath`):** `progress(forPull:)` clamps at 0 and 1 and hits 1 at the span; `dismissFraction(forDrag:height:)` clamps, returns 0 for non-positive height, and scales with height.
+- **On device:** enter pull recede + commit spring, swipe-down dismiss feel, mid-gesture reversal, scrubber unaffected, Reduce Motion.
