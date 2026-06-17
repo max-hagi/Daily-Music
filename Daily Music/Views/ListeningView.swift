@@ -29,6 +29,10 @@ struct ListeningView: View {
     /// True only for today's first-listen ceremony: hold on an intro beat, then
     /// reveal the song. Manual opens (headphones button, archive) go straight in.
     var showsRevealIntro: Bool = false
+    /// Today drives the interactive enter/exit transition through this 0…1 value
+    /// (0 = absent, 1 = fully presented). Vault/Favorites present in a fullScreenCover
+    /// and pass nil — the drag then animates an internal value and dismisses on commit.
+    var presentation: Binding<Double>? = nil
     /// Fired when the bottom button is tapped (and, on Today, when the clip ends).
     /// Last so trailing-closure call sites bind to it.
     var onAdvance: () -> Void
@@ -49,8 +53,12 @@ struct ListeningView: View {
     @State private var tracker = ListenTracker()
     @State private var didReachThreshold = false
     @State private var showingCollected = false
-    /// Drives the gentle up-and-down nudge on the "swipe up" return hint.
+    /// Drives the gentle up-and-down nudge on the "swipe down" return hint.
     @State private var swipeHintBob = false
+    /// Used when no external `presentation` binding is supplied (Vault/Favorites).
+    @State private var localPresentation: Double = 1
+    /// Captured container height so the dismiss drag scales to the screen.
+    @State private var viewHeight: CGFloat = 1
 
     private enum CeremonyPhase { case intro, player }
 
@@ -60,6 +68,31 @@ struct ListeningView: View {
     private var displayProgress: Double { scrub ?? player.progress }
     private let contentMaxWidth: CGFloat = 348
 
+    /// Single source of truth for how presented the player is, whether driven
+    /// externally (Today) or internally (Vault/Favorites).
+    private var presentationValue: Double { presentation?.wrappedValue ?? localPresentation }
+
+    private func setPresentation(_ value: Double) {
+        if let presentation {
+            presentation.wrappedValue = value
+        } else {
+            localPresentation = value
+        }
+    }
+
+    private func settlePresentation(to target: Double) {
+        if reduceMotion {
+            setPresentation(target)
+        } else {
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                setPresentation(target)
+            }
+        }
+    }
+
+    /// Foreground travel for the dismiss slide. Bloom never moves.
+    private static let dismissTravel: CGFloat = 120
+
     private var phase: CeremonyPhase {
         resolvedPhase ?? (showsRevealIntro ? .intro : .player)
     }
@@ -68,19 +101,31 @@ struct ListeningView: View {
         ZStack {
             bloom
 
-            if phase == .intro {
-                introStage
-                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 1.04)))
-            } else {
-                playerStage
-                    .transition(reduceMotion ? .opacity : .opacity)
+            Group {
+                if phase == .intro {
+                    introStage
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 1.04)))
+                } else {
+                    playerStage
+                        .transition(reduceMotion ? .opacity : .opacity)
+                }
             }
+            .scaleEffect(reduceMotion ? 1 : 0.96 + 0.04 * presentationValue)
+            .offset(y: reduceMotion ? 0 : (1 - presentationValue) * Self.dismissTravel)
         }
         .preferredColorScheme(.dark)
-        // Swipe up to send the player back down to Today — the mirror of Today's
-        // pull-down-to-listen. Simultaneous so it never blocks the transport/scrub.
+        // Swipe DOWN to send the player back to Today (the universal full-screen-player
+        // dismiss). Interactive: the foreground tracks the finger while the bloom only
+        // fades. Simultaneous so it never blocks the transport/scrub.
         .contentShape(Rectangle())
-        .simultaneousGesture(swipeUpToReturnGesture)
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { viewHeight = geo.size.height }
+                    .onChange(of: geo.size.height) { _, newValue in viewHeight = newValue }
+            }
+        }
+        .simultaneousGesture(dismissGesture)
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
         // Separate task from the palette load above: ticks the listen accumulator
         // while the player is open, so Today can collect the record once the
@@ -203,19 +248,19 @@ struct ListeningView: View {
         .padding(.bottom, 22)
     }
 
-    /// Mirrors Today's "pull down to listen" cue: a small upward chevron telling
-    /// the listener the screen swipes up to leave. A slow bob draws the eye; the
-    /// gesture itself lives on the root ZStack. Decorative — hidden from VoiceOver
-    /// (the labeled advance button is the accessible exit).
+    /// The dismiss cue: a small downward chevron telling the listener the screen
+    /// swipes down to leave (matching every full-screen media player). A slow bob
+    /// draws the eye. Decorative — hidden from VoiceOver (the labeled advance
+    /// button is the accessible exit).
     private var swipeUpHint: some View {
         VStack(spacing: 1) {
-            Image(systemName: "chevron.up")
-                .font(.system(size: 13, weight: .bold))
-            Text("Swipe up to close")
+            Text("Swipe down to close")
                 .font(.caption2.weight(.semibold))
+            Image(systemName: "chevron.down")
+                .font(.system(size: 13, weight: .bold))
         }
         .foregroundStyle(.white.opacity(0.55))
-        .offset(y: swipeHintBob ? -4 : 0)
+        .offset(y: swipeHintBob ? 4 : 0)
         .animation(
             reduceMotion ? nil : .easeInOut(duration: 1.1).repeatForever(autoreverses: true),
             value: swipeHintBob
@@ -484,15 +529,48 @@ struct ListeningView: View {
         .padding(.top, 4)
     }
 
-    /// An upward swipe dismisses the player back to Today (the inverse of the
-    /// pull-down that opened it). Vertical-only so a horizontal scrub can't trip it.
-    private var swipeUpToReturnGesture: some Gesture {
-        DragGesture(minimumDistance: 30)
-            .onEnded { value in
-                guard value.translation.height < -80, abs(value.translation.width) < 60 else { return }
-                Haptics.tap()   // confirm the swipe, then the screen cross-dissolves back
-                onAdvance()
+    /// A downward swipe dismisses the player back to Today — the universal
+    /// full-screen-player gesture. The foreground tracks the finger via
+    /// `presentation`; release commits or snaps back by distance + velocity.
+    /// Vertical-down only so a horizontal scrub can't trip it.
+    private var dismissGesture: some Gesture {
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                guard isDownwardDrag(value) else { return }
+                let fraction = TransitionMath.dismissFraction(
+                    forDrag: Double(value.translation.height), height: viewHeight)
+                setPresentation(1 - fraction)
             }
+            .onEnded { value in
+                guard isDownwardDrag(value) else {
+                    settlePresentation(to: 1)   // horizontal/upward: snap closed
+                    return
+                }
+                let fraction = TransitionMath.dismissFraction(
+                    forDrag: Double(value.translation.height), height: viewHeight)
+                let outcome = TransitionResolver.resolve(
+                    committedFraction: fraction, velocity: Double(value.velocity.height))
+                switch outcome {
+                case .commit:
+                    Haptics.tap()
+                    if reduceMotion {
+                        onAdvance()
+                    } else {
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                            setPresentation(0)
+                        } completion: {
+                            onAdvance()
+                        }
+                    }
+                case .cancel:
+                    settlePresentation(to: 1)
+                }
+            }
+    }
+
+    /// True for a clearly-downward drag (so horizontal scrubs and upward flicks pass through).
+    private func isDownwardDrag(_ value: DragGesture.Value) -> Bool {
+        value.translation.height > 0 && abs(value.translation.width) < abs(value.translation.height)
     }
 
     private func scrubGesture(width: CGFloat) -> some Gesture {
