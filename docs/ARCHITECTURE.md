@@ -429,6 +429,19 @@ capabilities live if the subscription lapses. MusicKit statics sit behind the
 playback. Manual opens skip the intro. Advancing to the story stops playback
 (TodayView's `onAdvance`).
 
+**Today ↔ Listening transition:** interactive and finger-tracked, driven by a
+single `presentation` value (0 = absent, 1 = up) that `TodayView` owns and binds
+into `ListeningView`. The pure commit/cancel decision and gesture→progress
+mappings live in [ListeningTransition.swift](Daily%20Music/Views/Components/ListeningTransition.swift)
+(`TransitionResolver` / `TransitionMath`, unit-tested). **Enter** keeps the
+pull-down ceremony: the journal over-pull reports live `pullProgress` so Today's
+content recedes, and commits at a fraction (springing `presentation` 0→1).
+**Exit** is **swipe-down to dismiss** (platform convention): the player foreground
+tracks the finger down and fades while the bloom only changes opacity — it is
+never repositioned (translating that `blur(radius:90)` layer dropped frames, so
+opacity carries the cross-dissolve). Release commits or snaps back by distance +
+velocity. Reduce Motion uses an opacity-only path.
+
 **Taste seed auto-play + loop:** `TasteSeedView` owns the intro → rating → reveal phase machine and a `TasteSeedDeck` state machine (which card is front, which peek behind, what's been judged). `TasteSeedCardStack` is a dumb swipe view: drag with rotation, INTO IT / NAH badge, fling past threshold. When the rating phase starts (Begin tapped), the front card's preview starts automatically; when `MusicPlayer` reports `.finished`, `toggle(current)` is called again — `toggle` from `.finished` replays fresh, implementing the loop. Judging advances the deck and starts the next card's preview via `toggle`. Compact 👍/👎 fallback buttons stay for accessibility and Reduce Motion.
 
 See [ListeningView](Daily%20Music/Views/ListeningView.swift) · [MusicPlayer](Daily%20Music/Services/MusicPlayer.swift) · [PreviewMusicEngine](Daily%20Music/Services/Music/PreviewMusicEngine.swift) · [TasteSeedView](Daily%20Music/Views/Onboarding/TasteSeedView.swift) · [TasteSeedDeck](Daily%20Music/Models/TasteSeedDeck.swift) · [TasteSeedCardStack](Daily%20Music/Views/Onboarding/TasteSeedCardStack.swift).
