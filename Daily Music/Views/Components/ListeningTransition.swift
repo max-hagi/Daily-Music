@@ -32,8 +32,10 @@ enum TransitionResolver {
 }
 
 enum TransitionMath {
-    /// Over-pull distance (points) that fills the ring on enter.
-    static let pullSpan: Double = 150
+    /// Over-pull distance (points) that fills the ring on enter. Tuned to a
+    /// pull-to-refresh-sized tug — the journal ScrollView's rubber-band resists and
+    /// snaps back, so a larger span never reaches the commit before springing back.
+    static let pullSpan: Double = 80
     /// Up-drag span as a fraction of screen height that fills the ring on exit.
     static let dismissHeightFraction: Double = 0.28
 
