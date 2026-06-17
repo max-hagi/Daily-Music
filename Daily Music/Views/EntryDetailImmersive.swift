@@ -44,17 +44,16 @@ extension EntryDetailView {
                 guard onRequestListen != nil else { return }
                 let pull = Double(max(0, -offset))   // points pulled past the top
                 if !pullTriggered {
-                    let progress = TransitionMath.progress(forPull: pull)
-                    onListenPullProgress?(progress)   // live recede feedback on Today
-                    if progress >= TransitionResolver.commitFraction {
+                    let arm = TransitionMath.armProgress(forPull: pull)
+                    onListenArm?(arm)                 // fills the ring + recedes Today live
+                    if arm >= 1 {                     // ring full → commit the takeover
                         pullTriggered = true
                         Haptics.tap()
-                        onListenPullProgress?(1)      // finish the recede under the rising player
                         onRequestListen?()
                     }
                 } else if offset >= -8 {
                     pullTriggered = false             // re-arm once released near the top
-                    onListenPullProgress?(0)
+                    onListenArm?(0)
                 }
             }
         }

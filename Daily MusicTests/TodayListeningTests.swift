@@ -83,51 +83,50 @@ struct NewDropPromptRuleTests {
 }
 
 struct TransitionResolverTests {
-    @Test func commitsAtOrAboveFractionWhenSlow() {
-        #expect(TransitionResolver.resolve(committedFraction: 0.4, velocity: 0) == .commit)
-        #expect(TransitionResolver.resolve(committedFraction: 0.9, velocity: 0) == .commit)
+    @Test func commitsWhenRingFullAndSlow() {
+        #expect(TransitionResolver.resolve(armProgress: 1, velocity: 0) == .commit)
     }
 
-    @Test func cancelsBelowFractionWhenSlow() {
-        #expect(TransitionResolver.resolve(committedFraction: 0.2, velocity: 0) == .cancel)
-        #expect(TransitionResolver.resolve(committedFraction: 0.0, velocity: 0) == .cancel)
+    @Test func cancelsWhenNotFullAndSlow() {
+        #expect(TransitionResolver.resolve(armProgress: 0.9, velocity: 0) == .cancel)
+        #expect(TransitionResolver.resolve(armProgress: 0.0, velocity: 0) == .cancel)
     }
 
-    @Test func fastForwardFlickCommitsBelowFraction() {
-        #expect(TransitionResolver.resolve(committedFraction: 0.1, velocity: 1200) == .commit)
+    @Test func fastFlickCommitsBeforeFull() {
+        #expect(TransitionResolver.resolve(armProgress: 0.3, velocity: 1200) == .commit)
     }
 
-    @Test func fastReverseFlickCancelsAboveFraction() {
-        #expect(TransitionResolver.resolve(committedFraction: 0.8, velocity: -1200) == .cancel)
+    @Test func slowReleaseBelowFullCancels() {
+        #expect(TransitionResolver.resolve(armProgress: 0.99, velocity: 100) == .cancel)
     }
 }
 
 struct TransitionMathTests {
     @Test func pullClampsAtZero() {
-        #expect(TransitionMath.progress(forPull: -50) == 0)
-        #expect(TransitionMath.progress(forPull: 0) == 0)
+        #expect(TransitionMath.armProgress(forPull: -50) == 0)
+        #expect(TransitionMath.armProgress(forPull: 0) == 0)
     }
 
     @Test func pullReachesOneAtSpan() {
-        #expect(TransitionMath.progress(forPull: TransitionMath.pullSpan) == 1)
-        #expect(TransitionMath.progress(forPull: 999) == 1)
+        #expect(TransitionMath.armProgress(forPull: TransitionMath.pullSpan) == 1)
+        #expect(TransitionMath.armProgress(forPull: 999) == 1)
     }
 
     @Test func pullIsLinearMidway() {
-        #expect(TransitionMath.progress(forPull: TransitionMath.pullSpan / 2) == 0.5)
+        #expect(TransitionMath.armProgress(forPull: TransitionMath.pullSpan / 2) == 0.5)
     }
 
-    @Test func dismissReturnsZeroForNonPositiveHeight() {
-        #expect(TransitionMath.dismissFraction(forDrag: 100, height: 0) == 0)
-        #expect(TransitionMath.dismissFraction(forDrag: 100, height: -10) == 0)
+    @Test func dragReturnsZeroForNonPositiveHeight() {
+        #expect(TransitionMath.armProgress(forDrag: 100, height: 0) == 0)
+        #expect(TransitionMath.armProgress(forDrag: 100, height: -10) == 0)
     }
 
-    @Test func dismissClampsAndScalesWithHeight() {
+    @Test func dragClampsAndScalesWithHeight() {
         let h: CGFloat = 800
-        let span = Double(h) * TransitionMath.dismissHeightFraction   // 280
-        #expect(TransitionMath.dismissFraction(forDrag: span, height: h) == 1)
-        #expect(TransitionMath.dismissFraction(forDrag: span / 2, height: h) == 0.5)
-        #expect(TransitionMath.dismissFraction(forDrag: -10, height: h) == 0)
-        #expect(TransitionMath.dismissFraction(forDrag: span * 2, height: h) == 1)
+        let span = Double(h) * TransitionMath.dismissHeightFraction
+        #expect(TransitionMath.armProgress(forDrag: span, height: h) == 1)
+        #expect(TransitionMath.armProgress(forDrag: span / 2, height: h) == 0.5)
+        #expect(TransitionMath.armProgress(forDrag: -10, height: h) == 0)
+        #expect(TransitionMath.armProgress(forDrag: span * 2, height: h) == 1)
     }
 }

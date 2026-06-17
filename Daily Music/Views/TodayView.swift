@@ -18,9 +18,10 @@ struct TodayView: View {
     // property-initialization time — only once the view is in the hierarchy.
     @State private var model: TodayViewModel?
     @State private var showingSettings = false   // drives the Settings sheet
-    @State private var showingListening = false  // drives the immersive listen cover
-    @State private var presentation: Double = 0  // 0 = player absent, 1 = fully presented
-    @State private var pullProgress: Double = 0  // enter-only recede feedback on Today
+    @State private var showingListening = false  // mounts the immersive player (mount = audio starts)
+    @State private var presentation: Double = 0  // player slide: 0 = off-screen above, 1 = covering
+    @State private var enterArm: Double = 0      // 0…1 arming progress during the pull-down
+    @State private var viewHeight: CGFloat = 1   // slide distance for the opaque takeover
     @State private var showingNewDropPrompt = false
     @State private var dismissedDropPromptThisSession = false
 
@@ -41,10 +42,10 @@ struct TodayView: View {
                                 albumArtHorizontalPadding: 28,
                                 usesImmersiveBackdrop: true,
                                 onRequestListen: { beginListening() },
-                                onListenPullProgress: { pullProgress = $0 }
+                                onListenArm: { enterArm = $0 }
                             )
-                            .scaleEffect(reduceMotion ? 1 : 1 - 0.04 * pullProgress)
-                            .opacity(1 - 0.25 * pullProgress)
+                            .scaleEffect(reduceMotion ? 1 : 1 - 0.04 * enterArm)
+                            .opacity(1 - 0.15 * enterArm)
                             .simultaneousGesture(returnSwipeGesture)
 
                         case .empty:
@@ -129,11 +130,29 @@ struct TodayView: View {
                 evaluateNewDropPrompt()
             }
 
-            // The player gets its own animated container so the cross-dissolve only
-            // ever fades the player in/out — no sliding, so the heavy blurred bloom
-            // never has to reposition (which dropped frames). Keeping the animation
-            // off the outer ZStack also means the Today toolbar behind it doesn't get
-            // swept into the transition as the player covers/uncovers the nav bar.
+            // Enter arming ring: fills as the user pulls Today down; the EntryDetail
+            // "pull down to listen" cue recedes beneath it (scale/dim) so they swap
+            // rather than overlap. Gone once the player mounts.
+            if !showingListening {
+                VStack {
+                    PullArmingRing(
+                        progress: enterArm,
+                        armed: enterArm >= 1,
+                        label: enterArm >= 1 ? "Release to listen" : "Keep pulling…",
+                        tint: .primary,
+                        pointsUp: false
+                    )
+                    .padding(.top, 64)
+                    Spacer()
+                }
+                .allowsHitTesting(false)
+                .zIndex(0.5)
+            }
+
+            // Opaque vertical takeover: the player slides DOWN from above to cover
+            // Today (presentation 1) and back UP to leave (0). No opacity fade — the
+            // destination fully takes over (no see-through). The heavy bloom moves
+            // only during this brief committed slide, never under the finger.
             ZStack {
                 if showingListening, let entry = loadedEntry {
                     ListeningView(
@@ -145,10 +164,16 @@ struct TodayView: View {
                     )
                 }
             }
-            // Opacity carries the cross-dissolve (cheap, no bloom repositioning);
-            // ListeningView adds the foreground scale/slide from the same value.
-            .opacity(presentation)
+            .offset(y: -(1 - presentation) * viewHeight)
             .zIndex(1)
+        }
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { viewHeight = geo.size.height }
+                    .onChange(of: geo.size.height) { _, newHeight in viewHeight = newHeight }
+            }
+            .ignoresSafeArea()
         }
     }
 
@@ -194,7 +219,7 @@ struct TodayView: View {
     /// first, then unmount. Reduce Motion skips straight to teardown.
     private func finishListening() {
         guard showingListening else { return }   // ignore a second dismiss from a finish/swipe race
-        pullProgress = 0
+        enterArm = 0
         if reduceMotion || presentation == 0 {
             teardownListening()
         } else {

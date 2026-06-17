@@ -4,50 +4,48 @@
 //
 //  Pure, view-free math for the Today ↔ Listening interactive transition.
 //  Kept separate so the easy-to-get-wrong commit/cancel decision and the
-//  gesture→progress mappings are unit-tested without spinning up a SwiftUI view.
+//  gesture→arm-progress mappings are unit-tested without spinning up a view.
+//
+//  Model: a pull "arms" a ring indicator (0…1). Releasing while the ring is full
+//  commits the takeover; a fast flick commits early; anything else snaps back.
 //
 
 import CoreGraphics
 
 enum TransitionOutcome: Equatable {
-    case commit   // finish the gesture's intent
-    case cancel   // snap back to where the gesture started
+    case commit   // finish the takeover
+    case cancel   // snap back
 }
 
 enum TransitionResolver {
-    /// Fraction of the gesture's intent that must be reached to commit on release alone.
-    static let commitFraction = 0.4
-    /// Velocity (points/sec, toward the intent) that commits even below `commitFraction`;
-    /// the same magnitude in reverse cancels even above it.
+    /// Velocity (points/sec, toward the intent) that commits even before the ring fills.
     static let commitVelocity = 800.0
 
-    /// Decide whether a released gesture should complete or snap back.
+    /// Commit once the ring is full, or on a fast flick; otherwise cancel.
     /// - Parameters:
-    ///   - committedFraction: 0 = at the gesture's start, 1 = intent fully achieved.
-    ///   - velocity: points/sec; positive = moving toward the intent.
-    static func resolve(committedFraction: Double, velocity: Double) -> TransitionOutcome {
+    ///   - armProgress: 0 = no pull, 1 = ring full.
+    ///   - velocity: points/sec; positive = pulling further toward the intent.
+    static func resolve(armProgress: Double, velocity: Double) -> TransitionOutcome {
         if velocity >= commitVelocity { return .commit }
-        if velocity <= -commitVelocity { return .cancel }
-        return committedFraction >= commitFraction ? .commit : .cancel
+        return armProgress >= 1 ? .commit : .cancel
     }
 }
 
 enum TransitionMath {
-    /// Over-pull distance (points) that maps to a full enter (progress 1).
-    static let pullSpan: Double = 160
-    /// Dismiss-drag span as a fraction of the screen height (so it feels the same on any device).
-    static let dismissHeightFraction: Double = 0.35
+    /// Over-pull distance (points) that fills the ring on enter.
+    static let pullSpan: Double = 150
+    /// Up-drag span as a fraction of screen height that fills the ring on exit.
+    static let dismissHeightFraction: Double = 0.28
 
-    /// Journal over-pull (points, positive = pulled down past the top) → 0...1.
-    static func progress(forPull pull: Double) -> Double {
+    /// Journal over-pull (points, positive = pulled past the top) → ring fill 0…1.
+    static func armProgress(forPull pull: Double) -> Double {
         clamp(pull / pullSpan)
     }
 
-    /// Downward dismiss-drag (points, positive = down) → 0...1, scaled to screen height.
-    static func dismissFraction(forDrag drag: Double, height: CGFloat) -> Double {
+    /// Upward dismiss-drag (points, positive = dragged up) → ring fill 0…1, scaled to height.
+    static func armProgress(forDrag drag: Double, height: CGFloat) -> Double {
         guard height > 0 else { return 0 }
-        let span = Double(height) * dismissHeightFraction
-        return clamp(drag / span)
+        return clamp(drag / (Double(height) * dismissHeightFraction))
     }
 
     private static func clamp(_ x: Double) -> Double { min(max(x, 0), 1) }

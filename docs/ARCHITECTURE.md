@@ -429,18 +429,22 @@ capabilities live if the subscription lapses. MusicKit statics sit behind the
 playback. Manual opens skip the intro. Advancing to the story stops playback
 (TodayView's `onAdvance`).
 
-**Today ↔ Listening transition:** interactive and finger-tracked, driven by a
-single `presentation` value (0 = absent, 1 = up) that `TodayView` owns and binds
-into `ListeningView`. The pure commit/cancel decision and gesture→progress
+**Today ↔ Listening transition:** an **opaque vertical takeover** with a pull-to-arm
+indicator. `TodayView` owns `presentation` (0 = player off-screen above, 1 = covering)
+and slides the player via `.offset` — never `.opacity`, so the destination fully
+takes over with no see-through. The pure commit/cancel decision and gesture→ring
 mappings live in [ListeningTransition.swift](Daily%20Music/Views/Components/ListeningTransition.swift)
-(`TransitionResolver` / `TransitionMath`, unit-tested). **Enter** keeps the
-pull-down ceremony: the journal over-pull reports live `pullProgress` so Today's
-content recedes, and commits at a fraction (springing `presentation` 0→1).
-**Exit** is **swipe-down to dismiss** (platform convention): the player foreground
-tracks the finger down and fades while the bloom only changes opacity — it is
-never repositioned (translating that `blur(radius:90)` layer dropped frames, so
-opacity carries the cross-dissolve). Release commits or snaps back by distance +
-velocity. Reduce Motion uses an opacity-only path.
+(`TransitionResolver` / `TransitionMath`, unit-tested); the arming
+[PullArmingRing](Daily%20Music/Views/Components/PullArmingRing.swift) fills as you pull.
+**Enter:** pull Today down → the ring fills (`enterArm`) and the song zone recedes;
+when the ring is full it commits and the player slides **down** to cover.
+**Exit:** swipe **up** on the player → a bottom ring fills (`dismissArm`) and the
+foreground rubber-bands up (the `blur(radius:90)` bloom never moves under the
+finger); release when full (or a fast flick) slides the player back up off-screen.
+The heavy bloom moves only during the brief committed slide. Reduce Motion skips
+the slide/rubber-band. (Earlier revs cross-faded with a swipe-down dismiss; rejected
+on feel — the fade showed Today through the player, and swipe-down fought the
+upward exit. See `docs/superpowers/specs/2026-06-17-interactive-listening-transition-design.md`.)
 
 **Taste seed auto-play + loop:** `TasteSeedView` owns the intro → rating → reveal phase machine and a `TasteSeedDeck` state machine (which card is front, which peek behind, what's been judged). `TasteSeedCardStack` is a dumb swipe view: drag with rotation, INTO IT / NAH badge, fling past threshold. When the rating phase starts (Begin tapped), the front card's preview starts automatically; when `MusicPlayer` reports `.finished`, `toggle(current)` is called again — `toggle` from `.finished` replays fresh, implementing the loop. Judging advances the deck and starts the next card's preview via `toggle`. Compact 👍/👎 fallback buttons stay for accessibility and Reduce Motion.
 
