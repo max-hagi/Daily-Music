@@ -193,6 +193,7 @@ struct TodayView: View {
     /// clip-finished auto-advance arrive with it still up, so we animate it away
     /// first, then unmount. Reduce Motion skips straight to teardown.
     private func finishListening() {
+        guard showingListening else { return }   // ignore a second dismiss from a finish/swipe race
         pullProgress = 0
         if reduceMotion || presentation == 0 {
             teardownListening()

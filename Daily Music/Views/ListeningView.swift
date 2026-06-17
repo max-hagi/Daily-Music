@@ -237,7 +237,7 @@ struct ListeningView: View {
 
     private var playerStage: some View {
         VStack(spacing: 34) {
-            swipeUpHint
+            swipeDownHint
             Spacer(minLength: 0)
             artwork
             controlDeck
@@ -252,7 +252,7 @@ struct ListeningView: View {
     /// swipes down to leave (matching every full-screen media player). A slow bob
     /// draws the eye. Decorative — hidden from VoiceOver (the labeled advance
     /// button is the accessible exit).
-    private var swipeUpHint: some View {
+    private var swipeDownHint: some View {
         VStack(spacing: 1) {
             Text("Swipe down to close")
                 .font(.caption2.weight(.semibold))
