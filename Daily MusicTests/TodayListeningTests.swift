@@ -81,3 +81,53 @@ struct NewDropPromptRuleTests {
         #expect(NewDropPromptRule.shouldShow(isCollected: false, dismissedThisSession: true) == false)
     }
 }
+
+struct TransitionResolverTests {
+    @Test func commitsAtOrAboveFractionWhenSlow() {
+        #expect(TransitionResolver.resolve(committedFraction: 0.4, velocity: 0) == .commit)
+        #expect(TransitionResolver.resolve(committedFraction: 0.9, velocity: 0) == .commit)
+    }
+
+    @Test func cancelsBelowFractionWhenSlow() {
+        #expect(TransitionResolver.resolve(committedFraction: 0.2, velocity: 0) == .cancel)
+        #expect(TransitionResolver.resolve(committedFraction: 0.0, velocity: 0) == .cancel)
+    }
+
+    @Test func fastForwardFlickCommitsBelowFraction() {
+        #expect(TransitionResolver.resolve(committedFraction: 0.1, velocity: 1200) == .commit)
+    }
+
+    @Test func fastReverseFlickCancelsAboveFraction() {
+        #expect(TransitionResolver.resolve(committedFraction: 0.8, velocity: -1200) == .cancel)
+    }
+}
+
+struct TransitionMathTests {
+    @Test func pullClampsAtZero() {
+        #expect(TransitionMath.progress(forPull: -50) == 0)
+        #expect(TransitionMath.progress(forPull: 0) == 0)
+    }
+
+    @Test func pullReachesOneAtSpan() {
+        #expect(TransitionMath.progress(forPull: TransitionMath.pullSpan) == 1)
+        #expect(TransitionMath.progress(forPull: 999) == 1)
+    }
+
+    @Test func pullIsLinearMidway() {
+        #expect(TransitionMath.progress(forPull: TransitionMath.pullSpan / 2) == 0.5)
+    }
+
+    @Test func dismissReturnsZeroForNonPositiveHeight() {
+        #expect(TransitionMath.dismissFraction(forDrag: 100, height: 0) == 0)
+        #expect(TransitionMath.dismissFraction(forDrag: 100, height: -10) == 0)
+    }
+
+    @Test func dismissClampsAndScalesWithHeight() {
+        let h: CGFloat = 800
+        let span = Double(h) * TransitionMath.dismissHeightFraction   // 280
+        #expect(TransitionMath.dismissFraction(forDrag: span, height: h) == 1)
+        #expect(TransitionMath.dismissFraction(forDrag: span / 2, height: h) == 0.5)
+        #expect(TransitionMath.dismissFraction(forDrag: -10, height: h) == 0)
+        #expect(TransitionMath.dismissFraction(forDrag: span * 2, height: h) == 1)
+    }
+}
