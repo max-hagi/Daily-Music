@@ -44,6 +44,11 @@ struct FavoritesView: View {
             .navigationTitle("Favorites")
             .toolbarBackground(.hidden, for: .navigationBar)
             .searchable(text: $filter.query, prompt: "Search favorites")
+            .onChange(of: filter) { _, newValue in
+                if isRearranging, newValue.isActive {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { isRearranging = false }
+                }
+            }
             .toolbar { toolbarContent }
             .sheet(isPresented: $showingFilterSheet) {
                 FavoritesFilterSheet(filter: $filter, facets: favoritesFacets(in: arranged))
@@ -89,6 +94,17 @@ struct FavoritesView: View {
                     Image(systemName: filter.hasFacetFilters
                           ? "line.3.horizontal.decrease.circle.fill"
                           : "line.3.horizontal.decrease.circle")
+                        .overlay(alignment: .topTrailing) {
+                            let count = filter.genres.count + filter.decades.count + filter.moods.count
+                            if count > 0 {
+                                Text("\(count)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(minWidth: 14, minHeight: 14)
+                                    .background(.pink, in: Circle())
+                                    .offset(x: 7, y: -7)
+                            }
+                        }
                 }
                 .accessibilityLabel("Filter")
             }
@@ -134,6 +150,12 @@ struct FavoritesView: View {
         }
         .scrollContentBackground(.hidden)
         .background(background)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isRearranging {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { isRearranging = false }
+            }
+        }
         .refreshable {
             await env.favoritesStore.load()
             Haptics.tap()
