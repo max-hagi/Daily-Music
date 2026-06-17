@@ -42,12 +42,19 @@ extension EntryDetailView {
                 geometry.contentOffset.y + geometry.contentInsets.top   // negative when pulled past the top
             } action: { _, offset in
                 guard onRequestListen != nil else { return }
-                if offset < -80, !pullTriggered {
-                    pullTriggered = true
-                    Haptics.tap()
-                    onRequestListen?()
+                let pull = Double(max(0, -offset))   // points pulled past the top
+                if !pullTriggered {
+                    let progress = TransitionMath.progress(forPull: pull)
+                    onListenPullProgress?(progress)   // live recede feedback on Today
+                    if progress >= TransitionResolver.commitFraction {
+                        pullTriggered = true
+                        Haptics.tap()
+                        onListenPullProgress?(1)      // finish the recede under the rising player
+                        onRequestListen?()
+                    }
                 } else if offset >= -8 {
-                    pullTriggered = false   // re-arm once released back near the top
+                    pullTriggered = false             // re-arm once released near the top
+                    onListenPullProgress?(0)
                 }
             }
         }

@@ -29,6 +29,9 @@ struct EntryDetailView: View {
     /// Today supplies this so the "Listen to collect" button can open the player.
     /// nil elsewhere (Vault/Favorites have their own listen entry points).
     var onRequestListen: (() -> Void)? = nil
+    /// Today supplies this so the song zone can recede live as the user over-pulls
+    /// toward the listen ceremony. nil elsewhere (0 = at rest, 1 = at the commit pull).
+    var onListenPullProgress: ((Double) -> Void)? = nil
     /// Optional trailing chip shown in the immersive greeting row (Today's streak).
     /// Type-erased so callers pass any small view; nil on Vault/Favorites.
     var greetingAccessory: AnyView? = nil
