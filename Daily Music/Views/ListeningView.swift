@@ -287,32 +287,38 @@ struct ListeningView: View {
         }
     }
 
-    // MARK: background — the song's own color, blooming
+    // MARK: background — the album art, blown up and blurred to fill the screen
     private var bloom: some View {
         ZStack {
-            LinearGradient(
-                colors: [accent.opacity(0.78), .black.opacity(0.68), accent.opacity(0.46)],
-                startPoint: animate ? .topLeading : .bottomTrailing,
-                endPoint: animate ? .bottomTrailing : .topLeading
-            )
-            // The artwork wash only joins once the song is revealed, so the intro
+            Color.black   // opaque base so Today never bleeds through the takeover
+
+            // The artwork bleed only joins once the song is revealed, so the intro
             // doesn't leak the album's colors ahead of the moment.
             if phase == .player, let image = palette.image {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    .blur(radius: 90)
-                    .saturation(1.28)
-                    .opacity(0.62)
+                    .blur(radius: 64)
+                    .scaleEffect(1.25)        // overscan so the blur's soft edges never show
+                    .saturation(1.2)
                     .transition(.opacity)
+            } else {
+                LinearGradient(
+                    colors: [accent.opacity(0.9), .black, accent.opacity(0.6)],
+                    startPoint: animate ? .topLeading : .bottomTrailing,
+                    endPoint: animate ? .bottomTrailing : .topLeading
+                )
             }
+
+            // Legibility scrim so the white text and controls read on any artwork.
             LinearGradient(
-                colors: [.white.opacity(0.14), .clear, .black.opacity(0.08)],
+                colors: [.black.opacity(0.40), .black.opacity(0.22), .black.opacity(0.55)],
                 startPoint: .top,
                 endPoint: .bottom
             )
         }
         .ignoresSafeArea()
+        .drawingGroup()   // rasterize: the committed slide moves a bitmap, not a live blur
         .animation(.easeInOut(duration: 0.7), value: accent)
     }
 

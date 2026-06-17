@@ -139,7 +139,7 @@ struct TodayView: View {
                         progress: enterArm,
                         armed: enterArm >= 1,
                         label: enterArm >= 1 ? "Release to listen" : "Keep pulling…",
-                        tint: .primary,
+                        tint: Theme.Brand.gradient[0],
                         pointsUp: false
                     )
                     .padding(.top, 64)
