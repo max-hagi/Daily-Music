@@ -19,6 +19,8 @@ struct TodayView: View {
     @State private var model: TodayViewModel?
     @State private var showingSettings = false   // drives the Settings sheet
     @State private var showingListening = false  // drives the immersive listen cover
+    @State private var presentation: Double = 0  // 0 = player absent, 1 = fully presented
+    @State private var pullProgress: Double = 0  // enter-only recede feedback on Today
     @State private var showingNewDropPrompt = false
     @State private var dismissedDropPromptThisSession = false
 
@@ -38,8 +40,11 @@ struct TodayView: View {
                                 showsNavigationTitle: false,
                                 albumArtHorizontalPadding: 28,
                                 usesImmersiveBackdrop: true,
-                                onRequestListen: { showingListening = true }
+                                onRequestListen: { beginListening() },
+                                onListenPullProgress: { pullProgress = $0 }
                             )
+                            .scaleEffect(reduceMotion ? 1 : 1 - 0.04 * pullProgress)
+                            .opacity(1 - 0.25 * pullProgress)
                             .simultaneousGesture(returnSwipeGesture)
 
                         case .empty:
@@ -134,20 +139,16 @@ struct TodayView: View {
                     ListeningView(
                         entry: entry,
                         showsRevealIntro: false,
-                        onAdvance: {
-                            showingListening = false
-                            // Reading mode is silent: moving to the story (or the clip
-                            // finishing) hands the room back — no audio left running.
-                            Task { await env.musicPlayer.stop() }
-                        },
+                        presentation: $presentation,
+                        onAdvance: { finishListening() },
                         onReachedListenThreshold: { env.listensStore.markHeard(entry) }
                     )
-                    .transition(.opacity)
                 }
             }
+            // Opacity carries the cross-dissolve (cheap, no bloom repositioning);
+            // ListeningView adds the foreground scale/slide from the same value.
+            .opacity(presentation)
             .zIndex(1)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25),
-                       value: showingListening)
         }
     }
 
@@ -173,6 +174,27 @@ struct TodayView: View {
 
     private var todayString: String {
         Date().formatted(.dateTime.weekday(.wide).month().day())
+    }
+
+    /// Commit the listen ceremony: mount the player and spring it up.
+    private func beginListening() {
+        showingListening = true
+        if reduceMotion {
+            presentation = 1
+        } else {
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
+                presentation = 1
+            }
+        }
+    }
+
+    /// Tear down after the player has animated away (or immediately under Reduce Motion).
+    private func finishListening() {
+        showingListening = false
+        presentation = 0
+        pullProgress = 0
+        // Reading mode is silent: handing the room back leaves no audio running.
+        Task { await env.musicPlayer.stop() }
     }
 
     private var returnSwipeGesture: some Gesture {
