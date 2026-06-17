@@ -201,12 +201,8 @@ struct TodayView: View {
         }
     }
 
-    private var revealHeight: CGFloat { max(0, CGFloat(presentation)) * viewHeight }
+    private var playerOffsetY: CGFloat { -(1 - CGFloat(presentation)) * viewHeight }
 
-    // Opaque "curtain" takeover: the player sits full-screen IN PLACE and is
-    // uncovered top-to-bottom as `presentation` grows (and re-covered on close).
-    // Nothing slides through frame, so content never scrambles and there's no
-    // half-positioned "weird screen" — it just reveals like a blind.
     @ViewBuilder private var playerLayer: some View {
         ZStack {
             if showingListening, let entry = loadedEntry {
@@ -221,10 +217,7 @@ struct TodayView: View {
                 )
             }
         }
-        .ignoresSafeArea()
-        .mask(alignment: .top) {
-            Color.black.frame(height: revealHeight)
-        }
+        .offset(y: playerOffsetY)
         .zIndex(1)
     }
 
