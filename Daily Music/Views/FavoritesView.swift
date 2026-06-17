@@ -14,7 +14,6 @@ struct FavoritesView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var model: FavoritesViewModel?
     @State private var selectedEntry: DailyEntry?
-    @State private var recentlyRemoved: DailyEntry?
 
     // Collection state
     @State private var orderStore = FavoritesOrderStore()
@@ -53,19 +52,6 @@ struct FavoritesView: View {
             .sheet(isPresented: $showingFilterSheet) {
                 FavoritesFilterSheet(filter: $filter, facets: favoritesFacets(in: arranged))
                     .presentationDetents([.medium, .large])
-            }
-            .overlay(alignment: .bottom) {
-                if recentlyRemoved != nil {
-                    UndoBanner(message: "Removed from favorites") { undoRemove() }
-                        .padding(.bottom, 8)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: recentlyRemoved)
-            .task(id: recentlyRemoved) {
-                guard recentlyRemoved != nil else { return }
-                try? await Task.sleep(for: .seconds(4))
-                recentlyRemoved = nil
             }
         }
         // Re-runs whenever the favorites SET changes (hearting/un-hearting anywhere).
@@ -226,16 +212,6 @@ struct FavoritesView: View {
                             isRearranging = true
                         }
                     }
-                    .contextMenu {
-                        Button { selectedEntry = entry } label: {
-                            Label("Open Entry", systemImage: "arrow.up.forward.app")
-                        }
-                        Button(role: .destructive) { removeFavorite(entry) } label: {
-                            Label("Remove Favorite", systemImage: "heart.slash.fill")
-                        }
-                    } preview: {
-                        FavoriteEntryPeek(entry: entry)
-                    }
             }
         }
     }
@@ -312,99 +288,8 @@ struct FavoritesView: View {
         }
         .background(background)
     }
-
-    // MARK: - Remove + undo
-
-    private func removeFavorite(_ entry: DailyEntry) {
-        Haptics.thud()
-        model?.remove(id: entry.id)
-        arranged.removeAll { $0.id == entry.id }
-        recentlyRemoved = entry
-        Task { await env.favoritesStore.toggle(entry) }
-    }
-
-    private func undoRemove() {
-        guard let entry = recentlyRemoved else { return }
-        Haptics.tap()
-        recentlyRemoved = nil
-        Task { await env.favoritesStore.toggle(entry) }
-    }
 }
 
-private struct FavoriteEntryPeek: View {
-    let entry: DailyEntry
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                AlbumArtView(url: entry.albumArtURL, cornerRadius: Theme.Radius.control)
-                    .frame(width: 96, height: 96)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(entry.date.formatted(.dateTime.weekday(.wide).month().day().year()))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    Text(entry.title)
-                        .font(.title3.weight(.bold))
-                        .lineLimit(2)
-
-                    Text(entry.artist)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            if !metadataChips.isEmpty {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], alignment: .leading, spacing: 8) {
-                    ForEach(metadataChips, id: \.self) { chip in
-                        Text(chip)
-                            .font(.caption.weight(.semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.pink.opacity(0.12), in: Capsule())
-                            .foregroundStyle(.pink)
-                    }
-                }
-            }
-
-            Text(journalExcerpt)
-                .font(.callout)
-                .lineSpacing(3)
-                .foregroundStyle(.primary)
-                .lineLimit(4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(Theme.Spacing.md)
-        .frame(width: 340, alignment: .leading)
-        .glassCardStyle(tint: .pink.opacity(0.08), in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-    }
-
-    private var metadataChips: [String] {
-        [entry.genre, entry.decade, entry.mood, entry.theme]
-            .compactMap { value in
-                guard let value, !value.isEmpty else { return nil }
-                return value
-            }
-    }
-
-    private var journalExcerpt: String {
-        let cleaned = entry.journalMarkdown
-            .replacingOccurrences(of: "**", with: "")
-            .replacingOccurrences(of: "*", with: "")
-            .replacingOccurrences(of: "\n", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard cleaned.count > 180 else { return cleaned }
-        let endIndex = cleaned.index(cleaned.startIndex, offsetBy: 180)
-        return String(cleaned[..<endIndex]).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
-    }
-}
 
 private struct FavoriteEntryDetail: View {
     let entry: DailyEntry

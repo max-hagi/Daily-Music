@@ -19,6 +19,8 @@ struct MonthShelvesView: View {
     let onSelect: (DailyEntry) -> Void
     let namespace: Namespace.ID
 
+    @Environment(AppEnvironment.self) private var env
+
     private var sections: [CrateLayout.MonthSection] {
         CrateLayout.monthSections(for: entries)
     }
@@ -72,6 +74,18 @@ struct MonthShelvesView: View {
         }
         .buttonStyle(PressableCardButtonStyle())
         .matchedTransitionSource(id: entry.id, in: namespace)
+        .contextMenu {
+            Button { onSelect(entry) } label: {
+                Label("Open Entry", systemImage: "arrow.up.forward.app")
+            }
+            let isFavorite = env.favoritesStore.isFavorite(entry)
+            Button(role: isFavorite ? .destructive : nil) {
+                Task { await env.favoritesStore.toggle(entry) }
+            } label: {
+                Label(isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                      systemImage: isFavorite ? "heart.slash.fill" : "heart.fill")
+            }
+        }
     }
 }
 
