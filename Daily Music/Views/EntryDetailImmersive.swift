@@ -39,24 +39,45 @@ extension EntryDetailView {
                 journalDockFade = fade
             }
             .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                geometry.contentOffset.y + geometry.contentInsets.top   // negative when pulled past the top
+                geometry.contentOffset.y + geometry.contentInsets.top   // ≤ 0 at/above the top
             } action: { _, offset in
-                guard onRequestListen != nil else { return }
-                let pull = Double(max(0, -offset))   // points pulled past the top
-                if !pullTriggered {
-                    let arm = TransitionMath.armProgress(forPull: pull)
-                    onListenArm?(arm)                 // fills the ring + recedes Today live
-                    if arm >= 1 {                     // ring full → commit the takeover
-                        pullTriggered = true
-                        Haptics.tap()
-                        onRequestListen?()
-                    }
-                } else if offset >= -8 {
-                    pullTriggered = false             // re-arm once released near the top
-                    onListenArm?(0)
+                isAtTop = offset <= 1   // the listen pull only arms from the very top
+            }
+            .simultaneousGesture(listenPullGesture)
+        }
+    }
+
+    /// The pull-down-to-listen arming gesture. Driven by raw finger translation —
+    /// 1:1 and controllable, unlike the scroll's rubber-band offset, which resisted
+    /// and snapped back before the ring could fill. It only acts on a downward drag
+    /// while the journal is at the top, so upward scrolling into the story is
+    /// untouched. Commits on release when the ring is full (or on a fast flick).
+    private var listenPullGesture: some Gesture {
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                guard onRequestListen != nil, isAtTop, isDownwardPull(value) else { return }
+                let arm = TransitionMath.armProgress(forPull: Double(value.translation.height))
+                if arm >= 1 && listenArm < 1 { Haptics.tap() }   // detent when the ring fills
+                listenArm = arm
+                onListenArm?(arm)
+            }
+            .onEnded { value in
+                guard onRequestListen != nil, isAtTop, isDownwardPull(value) else {
+                    if listenArm != 0 { listenArm = 0; onListenArm?(0) }
+                    return
+                }
+                let arm = TransitionMath.armProgress(forPull: Double(value.translation.height))
+                listenArm = 0
+                switch TransitionResolver.resolve(armProgress: arm, velocity: Double(value.velocity.height)) {
+                case .commit: Haptics.tap(); onRequestListen?()
+                case .cancel: onListenArm?(0)
                 }
             }
-        }
+    }
+
+    /// True for a clearly-downward drag (so taps and upward scrolls pass through).
+    private func isDownwardPull(_ value: DragGesture.Value) -> Bool {
+        value.translation.height > 0 && abs(value.translation.width) < abs(value.translation.height)
     }
 
     // Hero sleeve size on Today. Deliberately tunable — expect to adjust when testing.

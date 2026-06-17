@@ -49,8 +49,11 @@ struct EntryDetailView: View {
     @State var didDismissAnonymousRatingNudge = false
     // 1 → fully visible on the song zone; fades to 0 as the journal scrolls up.
     @State var journalDockFade: CGFloat = 1
-    // Guards against repeated triggers while the user holds the overscroll.
-    @State var pullTriggered = false
+    // True while the journal scroll is at the very top, where a downward drag arms
+    // the listen pull (driven by the gesture below, not the springy scroll offset).
+    @State var isAtTop = true
+    // Live 0…1 arming progress of the listen pull, kept to fire the haptic detent once.
+    @State var listenArm: Double = 0
     // One-time tip explaining that 👍/👎 shapes Insights (Today only).
     @AppStorage("hasSeenRatingNudgeLiquidGlass") var hasSeenRatingNudge = false
 
