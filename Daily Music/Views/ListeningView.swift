@@ -318,7 +318,6 @@ struct ListeningView: View {
             )
         }
         .ignoresSafeArea()
-        .drawingGroup()   // rasterize: the committed slide moves a bitmap, not a live blur
         .animation(.easeInOut(duration: 0.7), value: accent)
     }
 

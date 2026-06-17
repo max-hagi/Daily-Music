@@ -142,7 +142,7 @@ struct TodayView: View {
                         tint: Theme.Brand.gradient[0],
                         pointsUp: false
                     )
-                    .padding(.top, 64)
+                    .padding(.top, 100)   // below the nav bar — in the main view, not straddling the toolbar
                     Spacer()
                 }
                 .allowsHitTesting(false)
@@ -206,9 +206,14 @@ struct TodayView: View {
         showingListening = true
         if reduceMotion {
             presentation = 1
+            enterArm = 0
         } else {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
                 presentation = 1
+            } completion: {
+                // Un-recede Today behind the now-covering player so the eventual
+                // dismiss reveals a clean, full-size Today (no dim/pop on the way back).
+                enterArm = 0
             }
         }
     }
