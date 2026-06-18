@@ -26,7 +26,71 @@ enum TodayListeningTransitionPolicy {
     static func backingSection(for phase: TodayListeningTransitionPhase) -> ImmersiveSection {
         switch phase {
         case .enteringListening, .dismissingListening:
-            return .journal
+            return .song
+        }
+    }
+}
+
+enum ListeningHostPhase: Equatable {
+    case idle
+    case preparing
+    case presenting
+    case presented
+    case dismissing
+}
+
+enum ListeningHostEvent {
+    case presentRequested
+    case hostPrepared
+    case presentationCompleted
+    case dismissRequested
+    case dismissalCompleted
+    case cancelled
+}
+
+enum ListeningHostEffect: Equatable {
+    case none
+    case prepareHost
+    case animateIn
+    case animateOut
+    case detachHost
+}
+
+struct ListeningHostMachine {
+    private(set) var phase: ListeningHostPhase
+
+    init(phase: ListeningHostPhase = .idle) {
+        self.phase = phase
+    }
+
+    var isMounted: Bool { phase != .idle }
+    var isReady: Bool { phase == .presented }
+
+    mutating func handle(_ event: ListeningHostEvent) -> ListeningHostEffect {
+        switch (phase, event) {
+        case (.idle, .presentRequested):
+            phase = .preparing
+            return .prepareHost
+        case (.preparing, .hostPrepared):
+            phase = .presenting
+            return .animateIn
+        case (.presenting, .presentationCompleted):
+            phase = .presented
+            return .none
+        case (.presented, .dismissRequested):
+            phase = .dismissing
+            return .animateOut
+        case (.dismissing, .dismissalCompleted):
+            phase = .idle
+            return .detachHost
+        case (.preparing, .cancelled),
+             (.presenting, .cancelled),
+             (.presented, .cancelled),
+             (.dismissing, .cancelled):
+            phase = .idle
+            return .detachHost
+        default:
+            return .none
         }
     }
 }

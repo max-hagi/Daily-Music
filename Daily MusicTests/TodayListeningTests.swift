@@ -131,12 +131,64 @@ struct TransitionMathTests {
     }
 }
 
-struct TodayListeningTransitionPolicyTests {
-    @Test func enteringListeningPreparesJournalAsBackingSection() {
-        #expect(TodayListeningTransitionPolicy.backingSection(for: .enteringListening) == .journal)
+struct ListeningHostMachineTests {
+    @Test func presentationMovesThroughPrepareAnimateAndReady() {
+        var machine = ListeningHostMachine()
+
+        #expect(machine.handle(.presentRequested) == .prepareHost)
+        #expect(machine.phase == .preparing)
+        #expect(machine.isMounted)
+        #expect(machine.isReady == false)
+
+        #expect(machine.handle(.hostPrepared) == .animateIn)
+        #expect(machine.phase == .presenting)
+        #expect(machine.isReady == false)
+
+        #expect(machine.handle(.presentationCompleted) == .none)
+        #expect(machine.phase == .presented)
+        #expect(machine.isReady)
     }
 
-    @Test func dismissingListeningRevealsJournalAsBackingSection() {
-        #expect(TodayListeningTransitionPolicy.backingSection(for: .dismissingListening) == .journal)
+    @Test func duplicatePresentationRequestsAreIgnored() {
+        var machine = ListeningHostMachine()
+
+        #expect(machine.handle(.presentRequested) == .prepareHost)
+        #expect(machine.handle(.presentRequested) == .none)
+        #expect(machine.phase == .preparing)
+    }
+
+    @Test func dismissalKeepsHostMountedUntilCompletion() {
+        var machine = ListeningHostMachine(phase: .presented)
+
+        #expect(machine.handle(.dismissRequested) == .animateOut)
+        #expect(machine.phase == .dismissing)
+        #expect(machine.isMounted)
+        #expect(machine.isReady == false)
+
+        #expect(machine.handle(.dismissalCompleted) == .detachHost)
+        #expect(machine.phase == .idle)
+        #expect(machine.isMounted == false)
+    }
+
+    @Test func duplicateDismissalsDetachOnlyOnce() {
+        var machine = ListeningHostMachine(phase: .presented)
+
+        #expect(machine.handle(.dismissRequested) == .animateOut)
+        #expect(machine.handle(.dismissRequested) == .none)
+        #expect(machine.handle(.dismissalCompleted) == .detachHost)
+        #expect(machine.handle(.dismissalCompleted) == .none)
+    }
+
+    @Test func cancellationDetachesAnyMountedPhase() {
+        for phase in [
+            ListeningHostPhase.preparing,
+            .presenting,
+            .presented,
+            .dismissing
+        ] {
+            var machine = ListeningHostMachine(phase: phase)
+            #expect(machine.handle(.cancelled) == .detachHost)
+            #expect(machine.phase == .idle)
+        }
     }
 }
