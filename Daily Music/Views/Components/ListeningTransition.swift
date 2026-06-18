@@ -17,20 +17,6 @@ enum ImmersiveSection: Hashable {
     case journal
 }
 
-enum TodayListeningTransitionPhase {
-    case enteringListening
-    case dismissingListening
-}
-
-enum TodayListeningTransitionPolicy {
-    static func backingSection(for phase: TodayListeningTransitionPhase) -> ImmersiveSection {
-        switch phase {
-        case .enteringListening, .dismissingListening:
-            return .song
-        }
-    }
-}
-
 enum ListeningHostPhase: Equatable {
     case idle
     case preparing

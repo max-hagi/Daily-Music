@@ -18,11 +18,8 @@ struct TodayView: View {
     // property-initialization time — only once the view is in the hierarchy.
     @State private var model: TodayViewModel?
     @State private var showingSettings = false   // drives the Settings sheet
-    @State private var showingListening = false  // mounts the immersive player (mount = audio starts)
-    @State private var presentation: Double = 0  // player slide: 0 = off-screen above, 1 = covering
+    @State private var showingListening = false  // presentation intent consumed by the UIKit host
     @State private var enterArm: Double = 0      // 0…1 arming progress during the pull-down
-    @State private var viewHeight: CGFloat = 1   // slide distance for the opaque takeover
-    @State private var immersiveScrollPosition: ImmersiveSection?
     // Pre-loads today's artwork so the player's bloom shows it the instant it opens
     // (no gray flash while the player's own palette downloads).
     @State private var artwork = ArtworkPalette()
@@ -46,8 +43,7 @@ struct TodayView: View {
                                 albumArtHorizontalPadding: 28,
                                 usesImmersiveBackdrop: true,
                                 onRequestListen: { beginListening() },
-                                onListenArm: { enterArm = $0 },
-                                immersiveScrollPosition: $immersiveScrollPosition
+                                onListenArm: { enterArm = $0 }
                             )
                             .scaleEffect(todayRecedeScale)
                             .opacity(todayRecedeOpacity)
@@ -110,7 +106,7 @@ struct TodayView: View {
                             dateText: todayString,
                             onListen: {
                                 showingNewDropPrompt = false
-                                showingListening = true
+                                beginListening()
                             },
                             onDismiss: {
                                 showingNewDropPrompt = false
@@ -138,14 +134,6 @@ struct TodayView: View {
             enterRingOverlay
 
             playerLayer
-        }
-        .background {
-            GeometryReader { geo in
-                Color.clear
-                    .onAppear { viewHeight = geo.size.height }
-                    .onChange(of: geo.size.height) { _, newHeight in viewHeight = newHeight }
-            }
-            .ignoresSafeArea()
         }
         .task(id: loadedEntry?.id) {
             await artwork.load(from: loadedEntry?.albumArtURL)
@@ -176,7 +164,7 @@ struct TodayView: View {
         Date().formatted(.dateTime.weekday(.wide).month().day())
     }
 
-    /// Commit the listen ceremony: mount the player and spring it up.
+    /// Pull feedback remains in SwiftUI; committed presentation belongs to UIKit.
     // The Today song zone recedes slightly as the pull arms (extracted so the
     // view builder type-checks quickly).
     private var todayRecedeScale: CGFloat { reduceMotion ? 1 : CGFloat(1 - 0.04 * enterArm) }
@@ -203,67 +191,41 @@ struct TodayView: View {
         }
     }
 
-    private var playerOffsetY: CGFloat { -(1 - CGFloat(presentation)) * viewHeight }
-
     @ViewBuilder private var playerLayer: some View {
-        ZStack {
-            if showingListening, let entry = loadedEntry {
+        if let entry = loadedEntry {
+            UIKitListeningTransitionHost(
+                isPresented: $showingListening,
+                reduceMotion: reduceMotion,
+                onDismissed: {
+                    Task { await env.musicPlayer.stop() }
+                }
+            ) { isReady in
                 ListeningView(
                     entry: entry,
                     initialArtwork: artwork.image,
                     showsAdvanceButton: false,
                     showsRevealIntro: false,
-                    presentation: $presentation,
+                    isTransitionReady: isReady,
                     onAdvance: { finishListening() },
                     onReachedListenThreshold: { env.listensStore.markHeard(entry) }
                 )
+                .environment(env)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea()
+            .zIndex(1)
         }
-        .offset(y: playerOffsetY)
-        .zIndex(1)
     }
 
     private func beginListening() {
-        immersiveScrollPosition = TodayListeningTransitionPolicy.backingSection(for: .enteringListening)
-        showingListening = true
-        if reduceMotion {
-            presentation = 1
-            enterArm = 0
-        } else {
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
-                presentation = 1
-            } completion: {
-                // Un-recede Today behind the now-covering player so the eventual
-                // dismiss reveals a clean, full-size Today (no dim/pop on the way back).
-                enterArm = 0
-            }
-        }
-    }
-
-    /// Dismiss the player. The interactive swipe already animated `presentation`
-    /// to 0 before calling this (so we just tear down); the bottom button and the
-    /// clip-finished auto-advance arrive with it still up, so we animate it away
-    /// first, then unmount. Reduce Motion skips straight to teardown.
-    private func finishListening() {
-        guard showingListening else { return }   // ignore a second dismiss from a finish/swipe race
-        immersiveScrollPosition = TodayListeningTransitionPolicy.backingSection(for: .dismissingListening)
+        guard !showingListening, loadedEntry != nil else { return }
         enterArm = 0
-        if reduceMotion || presentation == 0 {
-            teardownListening()
-        } else {
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
-                presentation = 0
-            } completion: {
-                teardownListening()
-            }
-        }
+        showingListening = true
     }
 
-    private func teardownListening() {
+    private func finishListening() {
+        guard showingListening else { return }
         showingListening = false
-        presentation = 0
-        // Reading mode is silent: handing the room back leaves no audio running.
-        Task { await env.musicPlayer.stop() }
     }
 
     private var returnSwipeGesture: some Gesture {

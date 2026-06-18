@@ -40,9 +40,6 @@ struct ListeningView: View {
     /// UIKit-hosted Today presentations hold playback and repeating effects until
     /// their entrance finishes. Archive covers are ready immediately by default.
     var isTransitionReady: Bool = true
-    /// Temporary compatibility for Today's legacy overlay. Removed when Today is
-    /// switched to UIKitListeningTransitionHost in the next migration step.
-    var presentation: Binding<Double>? = nil
     /// Fired when the bottom button is tapped (and, on Today, when the clip ends).
     /// Last so trailing-closure call sites bind to it.
     var onAdvance: () -> Void
