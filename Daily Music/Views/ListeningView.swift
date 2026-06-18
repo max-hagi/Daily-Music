@@ -37,9 +37,11 @@ struct ListeningView: View {
     /// True only for today's first-listen ceremony: hold on an intro beat, then
     /// reveal the song. Manual opens (headphones button, archive) go straight in.
     var showsRevealIntro: Bool = false
-    /// Today drives the interactive enter/exit transition through this 0…1 value
-    /// (0 = absent, 1 = fully presented). Vault/Favorites present in a fullScreenCover
-    /// and pass nil — the drag then animates an internal value and dismisses on commit.
+    /// UIKit-hosted Today presentations hold playback and repeating effects until
+    /// their entrance finishes. Archive covers are ready immediately by default.
+    var isTransitionReady: Bool = true
+    /// Temporary compatibility for Today's legacy overlay. Removed when Today is
+    /// switched to UIKitListeningTransitionHost in the next migration step.
     var presentation: Binding<Double>? = nil
     /// Fired when the bottom button is tapped (and, on Today, when the clip ends).
     /// Last so trailing-closure call sites bind to it.
@@ -79,23 +81,6 @@ struct ListeningView: View {
     /// How far the foreground rubber-bands up during the dismiss pull. The bloom
     /// never moves — only this lightweight layer does — so the blur stays cheap.
     private static let foregroundTravel: CGFloat = 64
-
-    /// TodayView owns the opaque slide via `presentation` (0 = off-screen above,
-    /// 1 = covering). Vault/Favorites present in a fullScreenCover and pass nil —
-    /// there the commit just calls `onAdvance()` and the cover dismisses itself.
-    private func slidePlayerAway(_ completion: @escaping () -> Void) {
-        guard let presentation else { completion(); return }
-        if reduceMotion {
-            presentation.wrappedValue = 0
-            completion()
-        } else {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) {
-                presentation.wrappedValue = 0
-            } completion: {
-                completion()
-            }
-        }
-    }
 
     private var phase: CeremonyPhase {
         resolvedPhase ?? (showsRevealIntro ? .intro : .player)
@@ -153,7 +138,10 @@ struct ListeningView: View {
         .simultaneousGesture(dismissGesture)
         // The swipe is decorative/hidden from VoiceOver; with the visible advance
         // button gone on Today, this keeps an accessible way out.
-        .accessibilityAction(named: Text("Close")) { onAdvance() }
+        .accessibilityAction(named: Text("Close")) {
+            guard isTransitionReady else { return }
+            onAdvance()
+        }
         .task(id: entry.id) { await palette.load(from: entry.albumArtURL) }
         // Separate task from the palette load above: ticks the listen accumulator
         // while the player is open, so Today can collect the record once the
@@ -161,8 +149,11 @@ struct ListeningView: View {
         .task(id: entry.id) {
             guard onReachedListenThreshold != nil else { return }
             while !Task.isCancelled {
-                tracker.sample(isPlaying: player.state == .playing)
-                if !didReachThreshold,
+                if isTransitionReady {
+                    tracker.sample(isPlaying: player.state == .playing)
+                }
+                if isTransitionReady,
+                   !didReachThreshold,
                    tracker.hasReachedThreshold(finished: player.state == .finished) {
                     didReachThreshold = true
                     Haptics.success()
@@ -176,24 +167,28 @@ struct ListeningView: View {
                 try? await Task.sleep(for: .milliseconds(500))
             }
         }
-        .task {
+        .task(id: isTransitionReady) {
+            guard isTransitionReady else { return }
             if phase == .player {
                 await startPlaybackIfNeeded()
             } else {
                 // Hold the intro beat, then reveal (a tap skips ahead).
                 try? await Task.sleep(for: .seconds(1.6))
+                guard !Task.isCancelled else { return }
                 reveal()
             }
         }
         .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) { animate = true }
-            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { introPulse = true }
+            updateDecorativeAnimations(isReady: isTransitionReady)
+        }
+        .onChange(of: isTransitionReady) { _, isReady in
+            updateDecorativeAnimations(isReady: isReady)
         }
         .onChange(of: player.state) { _, newValue in
-            guard autoAdvanceOnFinish, newValue == .finished else { return }
+            guard autoAdvanceOnFinish, isTransitionReady, newValue == .finished else { return }
             Task {
                 try? await Task.sleep(for: .seconds(0.8))   // a beat, then the story
+                guard isTransitionReady else { return }
                 onAdvance()
             }
         }
@@ -247,7 +242,7 @@ struct ListeningView: View {
     }
 
     private func reveal() {
-        guard phase == .intro else { return }
+        guard isTransitionReady, phase == .intro else { return }
         Haptics.tap()
         withAnimation(reduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.82)) {
             resolvedPhase = .player
@@ -256,9 +251,31 @@ struct ListeningView: View {
     }
 
     private func startPlaybackIfNeeded() async {
+        guard isTransitionReady else { return }
         if !player.isPlaying(entry) && player.state != .finished {
             await player.toggle(entry)
         }
+    }
+
+    private func updateDecorativeAnimations(isReady: Bool) {
+        guard isReady, !reduceMotion else {
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                animate = false
+                introPulse = false
+                swipeHintBob = false
+            }
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) {
+            animate = true
+        }
+        withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
+            introPulse = true
+        }
+        swipeHintBob = true
     }
 
     // MARK: player stage
@@ -294,7 +311,6 @@ struct ListeningView: View {
             )
             .opacity(max(0, 1 - dismissArm * 1.5))
             .accessibilityHidden(true)
-            .onAppear { swipeHintBob = true }
 
             PullArmingRing(
                 progress: dismissArm,
@@ -376,7 +392,7 @@ struct ListeningView: View {
                         .transition(.scale.combined(with: .opacity))
                         .accessibilityLabel("Collected as a mint record")
                 }
-                EqualizerBars(isPlaying: player.state == .playing)
+                EqualizerBars(isPlaying: isTransitionReady && player.state == .playing)
                     .frame(height: 16)
 
                 scrubBar
@@ -581,14 +597,17 @@ struct ListeningView: View {
     private var dismissGesture: some Gesture {
         DragGesture(minimumDistance: 10)
             .onChanged { value in
-                guard isUpwardDrag(value) else { return }
+                guard isTransitionReady, isUpwardDrag(value) else { return }
                 let up = max(0, -Double(value.translation.height))
                 let arm = TransitionMath.armProgress(forDrag: up, height: viewHeight)
                 if arm >= 1 && dismissArm < 1 { Haptics.tap() }   // detent when the ring fills
                 dismissArm = arm
             }
             .onEnded { value in
-                guard isUpwardDrag(value) else { settleDismiss(); return }
+                guard isTransitionReady, isUpwardDrag(value) else {
+                    settleDismiss()
+                    return
+                }
                 let up = max(0, -Double(value.translation.height))
                 let arm = TransitionMath.armProgress(forDrag: up, height: viewHeight)
                 let outcome = TransitionResolver.resolve(
@@ -596,7 +615,7 @@ struct ListeningView: View {
                 switch outcome {
                 case .commit:
                     Haptics.tap()
-                    slidePlayerAway { onAdvance() }
+                    onAdvance()
                 case .cancel:
                     settleDismiss()
                 }
