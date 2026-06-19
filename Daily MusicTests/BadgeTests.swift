@@ -394,4 +394,36 @@ struct BadgeTests {
         let p = BadgeMath.tierProgress(value: value, thresholds: thresholds)
         return EarnedBadge(definition: def, value: value, isEarned: p.isEarned, tier: p)
     }
+
+    // MARK: - Earn log
+
+    @Test func earnLogBaselinesAllCurrentEarnsAtOneTimestamp() {
+        let log = BadgeEarnLog(defaults: Self.suiteDefaults())
+        let t0 = Self.cal.date(from: DateComponents(year: 2026, month: 6, day: 1))!
+        log.record([Self.earned("mint", tier: 1), Self.earned("crate", tier: 1)], now: t0)
+        let dates = log.dates()
+        #expect(dates[Self.earned("mint", tier: 1).seenKey] == t0)
+        #expect(dates[Self.earned("crate", tier: 1).seenKey] == t0)
+    }
+
+    @Test func earnLogStampsLaterEarnsWithTheirOwnTime() {
+        let log = BadgeEarnLog(defaults: Self.suiteDefaults())
+        let t0 = Self.cal.date(from: DateComponents(year: 2026, month: 6, day: 1))!
+        log.record([Self.earned("mint", tier: 1)], now: t0) // baseline
+        let t1 = Self.cal.date(from: DateComponents(year: 2026, month: 6, day: 5))!
+        log.record([Self.earned("mint", tier: 1), Self.earned("crate", tier: 1)], now: t1)
+        let dates = log.dates()
+        #expect(dates[Self.earned("mint", tier: 1).seenKey] == t0)  // unchanged
+        #expect(dates[Self.earned("crate", tier: 1).seenKey] == t1) // newly earned
+    }
+
+    @Test func earnLogTierUpRecordsAFreshKey() {
+        let log = BadgeEarnLog(defaults: Self.suiteDefaults())
+        let t0 = Self.cal.date(from: DateComponents(year: 2026, month: 6, day: 1))!
+        log.record([Self.earned("mint", tier: 1)], now: t0) // baseline at tier 1
+        let t1 = Self.cal.date(from: DateComponents(year: 2026, month: 6, day: 5))!
+        log.record([Self.earned("mint", tier: 2)], now: t1) // climbed to tier 2
+        // The tier-2 seenKey is distinct from tier-1's and gets the new timestamp.
+        #expect(log.dates()[Self.earned("mint", tier: 2).seenKey] == t1)
+    }
 }
