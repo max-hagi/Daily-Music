@@ -33,7 +33,8 @@ struct FriendActivityFeedTests {
         // Alex: loved e0, passed e2. Sam: passed e0. → 3 items, newest entry first.
         #expect(items.count == 3)
         #expect(items.first?.entry.id == MockEntryService.mockEntryID(0))
-        #expect(items.allSatisfy { $0.entry.date >= items.last!.entry.date })
+        let dates = items.map(\.entry.date)
+        #expect(dates == dates.sorted(by: >))
         let alexLoved = items.first { $0.friend.displayName == "Alex" && $0.entry.id == MockEntryService.mockEntryID(0) }
         #expect(alexLoved?.verdict == .loved)
     }
@@ -70,5 +71,19 @@ struct FriendActivityFeedTests {
             friends: f.friends, ratingsByFriend: f.byFriend, mine: mine, history: f.history)
         // Alex co-rated 2 (e0,e2) < 3 → omitted; Sam co-rated 1 → omitted.
         #expect(pcts.isEmpty)
+    }
+
+    @Test func recentDropItemsEmptyForZeroWindow() {
+        let f = fixture()
+        #expect(FriendActivityFeed.recentDropItems(
+            friends: f.friends, ratingsByFriend: f.byFriend, history: f.history, window: 0).isEmpty)
+    }
+
+    @Test func handlesEmptyFriends() {
+        let f = fixture()
+        #expect(FriendActivityFeed.recentDropItems(
+            friends: [], ratingsByFriend: f.byFriend, history: f.history, window: 5).isEmpty)
+        #expect(FriendActivityFeed.todayReactions(
+            friends: [], ratingsByFriend: f.byFriend, todayEntryID: MockEntryService.mockEntryID(0)).isEmpty)
     }
 }

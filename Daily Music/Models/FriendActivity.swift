@@ -67,6 +67,7 @@ enum FriendActivityFeed {
                     entry: entry))
             }
         }
+        // Normalize to newest-first regardless of input order; n is tiny (window × friends).
         return items.sorted { $0.entry.date > $1.entry.date }
     }
 
