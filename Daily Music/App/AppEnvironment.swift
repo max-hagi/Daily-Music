@@ -45,6 +45,7 @@ final class AppEnvironment {
     let profileStore: ProfileStore
     let friendsStore: FriendsStore
     let friendNudgeStore: FriendNudgeStore
+    let badgeCenter: BadgeCenter
     let appleMusic: AppleMusicSession
     let spotify: SpotifySession
     let savedTracks: SavedTracksLog
@@ -123,6 +124,15 @@ final class AppEnvironment {
         self.profileStore = ProfileStore(service: profiles)
         self.friendsStore = FriendsStore(service: friends)
         self.friendNudgeStore = FriendNudgeStore(service: friendNudges)
+        // App-wide badge truth: built from the stores above so the earn celebration
+        // can fire over any screen, not just the Insights tab.
+        self.badgeCenter = BadgeCenter(
+            entries: entries,
+            listensStore: self.listensStore,
+            favoritesStore: self.favoritesStore,
+            ratingsStore: self.ratingsStore,
+            checkIns: checkIns
+        )
     }
 
     // Two factory methods that assemble a fully-wired container. Picking `mock()`
