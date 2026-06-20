@@ -87,3 +87,30 @@ struct FriendActivityFeedTests {
             friends: [], ratingsByFriend: f.byFriend, todayEntryID: MockEntryService.mockEntryID(0)).isEmpty)
     }
 }
+
+struct FriendReactionBubbleLogicTests {
+    private func reaction(_ name: String, _ v: Verdict) -> FriendReaction {
+        FriendReaction(friend: UserProfile(id: UUID(), displayName: name, avatarURL: nil), verdict: v)
+    }
+
+    @Test func splitShowsAllWhenUnderCap() {
+        let r = [reaction("A", .loved), reaction("B", .passed)]
+        let s = BubbleLayout.split(r, maxVisible: 4)
+        #expect(s.shown.count == 2)
+        #expect(s.overflow == 0)
+    }
+
+    @Test func splitCapsAndCountsOverflow() {
+        let r = (0..<7).map { reaction("F\($0)", .loved) }
+        let s = BubbleLayout.split(r, maxVisible: 4)
+        #expect(s.shown.count == 4)
+        #expect(s.overflow == 3)
+    }
+
+    @Test func revealRequiresTodayListenedAndReactions() {
+        #expect(FriendBubbleReveal.shouldShow(isToday: true,  hasListenedOrRated: true,  hasReactions: true))
+        #expect(!FriendBubbleReveal.shouldShow(isToday: false, hasListenedOrRated: true,  hasReactions: true))
+        #expect(!FriendBubbleReveal.shouldShow(isToday: true,  hasListenedOrRated: false, hasReactions: true))
+        #expect(!FriendBubbleReveal.shouldShow(isToday: true,  hasListenedOrRated: true,  hasReactions: false))
+    }
+}
