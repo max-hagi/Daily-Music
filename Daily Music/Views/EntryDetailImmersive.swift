@@ -172,6 +172,7 @@ extension EntryDetailView {
                             .transition(.opacity)
                     }
                 }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: env.listensStore.isHeard(entry))
                 .animation(
                     reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.7),
                     value: env.listensStore.status(for: entry).indicatorColor

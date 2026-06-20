@@ -39,11 +39,11 @@ struct FriendsView: View {
             }
             .task {
                 await store.load()
-                await activity.load()
                 if let pending = UserDefaults.standard.string(forKey: "pendingFriendCode") {
                     enteredCode = FriendCode.normalize(pending)
                     UserDefaults.standard.removeObject(forKey: "pendingFriendCode")
                 }
+                await activity.load()
             }
             .refreshable {
                 await store.load()
@@ -146,10 +146,14 @@ struct FriendsView: View {
                         Spacer()
                         Button { Task { await store.respond(request, accept: true) } } label: {
                             Image(systemName: "checkmark.circle.fill").font(.title3).foregroundStyle(.green)
-                        }.buttonStyle(.plain)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Accept")
                         Button { Task { await store.respond(request, accept: false) } } label: {
                             Image(systemName: "xmark.circle.fill").font(.title3).foregroundStyle(.secondary)
-                        }.buttonStyle(.plain)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Decline")
                     }
                     .padding(Theme.Spacing.sm)
                     .background(Theme.Surface.card, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
@@ -233,7 +237,7 @@ struct FriendsView: View {
                         .frame(width: geo.size.width * CGFloat(pct) / 100)
                 }
             }
-            .frame(height: 7)
+            .frame(maxWidth: .infinity, minHeight: 7, maxHeight: 7)
             Text("\(pct)%")
                 .font(.caption.weight(.bold)).monospacedDigit()
                 .foregroundStyle(.secondary)
