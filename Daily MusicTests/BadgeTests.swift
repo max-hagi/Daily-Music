@@ -359,7 +359,7 @@ struct BadgeTests {
             Self.tieredFixture("saved", value: 4, thresholds: [5, 25]),            // not earned, close (4/5)
             Self.tieredFixture("crate", value: 1, thresholds: [10, 50]),           // not earned, far
         ]
-        let summary = BadgesViewModel.makeSummary(badges)
+        let summary = BadgeCenter.makeSummary(badges)
         #expect(summary.earnedCount == 1)
         #expect(summary.closeCount == 1) // only "saved" is ≥ 0.5 to next and not maxed
     }
@@ -370,7 +370,7 @@ struct BadgeTests {
             Self.tieredFixture("crate", value: 1, thresholds: [10]),    // 0.1
             Self.tieredFixture("mint", value: 5, thresholds: [5]),      // maxed → excluded
         ]
-        let summary = BadgesViewModel.makeSummary(badges)
+        let summary = BadgeCenter.makeSummary(badges)
         #expect(summary.nearestGoal?.id == "saved")
     }
 
@@ -383,7 +383,7 @@ struct BadgeTests {
             Self.tieredFixture("e", value: 0, thresholds: [5]),
             Self.tieredFixture("f", value: 0, thresholds: [5]),
         ]
-        let peek = BadgesViewModel.makeSummary(badges).peek
+        let peek = BadgeCenter.makeSummary(badges).peek
         #expect(peek.count == 5)
         #expect(peek.prefix(2).map(\.id) == ["b", "d"]) // earned first, original order preserved
     }
@@ -425,5 +425,25 @@ struct BadgeTests {
         log.record([Self.earned("mint", tier: 2)], now: t1) // climbed to tier 2
         // The tier-2 seenKey is distinct from tier-1's and gets the new timestamp.
         #expect(log.dates()[Self.earned("mint", tier: 2).seenKey] == t1)
+    }
+
+    // MARK: - Recency ordering
+
+    @Test func recencyOrdersNewestFirstWithCatalogTieBreak() {
+        let mint = Self.earned("mint", tier: 1)
+        let crate = Self.earned("crate", tier: 1)
+        let saved = Self.earned("saved", tier: 1)
+        let day = { (d: Int) in Self.cal.date(from: DateComponents(year: 2026, month: 6, day: d))! }
+        let dates = [mint.seenKey: day(1), crate.seenKey: day(1), saved.seenKey: day(9)]
+        // Input is in catalog order (mint, crate, saved); saved is newest, mint/crate tie.
+        let ordered = BadgeCenter.sortedByRecency([mint, crate, saved], dates: dates)
+        #expect(ordered.map(\.id) == ["saved", "mint", "crate"])
+    }
+
+    @Test func recencyExcludesUnearned() {
+        let mint = Self.earned("mint", tier: 1)
+        let lockedCrate = Self.tieredFixture("crate", value: 0, thresholds: [10]) // not earned
+        let ordered = BadgeCenter.sortedByRecency([mint, lockedCrate], dates: [mint.seenKey: Date()])
+        #expect(ordered.map(\.id) == ["mint"])
     }
 }
