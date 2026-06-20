@@ -3,7 +3,7 @@
 //  Daily Music
 //
 //  An immutable snapshot of everything the BadgeDeriver needs. Assembled by
-//  BadgesViewModel from the live stores, then handed to the pure deriver — which
+//  BadgeCenter from the live stores, then handed to the pure deriver — which
 //  keeps derivation fully testable with fixtures (no stores, no async).
 //
 
