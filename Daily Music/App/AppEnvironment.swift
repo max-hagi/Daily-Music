@@ -44,6 +44,7 @@ final class AppEnvironment {
     let ratingsStore: RatingsStore
     let profileStore: ProfileStore
     let friendsStore: FriendsStore
+    let friendsActivityStore: FriendsActivityStore
     let friendNudgeStore: FriendNudgeStore
     let badgeCenter: BadgeCenter
     let appleMusic: AppleMusicSession
@@ -123,6 +124,8 @@ final class AppEnvironment {
         self.ratingsStore = RatingsStore(service: ratings)
         self.profileStore = ProfileStore(service: profiles)
         self.friendsStore = FriendsStore(service: friends)
+        self.friendsActivityStore = FriendsActivityStore(
+            friends: friends, entries: entries, ratings: ratings)
         self.friendNudgeStore = FriendNudgeStore(service: friendNudges)
         // App-wide badge truth: built from the stores above so the earn celebration
         // can fire over any screen, not just the Insights tab.

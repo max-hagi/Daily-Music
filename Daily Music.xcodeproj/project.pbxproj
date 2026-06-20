@@ -44,6 +44,7 @@
 		FA0FA0FA0FA0FA0FA0FA00B2 /* FavoritesFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */; };
 		FF00112233445566778899BB /* TodayListeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00112233445566778899AA /* TodayListeningTests.swift */; };
 		FF11223344556677889900BB /* FriendActivityFeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11223344556677889900AA /* FriendActivityFeedTests.swift */; };
+		FF22334455667788990011BB /* FriendsActivityStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF22334455667788990011AA /* FriendsActivityStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,6 +117,7 @@
 		FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FavoritesFilterTests.swift; sourceTree = "<group>"; };
 		FF00112233445566778899AA /* TodayListeningTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodayListeningTests.swift; sourceTree = "<group>"; };
 		FF11223344556677889900AA /* FriendActivityFeedTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendActivityFeedTests.swift; sourceTree = "<group>"; };
+		FF22334455667788990011AA /* FriendsActivityStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsActivityStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -217,6 +219,7 @@
 				FA0FA0FA0FA0FA0FA0FA00F1 /* FavoritesOrderStoreTests.swift */,
 				FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */,
 				FF11223344556677889900AA /* FriendActivityFeedTests.swift */,
+				FF22334455667788990011AA /* FriendsActivityStoreTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -434,6 +437,7 @@
 				FA0FA0FA0FA0FA0FA0FA00B1 /* FavoritesOrderStoreTests.swift in Sources */,
 				FA0FA0FA0FA0FA0FA0FA00B2 /* FavoritesFilterTests.swift in Sources */,
 				FF11223344556677889900BB /* FriendActivityFeedTests.swift in Sources */,
+				FF22334455667788990011BB /* FriendsActivityStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
