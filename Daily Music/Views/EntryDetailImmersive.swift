@@ -28,8 +28,25 @@ extension EntryDetailView {
                 }
                 .scrollTargetLayout()
             }
+            .scrollIndicators(
+                ImmersiveScrollIndicatorPolicy.style(
+                    hidesIndicator: hidesImmersiveScrollIndicator
+                ) == .hidden ? .hidden : .automatic
+            )
             .scrollTargetBehavior(StorySnapScrollTargetBehavior())
+            // While a downward top-pull is arming the listen ring, the pull owns the
+            // drag — disabling the scroll cancels its co-driven pan so the release
+            // recoil can't feed StorySnapScrollTargetBehavior a flick that snaps to
+            // the journal (the "jumps down on an incomplete pull" bug). Upward scrolls
+            // into the journal never set listenArm, so reading stays untouched.
+            .scrollDisabled(listenArm > 0)
             .scrollPosition(id: immersiveScrollPosition)
+            // Returning from the player nudges the scroll back to the song zone.
+            // Imperative (vs. a controlled scrollPosition binding) so it can't
+            // recurse with the geometry observers below.
+            .onChange(of: scrollToTopToken) { _, _ in
+                proxy.scrollTo(ImmersiveSection.song, anchor: .top)
+            }
             // Drive the dock's opacity from scroll position so it reads as part
             // of the journal: gone while reading, back when the song zone returns.
             .onScrollGeometryChange(for: CGFloat.self) { geometry in
@@ -57,21 +74,34 @@ extension EntryDetailView {
         DragGesture(minimumDistance: 10)
             .onChanged { value in
                 guard onRequestListen != nil, isAtTop, isDownwardPull(value) else { return }
-                let arm = TransitionMath.armProgress(forPull: Double(value.translation.height))
+                let drag = Double(value.translation.height)
+                let arm = TransitionMath.armProgress(forPull: drag)
                 if arm >= 1 && listenArm < 1 { Haptics.tap() }   // detent when the ring fills
                 listenArm = arm
                 onListenArm?(arm)
             }
             .onEnded { value in
                 guard onRequestListen != nil, isAtTop, isDownwardPull(value) else {
-                    if listenArm != 0 { listenArm = 0; onListenArm?(0) }
+                    if listenArm != 0 {
+                        listenArm = 0
+                        onListenArm?(0)
+                    }
                     return
                 }
-                let arm = TransitionMath.armProgress(forPull: Double(value.translation.height))
+                let drag = Double(value.translation.height)
+                let velocity = Double(value.velocity.height)
+                let arm = TransitionMath.armProgress(forPull: drag)
+                let outcome = TransitionResolver.resolve(
+                    armProgress: arm,
+                    velocity: velocity
+                )
                 listenArm = 0
-                switch TransitionResolver.resolve(armProgress: arm, velocity: Double(value.velocity.height)) {
-                case .commit: Haptics.tap(); onRequestListen?()
-                case .cancel: onListenArm?(0)
+                switch outcome {
+                case .commit:
+                    Haptics.tap()
+                    onRequestListen?()
+                case .cancel:
+                    onListenArm?(0)
                 }
             }
     }
@@ -131,6 +161,17 @@ extension EntryDetailView {
                     size: coverSleeveSize
                 )
                 .frame(maxWidth: .infinity)
+                .overlay(alignment: .center) {
+                    if FriendBubbleReveal.shouldShow(
+                        isToday: onRequestListen != nil,
+                        hasListenedOrRated: env.listensStore.isHeard(entry),
+                        hasReactions: !env.friendsActivityStore.todayReactions.isEmpty
+                    ) {
+                        FriendReactionBubbles(reactions: env.friendsActivityStore.todayReactions)
+                            .frame(width: coverSleeveSize, height: coverSleeveSize)
+                            .transition(.opacity)
+                    }
+                }
                 .animation(
                     reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.7),
                     value: env.listensStore.status(for: entry).indicatorColor

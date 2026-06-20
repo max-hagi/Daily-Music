@@ -18,13 +18,19 @@ struct TodayView: View {
     // property-initialization time — only once the view is in the hierarchy.
     @State private var model: TodayViewModel?
     @State private var showingSettings = false   // drives the Settings sheet
-    @State private var showingListening = false  // presentation intent consumed by the UIKit host
+    @State private var showingListening = false
+    // Bumped when the player closes to imperatively scroll Today back to the song
+    // zone. A live two-way `.scrollPosition` binding here recursed with the
+    // scroll-geometry observers and overflowed the stack, so we nudge the proxy
+    // instead of binding the position.
+    @State private var scrollToTopToken = 0
     @State private var enterArm: Double = 0      // 0…1 arming progress during the pull-down
     // Pre-loads today's artwork so the player's bloom shows it the instant it opens
     // (no gray flash while the player's own palette downloads).
     @State private var artwork = ArtworkPalette()
     @State private var showingNewDropPrompt = false
-    @State private var dismissedDropPromptThisSession = false
+    @AppStorage("today.newDropPrompt.lastShownDay")
+    private var lastShownNewDropDay = ""
 
     var body: some View {
         ZStack {
@@ -42,8 +48,11 @@ struct TodayView: View {
                                 showsNavigationTitle: false,
                                 albumArtHorizontalPadding: 28,
                                 usesImmersiveBackdrop: true,
+                                immersiveBackdropOwner: .parent,
                                 onRequestListen: { beginListening() },
-                                onListenArm: { enterArm = $0 }
+                                onListenArm: { enterArm = $0 },
+                                hidesImmersiveScrollIndicator: true,
+                                scrollToTopToken: scrollToTopToken
                             )
                             .scaleEffect(todayRecedeScale)
                             .opacity(todayRecedeOpacity)
@@ -62,6 +71,7 @@ struct TodayView: View {
                         loadingState
                     }
                 }
+                .background { todayArtworkBackdrop }
                 // `.toolbar` adds bar buttons. Placement chooses the side.
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -110,7 +120,6 @@ struct TodayView: View {
                             },
                             onDismiss: {
                                 showingNewDropPrompt = false
-                                dismissedDropPromptThisSession = true
                             }
                         )
                         .transition(.opacity)
@@ -129,23 +138,53 @@ struct TodayView: View {
                 }
                 await model?.load()
                 evaluateNewDropPrompt()
+                await env.friendsActivityStore.load()
             }
 
             enterRingOverlay
-
-            playerLayer
         }
         .task(id: loadedEntry?.id) {
             await artwork.load(from: loadedEntry?.albumArtURL)
         }
+        .fullScreenCover(
+            isPresented: $showingListening,
+            onDismiss: handleListeningDismiss
+        ) {
+            if let entry = loadedEntry {
+                ListeningView(
+                    entry: entry,
+                    initialArtwork: artwork.image,
+                    showsAdvanceButton: false,
+                    showsCloseButton: true,
+                    showsRevealIntro: false,
+                    onAdvance: finishListening,
+                    onReachedListenThreshold: {
+                        env.listensStore.markHeard(entry)
+                    }
+                )
+                .environment(env)
+                .presentationBackground(.black)
+            }
+        }
     }
 
-    private func evaluateNewDropPrompt() {
-        guard let entry = loadedEntry else { return }
-        showingNewDropPrompt = NewDropPromptRule.shouldShow(
+    private func evaluateNewDropPrompt(now: Date = .now) {
+        guard let entry = loadedEntry else {
+            showingNewDropPrompt = false
+            return
+        }
+
+        guard NewDropPromptRule.shouldShow(
             isCollected: env.listensStore.isHeard(entry),
-            dismissedThisSession: dismissedDropPromptThisSession
-        )
+            lastShownDay: lastShownNewDropDay,
+            now: now
+        ) else {
+            showingNewDropPrompt = false
+            return
+        }
+
+        lastShownNewDropDay = NewDropPromptRule.dayIdentifier(for: now)
+        showingNewDropPrompt = true
     }
 
     private var loadingState: some View {
@@ -164,11 +203,23 @@ struct TodayView: View {
         Date().formatted(.dateTime.weekday(.wide).month().day())
     }
 
-    /// Pull feedback remains in SwiftUI; committed presentation belongs to UIKit.
     // The Today song zone recedes slightly as the pull arms (extracted so the
     // view builder type-checks quickly).
     private var todayRecedeScale: CGFloat { reduceMotion ? 1 : CGFloat(1 - 0.04 * enterArm) }
     private var todayRecedeOpacity: Double { 1 - 0.15 * enterArm }
+
+    @ViewBuilder private var todayArtworkBackdrop: some View {
+        if let entry = loadedEntry {
+            let cached = ArtworkPalette.cached(for: entry.albumArtURL)
+            ImmersiveArtworkBackdrop(
+                image: artwork.image ?? cached?.image,
+                accent: artwork.isLoaded ? artwork.accent : cached?.accent ?? artwork.accent
+            )
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: artwork.accent)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: artwork.isLoaded)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: artwork.didFinishLoading)
+        }
+    }
 
     // Enter arming ring: fills as the user pulls Today down; the EntryDetail
     // "pull down to listen" cue recedes beneath it so they swap rather than
@@ -181,7 +232,8 @@ struct TodayView: View {
                     armed: enterArm >= 1,
                     label: enterArm >= 1 ? "Release to listen" : "Keep pulling…",
                     tint: .primary,
-                    pointsUp: false
+                    pointsUp: false,
+                    placement: .todayEntrance
                 )
                 .padding(.top, 100)   // below the nav bar — in the main view, not the toolbar
                 Spacer()
@@ -191,41 +243,29 @@ struct TodayView: View {
         }
     }
 
-    @ViewBuilder private var playerLayer: some View {
-        if let entry = loadedEntry {
-            UIKitListeningTransitionHost(
-                isPresented: $showingListening,
-                reduceMotion: reduceMotion,
-                onDismissed: {
-                    Task { await env.musicPlayer.stop() }
-                }
-            ) { isReady in
-                ListeningView(
-                    entry: entry,
-                    initialArtwork: artwork.image,
-                    showsAdvanceButton: false,
-                    showsRevealIntro: false,
-                    isTransitionReady: isReady,
-                    onAdvance: { finishListening() },
-                    onReachedListenThreshold: { env.listensStore.markHeard(entry) }
-                )
-                .environment(env)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .ignoresSafeArea()
-            .zIndex(1)
-        }
-    }
-
     private func beginListening() {
-        guard !showingListening, loadedEntry != nil else { return }
+        guard TodayListeningPresentationPolicy.canPresent(
+            isPresented: showingListening,
+            hasEntry: loadedEntry != nil
+        ) else { return }
+
         enterArm = 0
         showingListening = true
     }
 
     private func finishListening() {
-        guard showingListening else { return }
+        guard TodayListeningPresentationPolicy.canDismiss(
+            isPresented: showingListening
+        ) else { return }
+        // Reset the scroll BEFORE the cover starts sliding away, while Today is
+        // still hidden behind it — so it's already at the song zone when revealed
+        // and there's no visible jump to the top.
+        scrollToTopToken += 1
         showingListening = false
+    }
+
+    private func handleListeningDismiss() {
+        Task { await env.musicPlayer.stop() }
     }
 
     private var returnSwipeGesture: some Gesture {
@@ -272,7 +312,7 @@ private struct NewDropIncomingView: View {
 
             VStack(spacing: Theme.Spacing.sm) {
                 Text("New drop incoming")
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
+                    .font(.dmDisplay())
                     .multilineTextAlignment(.center)
 
                 Text("Today's song has not landed yet. Check back soon.")
