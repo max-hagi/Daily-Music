@@ -43,6 +43,7 @@
 		FA0FA0FA0FA0FA0FA0FA00B1 /* FavoritesOrderStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0FA0FA0FA0FA0FA0FA00F1 /* FavoritesOrderStoreTests.swift */; };
 		FA0FA0FA0FA0FA0FA0FA00B2 /* FavoritesFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */; };
 		FF00112233445566778899BB /* TodayListeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00112233445566778899AA /* TodayListeningTests.swift */; };
+		FF11223344556677889900BB /* FriendActivityFeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11223344556677889900AA /* FriendActivityFeedTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -114,6 +115,7 @@
 		FA0FA0FA0FA0FA0FA0FA00F1 /* FavoritesOrderStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FavoritesOrderStoreTests.swift; sourceTree = "<group>"; };
 		FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FavoritesFilterTests.swift; sourceTree = "<group>"; };
 		FF00112233445566778899AA /* TodayListeningTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodayListeningTests.swift; sourceTree = "<group>"; };
+		FF11223344556677889900AA /* FriendActivityFeedTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendActivityFeedTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -214,6 +216,7 @@
 				FF00112233445566778899AA /* TodayListeningTests.swift */,
 				FA0FA0FA0FA0FA0FA0FA00F1 /* FavoritesOrderStoreTests.swift */,
 				FA0FA0FA0FA0FA0FA0FA00F2 /* FavoritesFilterTests.swift */,
+				FF11223344556677889900AA /* FriendActivityFeedTests.swift */,
 			);
 			path = "Daily MusicTests";
 			sourceTree = "<group>";
@@ -430,6 +433,7 @@
 				FF00112233445566778899BB /* TodayListeningTests.swift in Sources */,
 				FA0FA0FA0FA0FA0FA0FA00B1 /* FavoritesOrderStoreTests.swift in Sources */,
 				FA0FA0FA0FA0FA0FA0FA00B2 /* FavoritesFilterTests.swift in Sources */,
+				FF11223344556677889900BB /* FriendActivityFeedTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
