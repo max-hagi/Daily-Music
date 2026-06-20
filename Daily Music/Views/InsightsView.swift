@@ -14,7 +14,6 @@ struct InsightsView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: InsightsViewModel?
-    @State private var badges: BadgesViewModel?
     @State private var showingWrapped = false
     /// Which month the Wrapped sheet shows; the new-month moment passes last month.
     @State private var wrappedMonth = Date()
@@ -44,20 +43,6 @@ struct InsightsView: View {
             .navigationTitle("Insights")
             .toolbarBackground(.hidden, for: .navigationBar)
             .background(wash)
-            .overlay {
-                if let badge = celebrating {
-                    Color.black.opacity(0.45).ignoresSafeArea()
-                        .transition(.opacity)
-                        .onTapGesture { dismissCelebration() }
-                    BadgeCelebrationCard(
-                        badge: badge,
-                        accent: badge.definition.tint,
-                        onDismiss: { dismissCelebration() }
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: celebrating)
             .fullScreenCover(isPresented: $showingWrapped) {
                 WrappedView(favoriteIDs: env.favoritesStore.ids, targetMonth: wrappedMonth)
             }
@@ -74,16 +59,7 @@ struct InsightsView: View {
                 model = InsightsViewModel(entries: env.entries, ratings: env.ratings)
             }
             await model?.load(favoriteIDs: env.favoritesStore.ids, startingRead: startingRead)
-            if badges == nil {
-                badges = BadgesViewModel(
-                    entries: env.entries,
-                    listensStore: env.listensStore,
-                    favoritesStore: env.favoritesStore,
-                    ratingsStore: env.ratingsStore,
-                    checkIns: env.checkIns
-                )
-            }
-            await badges?.load()
+            await env.badgeCenter.refresh()
         }
     }
 
@@ -108,8 +84,6 @@ struct InsightsView: View {
         }
         return TasteProfile.theShapeshifter.colors
     }
-
-    private var celebrating: EarnedBadge? { badges?.newlyEarned.first }
 
     private var revealBinding: Binding<ArchetypeRevealRequest?> {
         Binding(
@@ -136,9 +110,9 @@ struct InsightsView: View {
                     onReplay: mirror.isArchetypeUnlocked ? { model?.replayReveal() } : nil,
                     revealCountdownText: countdownText(for: mirror)
                 )
-                badgesSummaryCard(accent: accent)
+                recentBadgesShelf(accent: accent)
                 historySummaryCard(accent: accent)
-                tasteArcCard(accent: accent)
+                tasteArcRow(accent: accent)
                 wrappedButton(accent)
             }
             .padding()
@@ -196,58 +170,9 @@ struct InsightsView: View {
                     .foregroundStyle(.secondary)
             }
             .padding(Theme.Spacing.md)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
         }
         .buttonStyle(PressableCardButtonStyle())
-    }
-
-    @ViewBuilder
-    private func badgesSummaryCard(accent: Color) -> some View {
-        if let summary = badges?.summary, let list = badges?.badges {
-            NavigationLink {
-                BadgesView(badges: list, accent: accent)
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "rosette")
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(accent)
-                        .frame(width: 42, height: 42)
-                        .glassEffect(.regular.tint(accent.opacity(0.14)), in: Circle())
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("YOUR BADGES")
-                            .font(.caption2.weight(.heavy))
-                            .foregroundStyle(.secondary)
-                        Text("\(summary.earnedCount) earned · \(summary.closeCount) close")
-                            .font(.subheadline.weight(.heavy))
-                            .foregroundStyle(.primary)
-                        if let goal = summary.nearestGoal, let tier = goal.tier, let next = tier.nextThreshold {
-                            Text("\(goal.definition.title) — \(max(0, next - goal.value)) to go")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                    }
-
-                    Spacer(minLength: 8)
-
-                    HStack(spacing: -8) {
-                        ForEach(summary.peek) { badge in
-                            Text(badge.isEarned ? badge.definition.symbol : "·")
-                                .font(.system(size: 16))
-                                .frame(width: 28, height: 28)
-                                .background(.regularMaterial, in: Circle())
-                                .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
-                                .opacity(badge.isEarned ? 1 : 0.45)
-                        }
-                    }
-                }
-                .padding(Theme.Spacing.md)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
-            }
-            .buttonStyle(PressableCardButtonStyle())
-        }
     }
 
     private func historySummaryDetail(_ entries: [HistoryEntry]) -> String {
@@ -266,70 +191,93 @@ struct InsightsView: View {
     }
 
     @ViewBuilder
-    private func tasteArcCard(accent: Color) -> some View {
+    private func recentBadgesShelf(accent: Color) -> some View {
+        let recent = env.badgeCenter.recent
+        let earnedCount = env.badgeCenter.summary?.earnedCount ?? 0
+        NavigationLink {
+            BadgesView(badges: env.badgeCenter.badges, accent: accent,
+                       currentStreak: env.badgeCenter.currentStreak)
+        } label: {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                HStack {
+                    Text("RECENTLY EARNED")
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(earnedCount > 0 ? "View all \(earnedCount) ›" : "View all ›")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(accent)
+                }
+                if recent.isEmpty {
+                    Text("Earn your first badge by catching a drop on its release day.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    HStack(alignment: .top, spacing: 12) {
+                        ForEach(recent.prefix(4)) { badge in
+                            VStack(spacing: 6) {
+                                ShelfDisc(symbol: badge.definition.symbol, tint: badge.definition.tint)
+                                Text(badge.definition.title)
+                                    .font(.system(size: 10).weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.8)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+            }
+            .padding(Theme.Spacing.md)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        }
+        .buttonStyle(PressableCardButtonStyle())
+    }
+
+    @ViewBuilder
+    private func tasteArcRow(accent: Color) -> some View {
         if let summary = model?.tasteArcSummary,
            let eras = model?.tasteEras,
            eras.count >= 2 {
             NavigationLink {
                 TasteArcTimelineView(eras: eras, accent: accent)
             } label: {
-                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                    HStack(spacing: 10) {
+                HStack(spacing: 12) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(accent)
+                        .frame(width: 42, height: 42)
+                        .glassEffect(.regular.tint(accent.opacity(0.14)), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("YOUR TASTE ARC")
                             .font(.caption2.weight(.heavy))
                             .foregroundStyle(.secondary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
+                        Text(summary.current)
+                            .font(.subheadline.weight(.heavy))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Text(summary.feedback)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
 
-                    HStack(alignment: .center, spacing: 10) {
-                        arcCapsule(summary.origin, icon: "flag.checkered", tint: .secondary)
-                        arcDots(eras: eras, accent: accent)
-                        arcCapsule(summary.current, icon: "sparkles", tint: accent)
-                    }
+                    Spacer(minLength: 8)
 
-                    Text(summary.feedback)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
                 }
                 .padding(Theme.Spacing.md)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
             }
             .buttonStyle(PressableCardButtonStyle())
         }
-    }
-
-    private func arcCapsule(_ text: String, icon: String, tint: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption.weight(.bold))
-            Text(text)
-                .font(.caption.weight(.heavy))
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-        }
-        .foregroundStyle(tint)
-        .frame(maxWidth: 112)
-        .glassPillStyle(tint: tint.opacity(0.12), horizontalInset: 9, verticalInset: 7)
-    }
-
-    private func arcDots(eras: [TasteEra], accent: Color) -> some View {
-        let preview = Array(eras.prefix(5))
-        return HStack(spacing: 4) {
-            ForEach(preview) { era in
-                Circle()
-                    .fill(era.profile?.colors.first ?? accent.opacity(0.72))
-                    .frame(width: era.kind == .current ? 12 : 9, height: era.kind == .current ? 12 : 9)
-                    .overlay {
-                        Circle().stroke(.white.opacity(0.55), lineWidth: 1)
-                    }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 4)
     }
 
     private func wrappedButton(_ accent: Color) -> some View {
@@ -413,11 +361,6 @@ struct InsightsView: View {
         // Tapped from the 1st-of-month notification → last month's story.
         let month = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
         openWrapped(for: month)
-    }
-
-    private func dismissCelebration() {
-        badges?.acknowledgeCelebration()
-        Haptics.success()
     }
 
 }
@@ -582,6 +525,23 @@ private struct TasteEraRow: View {
         case .reveal: "REVEAL"
         case .current: "NOW"
         }
+    }
+}
+
+/// A compact earned-badge disc for the Insights "recently earned" shelf.
+private struct ShelfDisc: View {
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        Text(symbol)
+            .font(.system(size: 24))
+            .frame(width: 52, height: 52)
+            .background(
+                RadialGradient(colors: [tint.opacity(0.55), tint.opacity(0.12)],
+                               center: .topLeading, startRadius: 2, endRadius: 50),
+                in: Circle())
+            .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
     }
 }
 
