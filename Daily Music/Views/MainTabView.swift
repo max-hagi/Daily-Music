@@ -10,6 +10,8 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedTab: MainTab = .today
     @State private var entryToOpenInVault: DailyEntry?
     @State private var tabToReturnToAfterOpeningEntry: MainTab?
@@ -48,6 +50,25 @@ struct MainTabView: View {
         }
         .onChange(of: pendingTodayRoute) { _, _ in consumePendingTodayRouteIfNeeded() }
         .onChange(of: pendingWrappedRoute) { _, _ in consumePendingWrappedRouteIfNeeded() }
+        .task(id: badgeSignal) { await env.badgeCenter.refresh() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await env.badgeCenter.refresh() } }
+        }
+        .overlay {
+            if let badge = env.badgeCenter.celebrating {
+                Color.black.opacity(0.45).ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture { dismissCelebration() }
+                BadgeCelebrationCard(
+                    badge: badge,
+                    accent: badge.definition.tint,
+                    onDismiss: { dismissCelebration() }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
+                   value: env.badgeCenter.celebrating)
     }
 
     /// Recomputes on the listens it reads, so opening a missed song in the Vault
@@ -109,6 +130,30 @@ struct MainTabView: View {
         pendingWrappedRoute = false
         // InsightsView watches this flag and presents last month's Wrapped.
         UserDefaults.standard.set(true, forKey: "pendingWrappedOpen")
+    }
+
+    /// The synchronously-observable store state that can flip a badge to earned.
+    /// `.task(id:)` re-runs `BadgeCenter.refresh()` whenever any of it changes, so
+    /// saving / catching a drop / rating surfaces the badge moments later, over
+    /// whatever tab is showing. Check-in- and reveal-driven badges are caught on the
+    /// next foreground (the scenePhase refresh below) or the next store change.
+    private struct BadgeSignal: Equatable {
+        let listens: [UUID: Date]
+        let favorites: Set<UUID>
+        let ratings: [UUID: Int]
+    }
+
+    private var badgeSignal: BadgeSignal {
+        BadgeSignal(
+            listens: env.listensStore.heardAt,
+            favorites: env.favoritesStore.ids,
+            ratings: env.ratingsStore.ratings
+        )
+    }
+
+    private func dismissCelebration() {
+        env.badgeCenter.acknowledgeCelebration()
+        Haptics.success()
     }
 
     private enum MainTab: Hashable {
