@@ -243,18 +243,28 @@ struct FriendsView: View {
 
     private func nudgeButton(_ friend: Friend) -> some View {
         let nudgeStore = env.friendNudgeStore
-        return Button {
-            Task { await nudgeStore.send(to: friend) }
-        } label: {
-            Label(nudgeStore.buttonTitle(for: friend), systemImage: nudgeStore.iconName(for: friend))
-                .font(.caption.weight(.semibold))
-                .labelStyle(.iconOnly)
+        return VStack(alignment: .trailing, spacing: 4) {
+            Button {
+                Task { await nudgeStore.send(to: friend) }
+            } label: {
+                Label(nudgeStore.buttonTitle(for: friend), systemImage: nudgeStore.iconName(for: friend))
+                    .font(.caption.weight(.semibold))
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(nudgeStore.isDisabled(for: friend))
+            .accessibilityLabel("Nudge \(friend.profile.displayName ?? "friend")")
+            .accessibilityHint("Send a push notification encouraging them to check Daily Music")
+
+            if let message = nudgeStore.message(for: friend) {
+                Text(message)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 120, alignment: .trailing)
+            }
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-        .disabled(nudgeStore.isDisabled(for: friend))
-        .accessibilityLabel("Nudge \(friend.profile.displayName ?? "friend")")
-        .accessibilityHint("Send a push notification encouraging them to check Daily Music")
     }
 
     private func sectionHeader(_ title: String) -> some View {
